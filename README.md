@@ -75,7 +75,7 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.0.exe
+Install\SpriteAnimStudio-Setup-0.3.1.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
@@ -86,7 +86,7 @@ Install\SpriteAnimStudio-Setup-0.3.0.exe
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.0.exe
+Install\SpriteAnimStudio-Setup-0.3.1.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
@@ -114,9 +114,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.0.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.1.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.0.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.1.exe`.
 
 ---
 
@@ -152,8 +152,8 @@ attached. The app reads `/releases/latest`.
 output/
   images/<прогон>/          картинки PNG
   background/<прогон>/      PNG с прозрачностью
-  animation/<имя>/<прогон>/ видео и кадры
-  upscaled/<прогон>/        увеличенные кадры PNG
+  animation/<имя>/<прогон>/ видео, frames/ и rgba/
+  upscaled/<прогон>/rgba/   увеличенные кадры PNG
   sheets/<имя>-<время>/     готовый спрайт-лист PNG + JSON
 ```
 

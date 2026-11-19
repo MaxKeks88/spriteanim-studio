@@ -138,7 +138,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.3.1"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -1061,24 +1061,25 @@ def _history_meta(entry: dict) -> dict:
     return meta
 
 
-def output_location(subfolder: str) -> tuple[str, str]:
-    """Куда в output/ положить файл: (группа, прогон).
+def output_location(subfolder: str) -> tuple[str, str, list[str]]:
+    """Куда в output/ положить файл: (группа, прогон, хвост подпапок).
 
     SpriteAnim/img/<run>  → images/<run>
     SpriteAnim/bg/<run>   → background/<run>
     SpriteAnim/walk/<run> → animation/walk/<run>
+    SpriteAnim/up/<run>   → upscaled/<run>
     """
     parts = [p for p in str(subfolder or "").replace("\\", "/").split("/") if p]
     if len(parts) >= 3 and parts[0] == "SpriteAnim":
-        kind, run = parts[1], parts[2]
+        kind, run, tail = parts[1], parts[2], parts[3:]
         if kind == "img":
-            return "images", run
+            return "images", run, tail
         if kind == "bg":
-            return "background", run
+            return "background", run, tail
         if kind == "up":
-            return "upscaled", run
-        return f"animation/{kind}", run
-    return "other", time.strftime("%Y%m%d-%H%M%S")
+            return "upscaled", run, tail
+        return f"animation/{kind}", run, tail
+    return "other", time.strftime("%Y%m%d-%H%M%S"), []
 
 
 _collect_lock = threading.Lock()
@@ -1092,8 +1093,10 @@ def collect_outputs(st: dict) -> dict:
     dirs: dict[str, int] = {}
     with _collect_lock:
         for o in outs:
-            group, run = output_location(o.get("subfolder") or "")
+            group, run, tail = output_location(o.get("subfolder") or "")
             target = output_dir() / group / run
+            if tail:
+                target = target.joinpath(*tail)
             path = target / o["filename"]
             try:
                 if not path.is_file() or path.stat().st_size == 0:
@@ -1135,6 +1138,16 @@ def upscale_model_available() -> str:
     return ""
 
 
+def _png_has_alpha(path: Path) -> bool:
+    """PNG с альфой (color type 4/6) — без зависимостей, по заголовку IHDR."""
+    try:
+        with path.open("rb") as f:
+            head = f.read(26)
+    except OSError:
+        return False
+    return head[:8] == b"\x89PNG\r\n\x1a\n" and len(head) >= 26 and head[25] in (4, 6)
+
+
 def upscale_frames(src: str) -> tuple[Path, list[Path]]:
     """Папка с кадрами внутри output/ и список frame_*.png."""
     base = output_dir().resolve()
@@ -1152,6 +1165,8 @@ def upscale_frames(src: str) -> tuple[Path, list[Path]]:
     files = sorted(folder.glob("frame_*.png"))
     if not files:
         raise ValueError("в папке нет кадров frame_*.png")
+    if not _png_has_alpha(files[0]):
+        raise ValueError("кадры без прозрачности — нужны RGBA-кадры из анимации")
     return folder, files
 
 
@@ -1172,6 +1187,8 @@ def upscale_sources(limit: int = 12) -> list[dict]:
         folder = run / "rgba" if (run / "rgba").is_dir() else run
         files = sorted(p.name for p in folder.glob("frame_*.png"))
         if not files:
+            continue
+        if not _png_has_alpha(folder / files[0]):
             continue
         out.append({"dir": str(folder.resolve()), "rel": _output_rel(folder),
                     "name": run.parent.name, "run": run.name,
@@ -3547,11 +3564,14 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.write(chunk)
             return
         # Наша копия в output/ — чтобы история и превью жили без файлов ComfyUI.
-        group, run = output_location(subfolder)
-        local = output_dir() / group / run / filename
-        if local.is_file():
-            ctype = mimetypes.guess_type(local.name)[0] or "application/octet-stream"
-            return self._send(200, local.read_bytes(), ctype)
+        group, run, tail = output_location(subfolder)
+        base = output_dir() / group / run
+        candidates = [base.joinpath(*tail, filename) if tail else base / filename,
+                      base / filename]           # старые копии лежали без подпапок
+        for local in candidates:
+            if local.is_file():
+                ctype = mimetypes.guess_type(local.name)[0] or "application/octet-stream"
+                return self._send(200, local.read_bytes(), ctype)
         return self._bad("нет файла", 404)
 
     def _sheet_file(self, directory: str, name: str):
