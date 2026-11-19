@@ -10,6 +10,16 @@ generates images and frames with **ComfyUI**, removes backgrounds, builds sprite
 sheets and installs animations into **Godot 4** and **Unity**. The whole UI is
 available in **Russian and English**.
 
+> **Важно:** разработчик настоятельно рекомендует писать промпты через кнопку
+> **«Промпт агентом»**. Агент собирает запрос по официальному руководству
+> (структура промпта, камера, звук, референсы), поэтому качество получается
+> **в разы выше**, чем у короткого ручного промпта.
+
+> **Important:** the developer strongly recommends using the **“Prompt with
+> agent”** button. The agent builds the request following the official prompt
+> guide (structure, camera, sound, references), so the result is **much better**
+> than with a short hand-written prompt.
+
 ---
 
 ## Возможности / Features
