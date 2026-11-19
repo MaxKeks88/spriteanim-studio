@@ -1,0 +1,1810 @@
+{
+  "revision": 0,
+  "last_node_id": 25,
+  "last_link_id": 35,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        -404.0915999999997,
+        -241.57650000000024
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "название_unet",
+          "name": "unet_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "unet_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "тип_данных_веса",
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "weight_dtype"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "МОДЕЛЬ",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6,
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader"
+      },
+      "widgets_values": [
+        "minimax_h3_fl2va_pruned_w6a8.safetensors",
+        "default"
+      ],
+      "widgets_values_named": {
+        "unet_name": "minimax_h3_fl2va_pruned_w6a8.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        -411.4120999999999,
+        102.62329999999983
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "название_clip",
+          "name": "clip_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "clip_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "тип",
+          "name": "type",
+          "type": "COMBO",
+          "widget": {
+            "name": "type"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "устройство",
+          "name": "device",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "minimax",
+        "default"
+      ],
+      "widgets_values_named": {
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "type": "minimax",
+        "device": "default"
+      }
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        -423.12489999999974,
+        436.3257000000004
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "название_vae",
+          "name": "vae_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "vae_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            2,
+            15
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "minimax_h3_video_vae_int8_convrot.safetensors"
+      ],
+      "widgets_values_named": {
+        "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
+      }
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [
+        -408.4838999999998,
+        768.0946999999994
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "изображение",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "выберите файл для загрузки",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "ИЗОБРАЖЕНИЕ",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            21,
+            26
+          ]
+        },
+        {
+          "localized_name": "МАСКА",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            24
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "character.png",
+        "image"
+      ],
+      "widgets_values_named": {
+        "image": "brute_magenta.png",
+        "upload": "image"
+      }
+    },
+    {
+      "id": 5,
+      "type": "MiniMaxH3ImageToVideo",
+      "pos": [
+        131.821,
+        -236.21750000000023
+      ],
+      "size": [
+        330,
+        580
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 2
+        },
+        {
+          "localized_name": "первый_кадр",
+          "name": "first_frame",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 33
+        },
+        {
+          "localized_name": "последний_кадр",
+          "name": "last_frame",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 34
+        },
+        {
+          "localized_name": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "ширина",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "высота",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "длина",
+          "name": "length",
+          "type": "INT",
+          "widget": {
+            "name": "length"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "позитивный",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            8
+          ]
+        },
+        {
+          "localized_name": "ЛАТЕНТНЫЙ",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MiniMaxH3ImageToVideo"
+      },
+      "widgets_values": [
+        "A 2D cartoon character, seen from the side, stands firmly in place facing screen-left and attacks something right in front of it: it lunges its upper body forward and slashes both hands forward toward screen-left in a fast clawing strike, then pulls back to the starting pose. Its hands never rise above its head. It never turns toward the viewer and always stays in the same left-facing view. Each strike is fast and snappy, lasting well under a second. Between strikes it returns exactly to the original starting pose and holds it still for a moment. It performs three separate identical strikes, evenly spaced in time. The skin and clothes keep their original colors with no pink or magenta tint. The feet stay planted on the same spot during the attack. The character stays at exactly the same position and scale; only the limbs, head and body parts move, the body does not travel across the frame. The camera is locked off, with fixed framing and the entire body visible. Preserve the exact original face, eyes, clothing, body proportions, colors and hand-drawn 2D style of the input image. The background remains a flat, uniform solid magenta. Smooth, fluid, continuous motion at an even tempo. Crisp outlines and clear separate limbs, with no motion blur. No camera movement, zoom, rotation, character turning, sliding across the frame, extra limbs, extra fingers, morphing, text or new objects.",
+        640,
+        512,
+        124
+      ],
+      "widgets_values_named": {
+        "prompt": "A 2D cartoon zombie soldier performs a steady walking cycle in place, facing screen-left throughout. His left and right legs alternate naturally: one foot lifts and steps forward while the other foot pushes backward, then they switch. His bent arms swing slightly in time with his steps. He completes several even steps and returns to the starting pose. The character stays centered at the same position and scale. The camera is locked off, with fixed framing and the entire body visible. Preserve the exact original face, helmet, clothing, body proportions, colors and hand-drawn 2D style. The background remains a flat, uniform solid magenta. Crisp outlines and clear separate limbs, with no motion blur. No camera movement, zoom, rotation, character turning, sliding across the frame, extra limbs, morphing, text or new objects.",
+        "width": 512,
+        "height": 512,
+        "length": 124
+      }
+    },
+    {
+      "id": 7,
+      "type": "RandomNoise",
+      "pos": [
+        797.5744000000002,
+        513.4307999999996
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "сид_шума",
+          "name": "noise_seed",
+          "type": "INT",
+          "widget": {
+            "name": "noise_seed"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "ШУМ",
+          "name": "NOISE",
+          "type": "NOISE",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RandomNoise"
+      },
+      "widgets_values": [
+        20261023,
+        "fixed"
+      ],
+      "widgets_values_named": {
+        "noise_seed": 20261020,
+        "control_after_generate": "fixed"
+      }
+    },
+    {
+      "id": 8,
+      "type": "KSamplerSelect",
+      "pos": [
+        799.2871999999998,
+        818.5359
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "название_сэмплера",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "СЭМПЛЕР",
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSamplerSelect"
+      },
+      "widgets_values": [
+        "res_multistep"
+      ],
+      "widgets_values_named": {
+        "sampler_name": "res_multistep"
+      }
+    },
+    {
+      "id": 9,
+      "type": "BasicScheduler",
+      "pos": [
+        767.0437000000004,
+        -186.4381000000002
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "модель",
+          "name": "model",
+          "type": "MODEL",
+          "link": 6
+        },
+        {
+          "localized_name": "scheduler",
+          "name": "scheduler",
+          "type": "COMBO",
+          "widget": {
+            "name": "scheduler"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "шаги",
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "шумоподавление",
+          "name": "denoise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "denoise"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "СИГМЫ",
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BasicScheduler"
+      },
+      "widgets_values": [
+        "simple",
+        20,
+        1
+      ],
+      "widgets_values_named": {
+        "scheduler": "simple",
+        "steps": 20,
+        "denoise": 1
+      }
+    },
+    {
+      "id": 10,
+      "type": "BasicGuider",
+      "pos": [
+        787.8616000000005,
+        154.22579999999988
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "модель",
+          "name": "model",
+          "type": "MODEL",
+          "link": 7
+        },
+        {
+          "localized_name": "кондиционирование",
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "ГИД",
+          "name": "GUIDER",
+          "type": "GUIDER",
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BasicGuider"
+      }
+    },
+    {
+      "id": 11,
+      "type": "SamplerCustomAdvanced",
+      "pos": [
+        1214.8896999999993,
+        -183.50990000000016
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "шум",
+          "name": "noise",
+          "type": "NOISE",
+          "link": 9
+        },
+        {
+          "localized_name": "гид",
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 10
+        },
+        {
+          "localized_name": "сэмплер",
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 11
+        },
+        {
+          "localized_name": "сигмы",
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 12
+        },
+        {
+          "localized_name": "латентное_изображение",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "выход",
+          "name": "output",
+          "type": "LATENT",
+          "links": [
+            14
+          ]
+        },
+        {
+          "localized_name": "выход без шума",
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SamplerCustomAdvanced"
+      }
+    },
+    {
+      "id": 12,
+      "type": "VAEDecode",
+      "pos": [
+        1220.3247247383063,
+        164.5233513268428
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "образцы",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 14
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "ИЗОБРАЖЕНИЕ",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            35
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    },
+    {
+      "id": 13,
+      "type": "CreateVideo",
+      "pos": [
+        1682.017700000001,
+        -176.1894000000001
+      ],
+      "size": [
+        330,
+        220
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "изображения",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16
+        },
+        {
+          "localized_name": "аудио",
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": null
+        },
+        {
+          "localized_name": "кадров в секунду",
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "bit_depth",
+          "name": "bit_depth",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "bit_depth"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "color_space",
+          "name": "color_space",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "color_space"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "codec",
+          "name": "codec",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "codec"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "ВИДЕО",
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CreateVideo"
+      },
+      "widgets_values": [
+        24,
+        "auto",
+        "sRGB",
+        "none"
+      ],
+      "widgets_values_named": {
+        "fps": 24,
+        "bit_depth": "auto",
+        "color_space": "sRGB",
+        "codec": "none"
+      }
+    },
+    {
+      "id": 14,
+      "type": "SaveVideo",
+      "pos": [
+        2179.402100458147,
+        -114.69539823154815
+      ],
+      "size": [
+        330,
+        476
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "видео",
+          "name": "video",
+          "type": "VIDEO",
+          "link": 17
+        },
+        {
+          "localized_name": "префикс_имени_файла",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "формат",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "кодек",
+          "name": "format.codec",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format.codec"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "encoding",
+          "name": "format.codec.encoding",
+          "shape": 7,
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format.codec.encoding"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "crf",
+          "name": "format.codec.encoding.crf",
+          "type": "FLOAT",
+          "widget": {
+            "name": "format.codec.encoding.crf"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "кодек",
+          "name": "codec",
+          "shape": 7,
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "codec"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "видео",
+          "name": "video",
+          "type": "VIDEO",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveVideo"
+      },
+      "widgets_values": [
+        "SpriteAnim/attack/preview",
+        "mp4",
+        "h264",
+        "re-encode",
+        18,
+        "auto"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "MiniMax_H3_Brute_512_Verified/preview",
+        "format": "mp4",
+        "format.codec": "h264",
+        "format.codec.encoding": "re-encode",
+        "format.codec.encoding.crf": 18,
+        "codec": "auto"
+      }
+    },
+    {
+      "id": 15,
+      "type": "SaveImage",
+      "pos": [
+        1695.796581693933,
+        130.31814137792705
+      ],
+      "size": [
+        330,
+        270
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "изображения",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 18
+        },
+        {
+          "localized_name": "префикс_названия_файла",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "изображения",
+          "name": "images",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "SpriteAnim/attack/frames/frame"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "MiniMax_H3_Brute_512_Verified/frames/frame"
+      }
+    },
+    {
+      "id": 16,
+      "type": "SpriteChromaKey",
+      "pos": [
+        1699.5165153951248,
+        605.630267222185
+      ],
+      "size": [
+        360,
+        310
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 19
+        },
+        {
+          "localized_name": "key_color",
+          "name": "key_color",
+          "type": "COMBO",
+          "widget": {
+            "name": "key_color"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "sample_border",
+          "name": "sample_border",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "sample_border"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "clip_black",
+          "name": "clip_black",
+          "type": "FLOAT",
+          "widget": {
+            "name": "clip_black"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "clip_white",
+          "name": "clip_white",
+          "type": "FLOAT",
+          "widget": {
+            "name": "clip_white"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "despill",
+          "name": "despill",
+          "type": "FLOAT",
+          "widget": {
+            "name": "despill"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "choke_px",
+          "name": "choke_px",
+          "type": "FLOAT",
+          "widget": {
+            "name": "choke_px"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "edge_bleed_px",
+          "name": "edge_bleed_px",
+          "type": "INT",
+          "widget": {
+            "name": "edge_bleed_px"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "rgba_straight",
+          "name": "rgba_straight",
+          "type": "IMAGE",
+          "links": [
+            20
+          ]
+        },
+        {
+          "localized_name": "foreground_mask",
+          "name": "foreground_mask",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "title": "Remove Magenta + Clean Edges",
+      "properties": {
+        "Node name for S&R": "SpriteChromaKey"
+      },
+      "widgets_values": [
+        "magenta",
+        true,
+        0.04,
+        0.97,
+        1,
+        0,
+        4
+      ],
+      "widgets_values_named": {
+        "key_color": "magenta",
+        "sample_border": true,
+        "clip_black": 0.04,
+        "clip_white": 0.97,
+        "despill": 1,
+        "choke_px": 0,
+        "edge_bleed_px": 4
+      }
+    },
+    {
+      "id": 17,
+      "type": "SaveImage",
+      "pos": [
+        2124.516515395122,
+        605.630267222185
+      ],
+      "size": [
+        360,
+        380
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "изображения",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 20
+        },
+        {
+          "localized_name": "префикс_названия_файла",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "изображения",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "SAVE TRANSPARENT PNG — RGBA",
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "SpriteAnim/attack/rgba/frame"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "MiniMax_H3_Brute_512_Verified/rgba/frame"
+      }
+    },
+    {
+      "id": 18,
+      "type": "GetImageSize",
+      "pos": [
+        20,
+        480
+      ],
+      "size": [
+        240,
+        130
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 21
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "links": [
+            22
+          ]
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "links": [
+            23
+          ]
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GetImageSize"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 19,
+      "type": "EmptyImage",
+      "title": "Цвет подкладки (маджента)",
+      "pos": [
+        300,
+        480
+      ],
+      "size": [
+        290,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 22
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 23
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "color",
+          "name": "color",
+          "type": "INT",
+          "widget": {
+            "name": "color"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            25
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyImage"
+      },
+      "widgets_values": [
+        1254,
+        1254,
+        1,
+        16711935
+      ]
+    },
+    {
+      "id": 20,
+      "type": "InvertMask",
+      "pos": [
+        20,
+        680
+      ],
+      "size": [
+        240,
+        60
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 24
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "InvertMask"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 21,
+      "type": "ImageCompositeMasked",
+      "title": "Рисунок поверх подкладки",
+      "pos": [
+        300,
+        740
+      ],
+      "size": [
+        290,
+        190
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "destination",
+          "name": "destination",
+          "type": "IMAGE",
+          "link": 25
+        },
+        {
+          "localized_name": "source",
+          "name": "source",
+          "type": "IMAGE",
+          "link": 26
+        },
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": 27
+        },
+        {
+          "localized_name": "x",
+          "name": "x",
+          "type": "INT",
+          "widget": {
+            "name": "x"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "y",
+          "name": "y",
+          "type": "INT",
+          "widget": {
+            "name": "y"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "resize_source",
+          "name": "resize_source",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "resize_source"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            30
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageCompositeMasked"
+      },
+      "widgets_values": [
+        0,
+        0,
+        false
+      ]
+    },
+    {
+      "id": 25,
+      "type": "SpriteLoopTrim",
+      "pos": [
+        1340,
+        300
+      ],
+      "size": [
+        300,
+        160
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "title": "ОДНА ПЕТЛЯ: один удар",
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 35
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            16,
+            18,
+            19
+          ]
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "info",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SpriteLoopTrim"
+      },
+      "widgets_values": [
+        "action",
+        0,
+        true,
+        12
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 22,
+      "type": "ImageScale",
+      "pos": [
+        650,
+        480
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "title": "Рисунок → 1024×1024",
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 30
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            31
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "lanczos",
+        1024,
+        1024,
+        "disabled"
+      ]
+    },
+    {
+      "id": 23,
+      "type": "EmptyImage",
+      "pos": [
+        650,
+        650
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "title": "Холст 1280×1024 (маджента)",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            32
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyImage"
+      },
+      "widgets_values": [
+        1280,
+        1024,
+        1,
+        16711935
+      ]
+    },
+    {
+      "id": 24,
+      "type": "ImageCompositeMasked",
+      "pos": [
+        650,
+        820
+      ],
+      "size": [
+        270,
+        150
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "title": "Рисунок у правого края (x = 256)",
+      "inputs": [
+        {
+          "name": "destination",
+          "type": "IMAGE",
+          "link": 32
+        },
+        {
+          "name": "source",
+          "type": "IMAGE",
+          "link": 31
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "shape": 7,
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            33,
+            34
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageCompositeMasked"
+      },
+      "widgets_values": [
+        256,
+        0,
+        false
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      5,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      3,
+      0,
+      5,
+      1,
+      "VAE"
+    ],
+    [
+      6,
+      1,
+      0,
+      9,
+      0,
+      "MODEL"
+    ],
+    [
+      7,
+      1,
+      0,
+      10,
+      0,
+      "MODEL"
+    ],
+    [
+      8,
+      5,
+      0,
+      10,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      9,
+      7,
+      0,
+      11,
+      0,
+      "NOISE"
+    ],
+    [
+      10,
+      10,
+      0,
+      11,
+      1,
+      "GUIDER"
+    ],
+    [
+      11,
+      8,
+      0,
+      11,
+      2,
+      "SAMPLER"
+    ],
+    [
+      12,
+      9,
+      0,
+      11,
+      3,
+      "SIGMAS"
+    ],
+    [
+      13,
+      5,
+      1,
+      11,
+      4,
+      "LATENT"
+    ],
+    [
+      14,
+      11,
+      0,
+      12,
+      0,
+      "LATENT"
+    ],
+    [
+      15,
+      3,
+      0,
+      12,
+      1,
+      "VAE"
+    ],
+    [
+      16,
+      25,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      25,
+      0,
+      15,
+      0,
+      "IMAGE"
+    ],
+    [
+      19,
+      25,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ],
+    [
+      20,
+      16,
+      0,
+      17,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      13,
+      0,
+      14,
+      0,
+      "VIDEO"
+    ],
+    [
+      21,
+      4,
+      0,
+      18,
+      0,
+      "IMAGE"
+    ],
+    [
+      22,
+      18,
+      0,
+      19,
+      0,
+      "INT"
+    ],
+    [
+      23,
+      18,
+      1,
+      19,
+      1,
+      "INT"
+    ],
+    [
+      24,
+      4,
+      1,
+      20,
+      0,
+      "MASK"
+    ],
+    [
+      25,
+      19,
+      0,
+      21,
+      0,
+      "IMAGE"
+    ],
+    [
+      26,
+      4,
+      0,
+      21,
+      1,
+      "IMAGE"
+    ],
+    [
+      27,
+      20,
+      0,
+      21,
+      2,
+      "MASK"
+    ],
+    [
+      35,
+      12,
+      0,
+      25,
+      0,
+      "IMAGE"
+    ],
+    [
+      30,
+      21,
+      0,
+      22,
+      0,
+      "IMAGE"
+    ],
+    [
+      31,
+      22,
+      0,
+      24,
+      1,
+      "IMAGE"
+    ],
+    [
+      32,
+      23,
+      0,
+      24,
+      0,
+      "IMAGE"
+    ],
+    [
+      33,
+      24,
+      0,
+      5,
+      2,
+      "IMAGE"
+    ],
+    [
+      34,
+      24,
+      0,
+      5,
+      3,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "MAGENTA → TRANSPARENT PNG (RGBA)",
+      "bounding": [
+        1659.5165153951248,
+        535.630267222185,
+        875,
+        500
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "ПОДКЛАДКА: PNG с прозрачностью → маджента (картинка без альфы проходит как есть)",
+      "bounding": [
+        0,
+        400,
+        610,
+        560
+      ],
+      "color": "#a1309b",
+      "flags": {}
+    },
+    {
+      "title": "МЕСТО ДЛЯ ВЫПАДА: персонаж у правого края, слева запас под удар",
+      "bounding": [
+        630,
+        400,
+        310,
+        600
+      ],
+      "color": "#3f789e",
+      "font_size": 20,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.4641000000000006,
+      "offset": [
+        -1646.3755587373842,
+        -296.6162496985386
+      ]
+    }
+  },
+  "version": 0.4
+}

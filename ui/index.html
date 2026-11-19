@@ -1,0 +1,3605 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpriteAnim Studio</title>
+<style>
+:root{
+  --bg:#0e1014; --bg2:#12151b; --card:#171b23; --card2:#1d222c; --line:#262c38; --line2:#333b4a;
+  --text:#e8ecf4; --muted:#98a2b4; --dim:#6b7484;
+  --acc:#7c6cff; --acc2:#4ad6c0; --warn:#ffb547; --bad:#ff5d6c; --ok:#43d08a;
+  --acc-rgb:124,108,255; --acc2-rgb:74,214,192;
+  --acc-d:#6a5bff; --acc2-l:#6fe0cf; --on-acc:#ffffff; --on-acc2:#0d0f13;
+  --on-soft:#ffffff; --acc-text:#d7d2ff;
+  --line3:#46506a; --hover:#161a24; --checker:#0b0d12; --checker-a:#1b202a; --checker-b:#141822;
+  --ok-rgb:67,208,138; --warn-rgb:255,181,71; --bad-rgb:255,93,108;
+  --r:16px;
+}
+/* Тема 2: палитра Sprite Sheet Maker (тёмно-зелёная с золотом) */
+html[data-theme="maker"]{
+  --bg:#121a17; --bg2:#18221e; --card:#18221e; --card2:#1e2a25; --line:#2f3f37; --line2:#3d5347;
+  --text:#e8e2cf; --muted:#93a093; --dim:#6f7c6f;
+  --acc:#d9a35a; --acc2:#9fc48c; --warn:#e6b971; --bad:#ff8a6a; --ok:#9fc48c;
+  --acc-rgb:217,163,90; --acc2-rgb:159,196,140;
+  --acc-d:#c08a45; --acc2-l:#b3d3a2; --on-acc:#241a0c; --on-acc2:#1b1408;
+  --on-soft:#ffe6bd; --acc-text:#ffd9a1;
+  --line3:#4d6656; --hover:#202c26; --checker:#0e1512; --checker-a:#1e2a25; --checker-b:#152019;
+  --ok-rgb:159,196,140; --warn-rgb:230,185,113; --bad-rgb:255,138,106;
+}
+/* Тема 3: светлая, бумага и благородный бордовый */
+html[data-theme="light"]{
+  --bg:#f5f1ea; --bg2:#ede7dd; --card:#fffdf9; --card2:#f3eee5; --line:#ded5c7; --line2:#cdc2b1;
+  --text:#2b241f; --muted:#7b6f65; --dim:#a3968a;
+  --acc:#7d1f35; --acc2:#b08d57; --warn:#a8721c; --bad:#a3251d; --ok:#4f7a4a;
+  --acc-rgb:125,31,53; --acc2-rgb:176,141,87;
+  --acc-d:#5f1627; --acc2-l:#c9a878; --on-acc:#ffffff; --on-acc2:#2b1a12;
+  --on-soft:#5f1627; --acc-text:#7d1f35;
+  --line3:#b9a998; --hover:#efe8dc; --checker:#f7f3ec; --checker-a:#e9e1d5; --checker-b:#f2ece3;
+  --ok-rgb:79,122,74; --warn-rgb:168,114,28; --bad-rgb:163,37,29;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+html{background:var(--bg)}
+body{background:
+   radial-gradient(900px 500px at 12% -10%, rgba(var(--acc-rgb),.14), transparent 60%),
+   radial-gradient(800px 420px at 100% 0%, rgba(var(--acc2-rgb),.10), transparent 55%),
+   var(--bg);
+  color:var(--text);font:15px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--acc2)}
+.wrap{max-width:1240px;margin:0 auto;padding:18px 20px 60px}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:14px;padding:6px 0 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:.2px}
+.brand i{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-style:normal;font-size:15px;color:#0e1014;font-weight:900}
+.tag{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.langs{display:inline-flex;border:1px solid var(--line2);border-radius:999px;overflow:hidden;flex:none}
+.langs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:11.5px;font-weight:800;
+  letter-spacing:.4px;padding:6px 10px;cursor:pointer;transition:.15s}
+.langs button:hover{color:var(--text)}
+.langs button.on{background:rgba(var(--acc-rgb),.22);color:var(--on-soft)}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+button.pill{cursor:pointer;font:inherit;font-size:12.5px}
+button.pill:hover{border-color:var(--acc);color:var(--text)}
+.queueWrap{position:relative;display:inline-flex}
+#queuePop{position:absolute;top:34px;left:0;z-index:80;min-width:320px;max-width:520px;
+  background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:6px;
+  box-shadow:0 18px 50px rgba(0,0,0,.45)}
+#queuePop[hidden]{display:none}
+.qrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;width:100%;
+  text-align:left;background:transparent;border:0;border-radius:8px;padding:8px 10px;
+  color:var(--text);font:inherit;font-size:12.5px;cursor:pointer}
+.qrow:hover{background:var(--card2)}
+.qrow b{font-weight:600;white-space:nowrap}
+.qrow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.qrow small{color:var(--dim);white-space:nowrap}
+.qempty{padding:10px;color:var(--muted);font-size:12.5px;text-align:center}
+.pill b{color:var(--text);font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--bad)}
+.dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(var(--ok-rgb),.16)}
+.spacer{flex:1}
+
+/* grid */
+/* сетка-«чат» общая для вкладок «Картинка», «Убрать фон» и «Анимация» */
+
+/* cards */
+.card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 18px}
+.card h2{margin:0 0 14px;font-size:15.5px;display:flex;align-items:center;gap:9px;font-weight:700}
+.card h2 span.n{width:22px;height:22px;border-radius:50%;background:var(--card2);border:1px solid var(--line2);display:grid;place-items:center;font-size:11.5px;color:var(--muted);font-weight:800;flex:none}
+.hint{font-size:12.5px;color:var(--muted);margin-top:8px}
+.hint b{color:var(--text);font-weight:600}
+
+/* drop */
+.drop{position:relative;display:grid;place-items:center;min-height:230px;border:1.5px dashed var(--line2);border-radius:14px;background:var(--bg2);cursor:pointer;overflow:hidden;transition:.15s}
+.drop:hover{border-color:var(--acc);background:var(--hover)}
+.drop.filled{border-style:solid;border-color:var(--line2);cursor:default;padding:0}
+.drop img{width:100%;height:100%;max-height:360px;object-fit:contain;display:block;background:
+  repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/22px 22px}
+.drop .ph{text-align:center;padding:22px;color:var(--muted)}
+.drop .ph b{display:block;color:var(--text);font-size:14.5px;margin-bottom:4px}
+.drop .ph svg{width:34px;height:34px;opacity:.6;margin-bottom:10px}
+.drop .x{position:absolute;right:8px;top:8px;border:0;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;width:28px;height:28px;cursor:pointer;font-size:14px}
+
+/* segmented */
+.seg{display:grid;gap:6px}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg.three{grid-template-columns:repeat(3,1fr)}
+.seg.four{grid-template-columns:repeat(4,1fr)}
+.seg button, .chip{border:1px solid var(--line2);background:var(--card2);color:var(--muted);border-radius:11px;padding:9px 10px;font:inherit;font-weight:600;font-size:13px;cursor:pointer;text-align:center;transition:.12s}
+.seg button small{display:block;font-weight:500;font-size:10.5px;color:var(--dim);margin-top:2px}
+.seg button:hover,.chip:hover{color:var(--text);border-color:var(--line3)}
+.seg button.on,.chip.on{background:rgba(var(--acc-rgb),.18);border-color:var(--acc);color:var(--on-soft);box-shadow:0 0 0 1px rgba(var(--acc-rgb),.35) inset}
+.seg button.on small,.chip.on small{color:inherit;opacity:.75}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+
+/* rows */
+.row{margin:0 0 16px}
+.row:last-child{margin-bottom:0}
+.row-l{font-size:12.5px;color:var(--muted);margin-bottom:7px;display:flex;justify-content:space-between;gap:10px}
+.row-l b{color:var(--text);font-weight:600}
+textarea,input[type=text],input[type=number],select{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:11px;color:var(--text);font:inherit;font-size:13.5px;padding:10px 12px;outline:none}
+textarea{resize:vertical;min-height:120px;line-height:1.5}
+textarea:focus,input:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(var(--acc-rgb),.14)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:4px}
+.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.inline .sep{color:var(--dim)}
+
+/* go */
+.go{width:100%;border:0;border-radius:14px;padding:16px;font:inherit;font-size:16px;font-weight:800;color:var(--on-acc2);background:linear-gradient(135deg,var(--acc2),#6fe0cf);cursor:pointer;transition:.15s}
+.go:hover{filter:brightness(1.06)}
+.go[disabled]{opacity:.45;cursor:default;filter:none}
+.go-row{display:flex;gap:10px;margin-top:4px}
+.go-row .go{flex:1}
+.stop{border:1px solid var(--line2);background:var(--card2);color:var(--text);border-radius:14px;padding:0 18px;font:inherit;font-weight:700;cursor:pointer}
+.stop:hover{border-color:var(--bad);color:var(--bad)}
+
+/* progress */
+.prog{display:none;margin-top:14px}
+.prog.on{display:block}
+/* дорожка видна только когда есть настоящий прогресс (шаги ComfyUI) */
+.prog.quiet .bar{display:none}
+.bar{height:4px;border-radius:99px;background:var(--card2);overflow:hidden;position:relative}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .4s}
+.prog .st{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:8px}
+.prog.quiet .st{margin-top:0}
+.prog .st b{color:var(--text)}
+
+/* result */
+.res{display:none}
+.res.on{display:block}
+.res video{width:100%;border-radius:12px;background:#000;display:block}
+.strip{display:flex;gap:6px;overflow-x:auto;padding:10px 2px 4px;margin-top:2px}
+.strip img{height:82px;border-radius:8px;background:var(--checker) repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/16px 16px;flex:none;cursor:zoom-in}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.acts a,.acts button{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:var(--card2);color:var(--text);border-radius:11px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none}
+.acts a:hover,.acts button:hover{border-color:var(--acc)}
+.meta{font-size:12.5px;color:var(--muted);margin-top:10px}
+.meta b{color:var(--text)}
+
+/* details */
+details{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:4px;background:var(--bg2)}
+details summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600}
+details[open] summary{margin-bottom:12px;color:var(--text)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g2 label{font-size:12px;color:var(--muted);display:block}
+.g2 label input,.g2 label select{margin-top:4px}
+
+/* toast */
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:90;max-width:min(420px,90vw)}
+.toast{background:var(--card2);border:1px solid var(--line2);border-left:3px solid var(--acc);border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 14px 34px rgba(0,0,0,.45);animation:in .18s ease-out}
+.toast.bad{border-left-color:var(--bad)}
+.toast.ok{border-left-color:var(--ok)}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.note{font-size:12.5px;color:var(--muted);border:1px solid var(--line);background:var(--bg2);border-radius:11px;padding:10px 12px}
+.note.warn{border-color:rgba(var(--warn-rgb),.35);background:rgba(var(--warn-rgb),.08);color:var(--warn)}
+.note b{color:inherit}
+#sheetCv{max-width:100%;margin-top:10px;border-radius:10px;border:1px solid var(--line2);
+  background:var(--checker) repeating-conic-gradient(var(--checker-a) 0 25%,var(--checker-b) 0 50%) 0 0/16px 16px}
+#sheetCv[hidden]{display:none}
+a.chip{display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+a.chip[hidden]{display:none}
+.chip i{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:7px;vertical-align:-1px;
+  border:1px solid rgba(255,255,255,.35);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+
+#bgPage[hidden],#genPage[hidden],#imgPage[hidden]{display:none}
+/* Высота вкладки «Картинка» — от окна, без «магических» пикселей:
+   шапка сверху, остальное делит #imgPage, поле промпта прижато к низу. */
+body.tab-img,body.tab-bg,body.tab-gen{height:100vh;overflow:hidden;background:var(--bg)}
+body.tab-img .wrap,body.tab-bg .wrap,body.tab-gen .wrap{display:flex;flex-direction:column;height:100vh;max-width:none;padding-bottom:16px}
+#imgPage,#bgPage,#genPage{display:flex;flex-direction:column;flex:1;min-height:0}
+.imgLayout{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);
+  gap:16px;align-items:stretch;flex:1;min-height:0;overflow:hidden}
+@media (max-width:1180px){.imgLayout{grid-template-columns:260px minmax(0,1fr) 260px}}
+@media (max-width:980px){
+  body.tab-img,body.tab-bg,body.tab-gen{height:auto;overflow:auto}
+  body.tab-img .wrap,body.tab-bg .wrap,body.tab-gen .wrap{display:block;height:auto}
+  #imgPage,#bgPage,#genPage{flex:none;height:auto;gap:16px}
+  .imgLayout{display:contents}
+  .imgCol{overflow:visible}
+  .imgCol:first-child{order:1}
+  .imgChat{order:2;overflow:visible}
+  .imgPromptWrap{order:3;margin:10px auto 0}
+  .imgCol:last-of-type{order:4}
+  .imgFeed{max-height:70vh;min-height:260px}
+}
+.imgCol{display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0;overflow:auto;padding-right:2px}
+.imgChat{min-width:0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.imgFeed{display:flex;flex-direction:column;gap:0;flex:1;min-height:0;overflow:auto;padding:2px 8px 2px 2px}
+.imgEmpty{margin:auto;max-width:920px;padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6;
+  border:1.5px dashed var(--line2);border-radius:14px;width:100%}
+.imgFeed::-webkit-scrollbar,.imgCol::-webkit-scrollbar,#imgPrompt::-webkit-scrollbar{width:10px;height:10px}
+.imgFeed::-webkit-scrollbar-track,.imgCol::-webkit-scrollbar-track,#imgPrompt::-webkit-scrollbar-track{background:transparent}
+.imgFeed::-webkit-scrollbar-thumb,.imgCol::-webkit-scrollbar-thumb,#imgPrompt::-webkit-scrollbar-thumb{
+  background:var(--line2);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+.imgFeed::-webkit-scrollbar-thumb:hover,.imgCol::-webkit-scrollbar-thumb:hover{background:var(--line3);background-clip:padding-box}
+.imgFeed,.imgCol,#imgPrompt{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.msg{display:flex;flex-direction:column;gap:10px;width:100%;max-width:920px;margin:0 auto 24px}
+.msg-bubble{align-self:flex-end;max-width:min(100%,600px);background:var(--card2);border:1px solid var(--line2);
+  border-radius:14px 14px 4px 14px;padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--text);cursor:pointer}
+.msg-bubble:hover{border-color:var(--acc)}
+.msg-text{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.msg.open .msg-text{-webkit-line-clamp:unset}
+.msg-img{align-self:flex-start;line-height:0;max-width:100%}
+.msg-img img{display:block;width:auto;height:auto;max-width:min(100%,520px);max-height:58vh;cursor:zoom-in;
+  border:1px solid var(--line2);border-radius:14px;
+  background:var(--checker) repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/16px 16px}
+.msg-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.msg-acts{display:inline-flex;flex-wrap:wrap;gap:6px}
+.msg-acts a,.msg-acts button{border:1px solid var(--line2);background:transparent;color:var(--muted);
+  border-radius:8px;padding:3px 8px;font:inherit;font-size:11.5px;cursor:pointer;text-decoration:none}
+.msg-acts a:hover,.msg-acts button:hover{border-color:var(--acc);color:var(--text)}
+#imgStylePreview{margin-top:10px}
+.ref-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.ref-item{position:relative;border:1px solid var(--line2);border-radius:10px;overflow:hidden;aspect-ratio:1;
+  background:var(--checker) repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/16px 16px}
+.ref-item img{display:block;width:100%;height:100%;object-fit:contain}
+.ref-item .n{position:absolute;top:4px;left:4px;min-width:20px;height:20px;border-radius:7px;
+  background:rgba(0,0,0,.7);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+.ref-item .x{position:absolute;top:4px;right:4px;width:20px;height:20px;border:0;border-radius:6px;
+  background:rgba(0,0,0,.7);color:#fff;cursor:pointer;font-size:11px;line-height:1;padding:0}
+.ref-item .x:hover{background:var(--bad)}
+.ref-item.base{outline:1.5px solid var(--acc);outline-offset:-1px}
+.imgPromptWrap{width:100%;max-width:780px;align-self:center;margin:14px auto 0;flex:none}
+.imgPromptWrap > .prog{margin:0 0 8px}
+.imgPromptWrap .pprev{display:block;margin:0 auto 8px;max-height:110px;max-width:100%;
+  border-radius:10px;border:1px solid var(--line2);background:var(--checker)}
+.imgPromptWrap .pprev:not([src]){display:none!important}
+.imgPromptCard{margin:0;padding:12px}
+.imgComposer{display:grid;grid-template-columns:minmax(0,1fr) auto 148px;gap:10px;align-items:stretch}
+.imgComposer.no-mic{grid-template-columns:minmax(0,1fr) 148px}
+.imgComposer.no-mic .micCol{display:none}
+.imgComposerField{display:flex;flex-direction:column;min-width:0}
+#imgPrompt{min-height:96px;max-height:160px;padding:12px 14px;border-radius:14px;
+  font-size:14px;line-height:1.55;resize:none;overflow:auto}
+.tab-bg .drop img{max-height:200px}
+.tab-gen .drop img{max-height:200px}
+.tab-gen .drop{min-height:200px}
+.tab-bg .msg-img img{max-height:48vh}
+.imgComposerSide{display:flex;flex-direction:column;gap:8px;justify-content:center}
+.side-btn{border:1px solid var(--line2);background:var(--card2);color:var(--text);border-radius:12px;
+  padding:10px 12px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;
+  display:block;text-align:center;text-decoration:none}
+.side-btn:hover{border-color:var(--acc)}
+.side-btn:disabled{opacity:.45;cursor:default}
+/* агент думает: кнопка сама становится «стопом» */
+.side-btn.busy{position:relative;border-color:rgba(var(--acc-rgb),.55);background:rgba(var(--acc-rgb),.12);color:var(--on-soft)}
+.side-btn.busy::after{content:"";position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:2px;
+  background:var(--bad);box-shadow:0 0 7px 1px rgba(var(--bad-rgb),.85);animation:stopPulse 1.1s ease-in-out infinite}
+@keyframes stopPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
+.side-btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.bgResActions{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+#bgPrompt{min-height:80px;max-height:160px;padding:12px 14px;border-radius:14px;
+  font-size:13.5px;line-height:1.5;resize:none;overflow:auto}
+#prompt{min-height:96px;max-height:160px;padding:12px 14px;border-radius:14px;
+  font-size:14px;line-height:1.55;resize:none;overflow:auto}
+#res{max-width:920px;margin:0 auto;width:100%}
+.side-btn.primary{border:0;color:var(--on-acc2);font-size:14px;padding:12px;
+  background:linear-gradient(135deg,var(--acc2),var(--acc2-l))}
+.side-btn.primary:hover{filter:brightness(1.06)}
+.side-btn.primary:disabled{opacity:.45;filter:none;cursor:default}
+.side-btn.danger{color:var(--bad);border-color:rgba(var(--bad-rgb),.45)}
+.side-btn.danger:hover{border-color:var(--bad)}
+@media (max-width:650px){.imgComposer{grid-template-columns:1fr}.imgComposerSide{flex-direction:row;flex-wrap:wrap}}
+#imgPage .seg button{padding:8px 6px;font-size:12.5px}
+#imgPage .seg button small{font-size:10px}
+#bgPage .seg button{padding:8px 4px;font-size:12px}
+#bgPage .seg button small{font-size:9.5px}
+
+/* вкладки и встроенный редактор */
+.tabs{display:flex;gap:4px;padding:3px;border:1px solid var(--line2);border-radius:12px;background:var(--card)}
+.tab{border:0;background:none;color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:8px 14px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.on{background:linear-gradient(135deg,var(--acc),var(--acc-d));color:var(--on-acc)}
+#sheetView{position:fixed;left:20px;right:20px;bottom:16px;top:96px;z-index:60;display:none;flex-direction:column;background:var(--bg)}
+body.sheet-on{overflow:hidden}
+body.sheet-on .wrap{max-width:none;padding-bottom:16px}
+body.sheet-on #sheetView{display:flex}
+.sheet-msg{margin:auto;max-width:560px;padding:24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
+.sheet-msg b{color:var(--text)}
+#sheetFrame{flex:1;width:100%;border:0;background:var(--bg2);display:block;border-radius:12px;border:1px solid var(--line2)}
+.sheet-msg{margin:auto;max-width:560px;padding:24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
+.sheet-msg b{color:var(--text)}
+
+/* просмотр с увеличением */
+.vwrap{position:relative}
+.vzoom{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;border:0;border-radius:9px;
+  background:rgba(0,0,0,.62);color:#fff;font-size:16px;cursor:pointer}
+.vzoom:hover{background:var(--acc)}
+.vzoom[hidden]{display:none}
+#zoom{position:fixed;inset:0;z-index:95;background:rgba(5,7,10,.97);display:flex;flex-direction:column}
+#zoom[hidden]{display:none}
+#zoomClose{position:absolute;z-index:4;width:40px;height:40px;border:0;border-radius:11px;
+  background:#d64545;color:#fff;font-size:17px;font-weight:700;cursor:pointer;line-height:1;
+  box-shadow:0 8px 20px rgba(0,0,0,.45);transition:background .15s}
+#zoomClose:hover{background:#ea5b5b}
+#zoomClose[hidden]{display:none}
+.zbar{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;flex:none;flex-wrap:wrap}
+.zbar button{height:36px;min-width:38px;padding:0 12px;border:0;border-radius:10px;
+  background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:15px;cursor:pointer}
+.zbar button:hover{background:var(--acc)}
+.zbar .zinfo{font-size:12.5px;color:var(--muted);min-width:90px;text-align:center}
+.zstage{flex:1;min-height:0;overflow:auto;display:grid;place-items:center;padding:8px 12px;cursor:grab}
+.zstage.drag{cursor:grabbing}
+.zstage img,.zstage video{display:block;border-radius:8px;background:var(--checker);user-select:none;-webkit-user-drag:none}
+.zstage.zoomed{display:block;text-align:center}
+.zstage.zoomed img{margin:0 auto}
+.zstage img{max-width:100%;max-height:calc(100vh - 120px);cursor:zoom-in}
+.zstage img.actual{max-width:none;max-height:none;cursor:grab}
+.zstage video{max-width:100%;max-height:calc(100vh - 120px)}
+.zstage img[hidden],.zstage video[hidden]{display:none}
+.zn{position:fixed;top:50%;transform:translateY(-50%);width:42px;height:64px;border:0;border-radius:12px;
+  background:rgba(255,255,255,.10);color:#fff;font-size:26px;line-height:1;cursor:pointer;z-index:2}
+.zn.prev{left:10px}.zn.next{right:10px}
+.zn:hover{background:var(--acc)}
+.zn[hidden]{display:none}
+
+/* история прогонов */
+.pill.hist{cursor:pointer;background:var(--card2);border:1px solid var(--line2);color:var(--text);
+  font:inherit;font-size:12.5px;padding:6px 12px;border-radius:99px;transition:.15s}
+.pill.hist:hover{border-color:var(--acc)}
+#runsView{position:fixed;inset:0;z-index:94;background:var(--bg);display:flex;flex-direction:column}
+#runsView[hidden]{display:none}
+.runs-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);font-size:15px}
+.runs-filter{display:flex;gap:6px;margin-left:10px}
+.runs-filter .chip{font-size:12px;padding:4px 10px}
+.runs-filter .chip.on{border-color:var(--acc);color:var(--text);background:rgba(var(--acc-rgb),.16)}
+.runs-list{flex:1;min-height:0;overflow:auto;padding:14px 18px 30px;display:flex;flex-direction:column;gap:10px}
+.run{border:1px solid var(--line2);border-radius:12px;background:var(--card);padding:10px 12px;
+  display:flex;gap:12px;align-items:flex-start}
+.run-thumb{position:relative;flex:none;width:132px;height:96px;border-radius:10px;overflow:hidden;
+  border:1px solid var(--line2);cursor:zoom-in;
+  background:var(--checker) repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/16px 16px;
+  display:grid;place-items:center}
+.run-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.run-thumb .play{position:absolute;inset:0;display:grid;place-items:center;font-size:24px;color:#fff;
+  background:rgba(0,0,0,.35);text-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none}
+.run-body{flex:1;min-width:0}
+.run-top{display:flex;gap:10px;align-items:baseline;font-size:12px;color:var(--muted)}
+.run-kind{font-weight:700;color:var(--text)}
+.run-prompt{margin-top:6px;font-size:13px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;
+  -webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.run-meta{margin-top:6px;font-size:11.5px;color:var(--muted)}
+.run-acts{display:flex;gap:8px;margin-top:8px}
+.runs-empty{margin:auto;color:var(--muted);text-align:center;font-size:13.5px;line-height:1.6}
+
+/* настройки */
+.settings-btn{border:1px solid rgba(var(--acc-rgb),.45);background:rgba(var(--acc-rgb),.14);
+  color:var(--acc-text);font:inherit;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:99px;
+  cursor:pointer;transition:.15s;white-space:nowrap}
+.settings-btn:hover{background:rgba(var(--acc-rgb),.26);border-color:var(--acc);color:#fff}
+.settings-btn.attention{border-color:rgba(240,150,90,.75);background:rgba(240,150,90,.18);
+  color:#ffd9b8;animation:setPulse 1.8s ease-in-out infinite}
+@keyframes setPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,150,90,.0)}
+  50%{box-shadow:0 0 0 4px rgba(240,150,90,.18)}}
+#setView{position:fixed;inset:0;z-index:94;background:var(--bg);display:flex;flex-direction:column}
+#setView[hidden]{display:none}
+#setView .runs-bar{max-width:820px;margin:0 auto;width:100%;box-sizing:border-box}
+
+/* выбор папки внутри приложения */
+#dirModal{position:fixed;inset:0;z-index:96;background:rgba(6,7,11,.72);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center}
+#dirModal[hidden]{display:none}
+.dir-box{width:min(660px,92vw);max-height:78vh;display:flex;flex-direction:column;
+  background:var(--bg2);border:1px solid var(--line2);border-radius:14px;overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.dir-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line2)}
+.dir-path{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line2);
+  font-size:12.5px;color:var(--muted);min-width:0}
+.dir-path span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.dir-drives{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 4px}
+.dir-list{flex:1;min-height:220px;overflow:auto;padding:6px 8px 12px}
+.dir-row{padding:8px 10px;border-radius:8px;font-size:13px;color:var(--text);cursor:pointer;
+  display:flex;align-items:center;gap:8px}
+.dir-row:hover{background:rgba(var(--acc-rgb),.14)}
+.dir-empty{padding:16px;color:var(--muted);font-size:12.5px;text-align:center}
+.dir-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--line2)}
+/* ---------- голосовой ввод ---------- */
+.promptWrap{position:relative;display:block;min-width:0}
+.promptWrap textarea{padding-right:34px}
+.clearBtn{position:absolute;right:7px;top:7px;width:20px;height:20px;border-radius:50%;
+  border:1px solid rgba(255,93,108,.45);background:rgba(255,93,108,.12);color:#ff8a94;
+  font-size:13px;line-height:1;padding:0;cursor:pointer;display:grid;place-items:center;
+  transition:.15s;z-index:1}
+.clearBtn:hover{background:rgba(255,93,108,.28);border-color:var(--bad);color:#fff}
+.micCol{display:flex;min-width:0}
+.micBtn{width:40px;min-height:56px;height:100%;border-radius:12px;border:1px solid var(--line2);
+  background:var(--card2);color:var(--muted);cursor:pointer;display:grid;place-items:center;
+  padding:0;transition:.15s}
+.micBtn:hover{border-color:var(--acc);color:#fff}
+.micBtn.rec{background:rgba(var(--bad-rgb),.18);border-color:rgba(var(--bad-rgb),.65);color:var(--bad);
+  animation:micPulse 1.2s ease-in-out infinite}
+.micBtn.busy{opacity:.7;cursor:default}
+.micBtn.wait{border-color:var(--acc);color:var(--acc-text);animation:micPulse 1s ease-in-out infinite}
+.chip.aspect{display:inline-flex;align-items:center;gap:7px;padding:9px 12px}
+.chip.aspect .shape{display:block;height:13px;width:calc(13px * var(--w) / var(--h));
+  border:1.6px solid currentColor;border-radius:2px;opacity:.9}
+.chip.aspect.on .shape{opacity:1}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,93,108,.2)}
+  50%{box-shadow:0 0 0 7px rgba(255,93,108,0)}}
+
+.dir-ok{background:rgba(var(--ok-rgb),.16);border-color:rgba(var(--ok-rgb),.45);color:var(--ok)}
+
+/* установка и модели */
+.setup-line{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.setup-chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;
+  border:1px solid rgba(255,255,255,.12);color:var(--muted);background:rgba(255,255,255,.04);white-space:nowrap}
+.setup-chip.ok{border-color:rgba(var(--ok-rgb),.45);color:var(--ok);background:rgba(var(--ok-rgb),.12)}
+.setup-chip.warn{border-color:rgba(var(--warn-rgb),.45);color:var(--warn);background:rgba(var(--warn-rgb),.12)}
+.setup-chip.bad{border-color:rgba(var(--bad-rgb),.45);color:var(--bad);background:rgba(var(--bad-rgb),.12)}
+.setup-path{font-size:12px;color:var(--muted);word-break:break-all}
+.setup-note{margin-top:10px;font-size:12.5px;color:var(--muted);white-space:pre-wrap}
+.setup-total{font-size:12.5px;color:var(--muted);margin-top:8px}
+.setup-total b{color:var(--text)}
+
+.mg{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;margin-top:12px;background:var(--bg2)}
+.mg.off{opacity:.55}
+.mg-head{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.mg-head b{font-size:13.5px}
+.mg-what{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.mg-right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.mg-files{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.mg-file{display:flex;gap:8px;font-size:12px;color:var(--muted);align-items:baseline}
+.mg-file .nm{color:var(--text);word-break:break-all}
+.mg-file .st{margin-left:auto;white-space:nowrap}
+.mg-file .st.ok{color:var(--ok)}
+.mg-file .st.no{color:var(--bad);font-weight:600}
+.mg-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.mg-progress{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.mg-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.mg-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc2),var(--acc));
+  border-radius:99px;transition:width .3s}
+.mg-progress span{font-size:11.5px;color:var(--muted)}
+.set-body{flex:1;min-height:0;overflow:auto;padding:18px;width:100%;max-width:820px;margin:0 auto;
+  display:flex;flex-direction:column;gap:22px}
+.set-body > .card{margin:0}
+.set-sublabel{margin-top:16px;font-size:12.5px;font-weight:600;color:var(--text)}
+.themes{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.theme-btn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;
+  border:1px solid var(--line2);background:var(--card2);color:var(--text);font:inherit;
+  font-size:12.5px;cursor:pointer;transition:.15s}
+.theme-btn:hover{border-color:var(--acc)}
+.theme-btn.on{border-color:var(--acc);box-shadow:0 0 0 2px rgba(var(--acc-rgb),.22)}
+.theme-dots{display:flex;gap:3px}
+.theme-dots i{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
+.set-row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.set-row input{flex:1;min-width:0;font-size:13px}
+.set-row .chip{flex:none}
+</style>
+</head>
+<body class="tab-img">
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand"><i>◆</i>SpriteAnim Studio <span class="tag">v0.2</span></div>
+    <div class="pill" id="comfyPill"><span class="dot" id="comfyDot"></span><span id="comfyTxt">ComfyUI: проверяю…</span></div>
+    <div class="queueWrap">
+      <button class="pill" id="queuePill" type="button" hidden>очередь: <b id="queueN">0</b></button>
+      <div id="queuePop" hidden></div>
+    </div>
+    <button class="pill hist" id="runsBtn" type="button" title="История прогонов">🕘 История</button>
+    <div class="spacer"></div>
+    <div class="langs" id="appLangs" role="group" aria-label="Language / Язык">
+      <button class="on" id="langRu" type="button" title="Русский">RU</button>
+      <button id="langEn" type="button" title="English">EN</button>
+    </div>
+    <button class="settings-btn" id="setBtn" type="button" title="Настройки">⚙ Настройки</button>
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-tab="img" type="button">Изображения</button>
+      <button class="tab" data-tab="bg" type="button">Убрать фон</button>
+      <button class="tab" data-tab="gen" type="button">Анимация</button>
+      <button class="tab" data-tab="sheet" type="button">Спрайт-лист</button>
+    </div>
+  </div>
+
+  <div id="imgPage">
+    <div class="imgLayout">
+      <div class="imgCol">
+        <div class="card">
+          <h2><span class="n">1</span>Модель</h2>
+          <div class="seg" id="imgModels"></div>
+          <div class="hint" id="imgModelHint"></div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">2</span>Исходник</h2>
+          <div class="inline">
+            <button class="chip" id="imgStyleBtn" type="button">📎 Загрузить исходник</button>
+            <span class="hint" id="imgStyleName" style="margin:0" hidden></span>
+          </div>
+          <input type="file" id="imgStyleFile" accept="image/*" multiple hidden>
+
+          <div id="imgStylePreview" hidden>
+            <div class="ref-list" id="imgRefList"></div>
+          </div>
+
+          <div class="row" style="margin-top:14px">
+            <div class="row-l"><span>Что делать с исходником</span></div>
+            <div class="seg two" id="imgRefMode">
+              <button type="button" data-m="edit">Изменить это<small>правка картинки</small></button>
+              <button type="button" data-m="new">Новое по образцу<small>другой персонаж</small></button>
+            </div>
+            <div class="hint" id="imgRefHint"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="imgChat">
+        <div class="imgFeed" id="imgFeed">
+          <div class="imgEmpty" id="imgEmpty">
+            Здесь появятся картинки: промпт и результат друг под другом.<br>
+            Историю можно листать.
+          </div>
+        </div>
+      
+    <div class="imgPromptWrap">
+      <div class="prog" id="imgProg">
+        <img class="pprev" id="imgPreview" alt="" hidden>
+        <div class="bar" id="imgBar"><i></i></div>
+        <div class="st"><span id="imgStage"></span><span id="imgTime"></span></div>
+      </div>
+          <div class="card imgPromptCard">
+            <div class="imgComposer">
+              <div class="imgComposerField">
+                <div class="promptWrap">
+                  <textarea id="imgPrompt" spellcheck="false" rows="3"
+                    placeholder="Опишите картинку: кто, что делает, где, свет и стиль"></textarea>
+                  <button class="clearBtn" id="imgClear" type="button" title="Очистить промпт">×</button>
+                </div>
+              </div>
+              <div class="micCol">
+                <button class="micBtn" id="imgMic" type="button" title="Голосовой ввод" hidden><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg></button>
+              </div>
+              <div class="imgComposerSide">
+                <button class="side-btn" id="imgAgent" type="button">✨ Промпт агентом</button>
+                <button class="side-btn primary" id="imgGo" type="button">Сгенерировать</button>
+                <button class="side-btn danger" id="imgStop" type="button" hidden>■ Стоп</button>
+              </div>
+            </div>
+
+            <div class="note" id="imgWarn" hidden style="margin-top:10px"></div>
+            <details id="imgDescBox" hidden style="margin-top:10px">
+              <summary style="font-size:12.5px">Что агент увидел в исходной картинке</summary>
+              <pre id="imgDescText" style="white-space:pre-wrap;font-size:12px;line-height:1.45;color:var(--muted);margin:8px 0 0;max-height:220px;overflow:auto"></pre>
+            </details>
+          </div>
+        </div>
+</div>
+
+      <div class="imgCol">
+        <div class="card">
+          <h2><span class="n">3</span>Параметры</h2>
+          <div class="row">
+            <div class="row-l"><span>Формат</span><b id="imgSizeV"></b></div>
+            <div class="chips" id="imgAspect"></div>
+          </div>
+          <div class="row">
+            <div class="row-l"><span>Размер</span><b id="imgBaseV"></b></div>
+            <div class="seg three" id="imgBase">
+              <button data-v="768">768<small>быстрее</small></button>
+              <button data-v="1024">1024<small>стандарт</small></button>
+              <button data-v="1536">1536<small>крупнее</small></button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-l"><span>Шаги</span><b id="imgStepsV"></b></div>
+            <div class="seg three" id="imgSteps">
+              <button data-v="16">16<small>черновик</small></button>
+              <button data-v="25">25<small>обычно</small></button>
+              <button data-v="40">40<small>чище</small></button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-l"><span>Seed</span><b id="imgSeedV"></b></div>
+            <div class="seg two" id="imgSeedMode">
+              <button data-f="0">Случайный<small>каждый раз</small></button>
+              <button data-f="1">Фиксированный<small>повторить</small></button>
+            </div>
+            <div class="inline" id="imgSeedRow" style="margin-top:8px" hidden>
+              <input type="text" id="imgSeedIn" inputmode="numeric" placeholder="например 20261023" style="max-width:100%">
+              <button class="chip" id="imgSeedNew">🎲 Новый</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bgPage" hidden>
+    <div class="imgLayout">
+      <div class="imgCol">
+        <div class="card">
+          <h2><span class="n">1</span>Картинка с фоном</h2>
+          <div class="drop" id="bgDrop">
+            <div class="ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="9" r="1.6"/><path d="m4 17 5-5 4 4 3-3 4 4"/></svg>
+              <b>Перетащите картинку</b>
+              или нажмите, чтобы выбрать файл<br>PNG / JPG, любой фон
+            </div>
+            <button class="x" id="bgDropX" hidden title="Убрать">✕</button>
+          </div>
+          <div class="hint">Модель оставляет объект, а фон делает прозрачным (Qwen Image 2.1).</div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">2</span>Размер результата</h2>
+          <div class="row">
+            <div class="row-l"><span>Размер</span><b id="bgResV"></b></div>
+            <div class="seg four" id="bgRes">
+              <button data-v="0">Исходный<small>как загрузили</small></button>
+              <button data-v="768">768<small>меньше</small></button>
+              <button data-v="1024">1024<small>≈1 МП</small></button>
+              <button data-v="1536">1536<small>крупнее</small></button>
+            </div>
+            <div class="hint">Пропорции — из загруженной картинки; «Исходный» не меняет размер.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="imgChat">
+        <div class="imgFeed" id="bgFeed">
+          <div class="imgEmpty" id="bgEmpty">
+            Здесь появится результат: картинка с прозрачным фоном.<br>
+            Инструкция — в поле ниже, его можно не трогать.
+          </div>
+        </div>
+      
+    <div class="imgPromptWrap">
+      <div class="prog" id="bgProg">
+        <img class="pprev" id="bgPreview" alt="" hidden>
+        <div class="bar" id="bgBar"><i></i></div>
+        <div class="st"><span id="bgStage"></span><span id="bgTime"></span></div>
+      </div>
+          <div class="card imgPromptCard">
+            <div class="imgComposer">
+              <div class="imgComposerField">
+                <div class="promptWrap">
+                  <textarea id="bgPrompt" spellcheck="false" rows="2">Remove the background, and output a PNG image</textarea>
+                  <button class="clearBtn" id="bgClear" type="button" title="Очистить промпт">×</button>
+                </div>
+              </div>
+              <div class="micCol">
+                <button class="micBtn" id="bgMic" type="button" title="Голосовой ввод" hidden><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg></button>
+              </div>
+              <div class="imgComposerSide">
+                <button class="side-btn" id="bgPromptReset" type="button">↺ Стандартная</button>
+                <button class="side-btn primary" id="bgGo" type="button">Убрать фон</button>
+                <button class="side-btn danger" id="bgStop" type="button" hidden>■ Стоп</button>
+              </div>
+            </div>
+            <div class="note" id="bgWarn" hidden style="margin-top:10px"></div>
+          </div>
+        </div>
+</div>
+
+      <div class="imgCol">
+        <div class="card">
+          <h2><span class="n">3</span>Результат</h2>
+          <div class="bgResActions">
+            <a class="side-btn" id="bgDl" href="#" download aria-disabled="true">⬇ PNG с прозрачностью</a>
+            <button class="side-btn" id="bgToGen" type="button" disabled>→ В анимацию</button>
+          </div>
+          <div class="hint">Прозрачность настоящая (альфа-канал), без «белого фона»: такой PNG сразу годится и для генерации, и для редактора.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="genPage" hidden>
+    <div class="imgLayout">
+      <div class="imgCol">
+        <div class="card">
+          <h2><span class="n">1</span>Персонаж</h2>
+          <div class="drop" id="drop">
+            <div class="ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="9" r="1.6"/><path d="m4 17 5-5 4 4 3-3 4 4"/></svg>
+              <b>Перетащите картинку персонажа</b>
+              или нажмите, чтобы выбрать файл<br>PNG / JPG, вид сбоку, всё тело в кадре
+            </div>
+            <button class="x" id="dropX" hidden title="Убрать">✕</button>
+          </div>
+          <div class="hint">Прозрачный фон не нужен: генерация идёт на ровной пурпурной подложке.</div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">2</span>Что происходит</h2>
+          <div class="row">
+            <div class="row-l"><span>Название движения</span><span class="hint" style="margin:0">для папки и файлов</span></div>
+            <input type="text" id="clipName" placeholder="death, run, jump" maxlength="40" spellcheck="false">
+            <div class="hint" id="nameHint">Можно по-русски — в имени папки станет латиницей.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="imgChat">
+        <div class="imgFeed" id="genFeed">
+          <div class="imgEmpty" id="genEmpty">
+            Здесь появится результат: видео, кадры с прозрачностью и спрайт-лист.<br>
+            Промпт движения — в поле ниже.
+          </div>
+
+          <div class="card res" id="res">
+            <h2><span class="n">4</span>Результат</h2>
+            <div class="vwrap">
+              <video id="video" controls loop muted playsinline hidden></video>
+              <button class="vzoom" id="videoZoom" type="button" title="Увеличить" hidden>⤢</button>
+            </div>
+            <div class="strip" id="strip"></div>
+            <div class="meta" id="resMeta"></div>
+            <div class="acts">
+              <a id="dlZip" href="#" download>⬇ Кадры PNG (zip)</a>
+              <a id="dlVid" href="#" download hidden>⬇ Видео mp4</a>
+              <button id="toEditor" type="button">→ Собрать в редакторе</button>
+              <button id="again">↻ Ещё вариант</button>
+            </div>
+
+            <div class="row" style="margin-top:16px">
+              <div class="row-l"><span>Спрайт-лист</span><b id="sheetInfo">—</b></div>
+              <div class="inline">
+                <label class="hint" style="margin:0">колонок
+                  <select id="sheetCols" style="width:auto;padding:6px 8px">
+                    <option value="0">авто</option>
+                    <option>4</option><option>6</option><option>8</option><option>10</option><option>12</option>
+                  </select>
+                </label>
+                <label class="hint" style="margin:0">масштаб
+                  <select id="sheetScale" style="width:auto;padding:6px 8px">
+                    <option value="100">100%</option>
+                    <option value="75">75%</option>
+                    <option value="50">50%</option>
+                    <option value="25">25%</option>
+                  </select>
+                </label>
+                <button class="chip" id="sheetBuild" type="button">Собрать</button>
+                <a class="chip" id="sheetDl" download hidden>⬇ PNG</a>
+                <a class="chip" id="sheetJson" download hidden>⬇ JSON</a>
+              </div>
+              <canvas id="sheetCv" hidden></canvas>
+              <div class="hint" id="sheetHint">Лист собирается в браузере из кадров с прозрачностью — по одному кадру в ячейке.</div>
+            </div>
+
+            <div class="note" style="margin-top:12px">Кадры в zip — с прозрачностью (выход узла RGBA). В ComfyUI они лежат в <b>output\SpriteAnim\&lt;название&gt;\&lt;прогон&gt;</b>.</div>
+          </div>
+        </div>
+      
+    <div class="imgPromptWrap">
+      <div class="prog" id="prog">
+        <img class="pprev" id="genPreview" alt="" hidden>
+        <div class="bar" id="bar"><i></i></div>
+        <div class="st"><span id="pStage"></span><span id="pTime"></span></div>
+      </div>
+          <div class="card imgPromptCard">
+            <div class="imgComposer">
+              <div class="imgComposerField">
+                <div class="promptWrap">
+                  <textarea id="prompt" spellcheck="false" rows="3"
+                    placeholder="Что делает персонаж: движение, ракурс, темп. Можно по-русски."></textarea>
+                  <button class="clearBtn" id="genClear" type="button" title="Очистить промпт">×</button>
+                </div>
+              </div>
+              <div class="micCol">
+                <button class="micBtn" id="genMic" type="button" title="Голосовой ввод" hidden><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg></button>
+              </div>
+              <div class="imgComposerSide">
+                <button class="side-btn" id="agentGen" type="button">✨ Промпт агентом</button>
+                <button class="side-btn primary" id="go" type="button">Сгенерировать</button>
+                <button class="side-btn danger" id="stop" type="button" hidden>■ Стоп</button>
+              </div>
+            </div>
+
+            <div class="note" id="tailNote" style="margin-top:10px">
+              <details style="background:transparent;border:0;padding:0">
+                <summary style="font-size:12.5px"><span id="tailInfo">проверяю промпт…</span></summary>
+                <pre id="finalPrompt" style="white-space:pre-wrap;font-size:12px;line-height:1.45;color:var(--muted);margin:8px 0 0;max-height:220px;overflow:auto"></pre>
+                <div class="inline" style="margin-top:8px">
+                  <button class="chip" id="copyFinal" type="button">⧉ Скопировать итоговый</button>
+                  <span class="hint" style="margin:0">Это ровно тот текст, который уйдёт в модель.</span>
+                </div>
+              </details>
+            </div>
+
+            </div>
+          </div>
+        </div>
+
+      <div class="imgCol">
+        <div class="card">
+          <h2><span class="n">3</span>Параметры</h2>
+
+          <div class="row">
+            <div class="row-l"><span>Как повторяется</span><b id="repeatV"></b></div>
+            <div class="seg two" id="repeat"></div>
+            <div class="hint" id="repeatHint">От этого зависит, как обрезать готовый ролик: один бесшовный цикл или одно действие от стойки до стойки.</div>
+          </div>
+
+          <div class="row">
+            <div class="row-l"><span>Размер кадра</span><b id="sizeV"></b></div>
+            <div class="chips" id="sizes"></div>
+            <div class="inline" style="margin-top:8px">
+              <span class="hint" style="margin:0">свой:</span>
+              <input type="number" id="cw" style="width:88px" placeholder="ширина">
+              <span class="sep">×</span>
+              <input type="number" id="ch" style="width:88px" placeholder="высота">
+              <button class="chip" id="cwApply">Применить</button>
+            </div>
+            <div class="hint">Округляется до кратного 32. Больше 768 — дольше и рискованнее по видеопамяти.</div>
+          </div>
+
+          <div class="row">
+            <div class="row-l"><span>Длительность</span><b id="durV"></b></div>
+            <input type="range" id="dur" min="0" max="12" step="1" value="6">
+            <div class="ticks"><span>0,9 с</span><span>2,3</span><span>4,0</span><span>5,2</span><span>9,4 с</span></div>
+            <div class="hint">Модель считает кадрами: 24 fps, длина = 17k + 5. Ползунок стоит только на допустимых значениях — 124 кадра ≈ 5,2 с (по умолчанию из воркфлоу).</div>
+          </div>
+
+          <div class="row">
+            <div class="row-l"><span>Цвет подложки</span><b id="keyColorV"></b></div>
+            <div class="chips" id="keyColors">
+              <button class="chip kc" type="button" data-c="magenta"><i style="background:#ff00ff"></i>Пурпурный</button>
+              <button class="chip kc" type="button" data-c="green"><i style="background:#00ff00"></i>Зелёный</button>
+              <button class="chip kc" type="button" data-c="blue"><i style="background:#0000ff"></i>Синий</button>
+            </div>
+            <input type="hidden" id="keyColor" value="magenta">
+            <div class="hint">Это цвет фона в самом видео: под него настраивается вырезание, и он же подставляется в промпт. После рендера фон становится прозрачным.</div>
+          </div>
+
+          <div class="row">
+            <div class="row-l"><span>Шаги</span><b id="stepsV"></b></div>
+            <div class="seg three" id="steps">
+              <button data-v="12">12<small>черновик</small></button>
+              <button data-v="20">20<small>стандарт</small></button>
+              <button data-v="28">28<small>чище</small></button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="row-l"><span>Seed</span><b id="seedV"></b></div>
+            <div class="seg two" id="seedMode">
+              <button data-f="0">Случайный<small>каждый раз новый</small></button>
+              <button data-f="1">Фиксированный<small>повторить удачный</small></button>
+            </div>
+            <div class="inline" id="seedRow" style="margin-top:8px" hidden>
+              <input type="text" id="seedIn" inputmode="numeric" placeholder="например 20261023" style="max-width:220px">
+              <button class="chip" id="seedNew">🎲 Новый</button>
+            </div>
+          </div>
+
+          <details id="adv">
+            <summary>Дополнительно: ключ, кромка, обрезка цикла</summary>
+            <div class="g2">
+              <label>Обрезка кадров (0 = все)
+                <input type="number" id="maxFrames" value="0" min="0" max="512">
+              </label>
+              <label>clip_black (убрать дымку)
+                <input type="number" id="clipBlack" value="0.04" step="0.01" min="0" max="0.4">
+              </label>
+              <label>clip_white (плотность)
+                <input type="number" id="clipWhite" value="0.97" step="0.01" min="0.5" max="1">
+              </label>
+              <label>choke (сжать маску, px)
+                <input type="number" id="choke" value="0" step="0.1" min="0" max="3">
+              </label>
+              <label>edge_bleed (подложить край, px)
+                <input type="number" id="bleed" value="4" step="1" min="0" max="16">
+              </label>
+            </div>
+            <div class="inline" style="margin-top:10px">
+              <label class="inline" style="gap:7px;font-size:12.5px;color:var(--muted)">
+                <input type="checkbox" id="dedupe" checked style="width:auto"> убирать дубли («на двойках»)
+              </label>
+            </div>
+            <div class="hint">Трогайте только если остаётся кайма или фон не убирается полностью.</div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="runsView" hidden>
+  <div class="runs-bar">
+    <b>История прогонов</b>
+    <div class="runs-filter" id="runsFilter">
+      <button class="chip on" data-f="all" type="button">Все</button>
+      <button class="chip" data-f="img" type="button">Изображения</button>
+      <button class="chip" data-f="anim" type="button">Анимация</button>
+    </div>
+    <span class="spacer"></span>
+    <button class="chip" id="runsRefresh" type="button">↻ Обновить</button>
+    <button class="chip" id="runsClose" type="button">✕ Закрыть</button>
+  </div>
+  <div class="runs-list" id="runsList"></div>
+</div>
+
+<div id="setView" hidden>
+  <div class="runs-bar">
+    <b>Настройки</b>
+    <span class="spacer"></span>
+    <button class="chip" id="setClose" type="button">✕ Закрыть</button>
+  </div>
+  <div class="set-body">
+    <div class="card">
+      <h2><span class="n">1</span>Куда сохранять</h2>
+      <div class="hint">Готовые картинки, фон и анимации копируются сюда, по подпапкам
+        <b>images</b>, <b>background</b>, <b>animation</b>.</div>
+      <div class="set-row">
+        <input type="text" id="setInput" spellcheck="false" placeholder="E:\SpriteAnim\output">
+        <button class="chip" id="setDefault" type="button">↺ По умолчанию</button>
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <button class="chip" id="setPick" type="button">📁 Выбрать папку…</button>
+        <button class="chip" id="setOpen" type="button">↗ Открыть папку</button>
+      </div>
+      <div class="hint">Путь можно менять прямо в строке: вставьте и нажмите Enter. Папка и подпапки создадутся сами.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">2</span>Тема</h2>
+      <div class="hint">Оформление приложения и встроенного редактора спрайт-листа.</div>
+      <div class="themes" id="themes"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">3</span>ComfyUI</h2>
+      <div class="hint">Приложение работает поверх ComfyUI — он считает картинки, фон и анимацию.
+        Если ComfyUI ещё не установлен, скачайте его с официального сайта или поставьте
+        готовую сборку автоматически (≈ 2 ГБ, распаковка в папку программы).</div>
+      <div class="setup-line">
+        <span class="setup-chip" id="comfyState">проверяю…</span>
+        <span class="setup-path" id="comfyPath"></span>
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <a class="chip" id="comfySite" href="https://www.comfy.org/download" target="_blank" rel="noopener">↗ Официальный сайт</a>
+        <button class="chip" id="comfyInstall" type="button">⤓ Скачать и установить</button>
+        <button class="chip" id="comfyRun" type="button" hidden>▶ Запустить ComfyUI</button>
+        <button class="chip" id="setupRefresh" type="button">↻ Проверить снова</button>
+      </div>
+      <div class="setup-note" id="comfyNote" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">4</span>Модели</h2>
+      <div class="hint">При запуске приложение проверяет, что нужные модели лежат на месте.
+        Ниже — что скачивается и сколько места занимает. Файлы кладутся в папку моделей,
+        после скачивания перезапустите ComfyUI, чтобы он их увидел.</div>
+
+      <div class="set-sublabel">Папка моделей</div>
+      <div class="set-row">
+        <input type="text" id="modelsInput" spellcheck="false" placeholder="папка моделей ComfyUI">
+        <button class="chip" id="modelsPick" type="button">📁 Выбрать</button>
+        <button class="chip" id="modelsDefault" type="button" title="По умолчанию — папка моделей ComfyUI">↺</button>
+      </div>
+      <div class="hint">Где искать модели и куда их скачивать. Если выбрали свою папку —
+        ComfyUI должен её знать (добавьте путь в его настройки папок).</div>
+
+      <div class="set-sublabel">Папка агента</div>
+      <div class="set-row">
+        <input type="text" id="agentInput" spellcheck="false" placeholder="папка агента">
+        <button class="chip" id="agentPick" type="button">📁 Выбрать</button>
+        <button class="chip" id="agentDefault" type="button" title="По умолчанию">↺</button>
+      </div>
+      <div class="hint">Здесь лежат модель Gemma, её визуальный проектор и llama.cpp.</div>
+
+      <div class="setup-total" id="setupTotal"></div>
+      <div id="setupGroups"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<div id="dirModal" hidden>
+  <div class="dir-box">
+    <div class="dir-head">
+      <b id="dirTitle">Куда сохранять</b>
+      <span class="spacer"></span>
+      <button class="chip" id="dirClose" type="button">✕</button>
+    </div>
+    <div class="dir-path">
+      <button class="chip" id="dirUp" type="button" title="На уровень выше">↑</button>
+      <span id="dirPath">Этот компьютер</span>
+    </div>
+    <div class="dir-drives" id="dirDrives"></div>
+    <div class="dir-list" id="dirList"></div>
+    <div class="dir-foot">
+      <button class="chip dir-ok" id="dirOk" type="button">Выбрать эту папку</button>
+      <button class="chip" id="dirCancel" type="button">Отмена</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="file" accept="image/*" hidden>
+<input type="file" id="bgFile" accept="image/*" hidden>
+
+<div id="sheetView">
+  <iframe id="sheetFrame" title="Sprite Sheet Maker" referrerpolicy="no-referrer"></iframe>
+  <div class="sheet-msg" id="sheetMsg" hidden></div>
+</div>
+
+<div id="zoom" hidden>
+  <div class="zbar">
+    <button id="zoomOut" type="button" title="Уменьшить (−)">−</button>
+    <span class="zinfo" id="zoomLevel">вписано</span>
+    <button id="zoomIn" type="button" title="Увеличить (+)">+</button>
+    <button id="zoomActual" type="button" title="Масштаб 1:1">1:1</button>
+    <button id="zoomFit" type="button" title="Вписать в экран (0)">Вписать</button>
+    <span class="zinfo" id="zoomCount"></span>
+  </div>
+  <button id="zoomClose" type="button" title="Закрыть (Esc)">✕</button>
+  <div class="zstage" id="zoomStage">
+    <img id="zoomImg" alt="">
+    <video id="zoomVideo" controls loop muted playsinline hidden></video>
+  </div>
+  <button class="zn prev" id="zoomPrev" type="button" title="Предыдущий">‹</button>
+  <button class="zn next" id="zoomNext" type="button" title="Следующий">›</button>
+</div>
+
+<script src="/static/i18n.js"></script>
+<script>const $ = s => document.querySelector(s);
+const S = {
+  modes: [], byRepeat: {}, repeat: '', img: null, frames: 124, steps: 20,
+  seedFixed: false, seed: '', size: null, custom: null, job: null, tick: null,
+  prompts: {}, names: {}, framesList: [], voiceReady: false,
+};
+const FRAMES = [22, 39, 56, 73, 90, 107, 124, 141, 158, 175, 192, 209, 226];
+const framesFor = sec => {
+  const f = Math.max(22, Math.round(sec * 24));
+  return 17 * Math.max(1, Math.round((f - 5) / 17)) + 5;
+};
+const nearestIdx = f => {
+  let best = 0;
+  FRAMES.forEach((v, i) => { if (Math.abs(v - f) < Math.abs(FRAMES[best] - f)) best = i; });
+  return best;
+};
+const plural = (n, forms) => {
+  const a = Math.abs(n) % 100, b = a % 10;
+  return forms[a > 10 && a < 20 ? 2 : b === 1 ? 0 : b >= 2 && b <= 4 ? 1 : 2];
+};
+const frameLabel = n => window.AppI18N.lang === 'en'
+  ? `${n} ${n === 1 ? 'frame' : 'frames'}`
+  : `${n} ${plural(n, ['кадр', 'кадра', 'кадров'])}`;
+const fmtT = ms => { const s = Math.round(ms / 1000); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function toast(text, kind = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = text;
+  $('#toasts').append(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = '.3s'; setTimeout(() => el.remove(), 320); }, kind === 'bad' ? 7000 : 4200);
+}
+
+/* ---------- прогресс: шаги/превью из ComfyUI, полоска над композером ---------- */
+const PROG = {
+  img: { prog: '#imgProg', bar: '#imgBar', stage: '#imgStage', time: '#imgTime', prev: '#imgPreview' },
+  bg: { prog: '#bgProg', bar: '#bgBar', stage: '#bgStage', time: '#bgTime', prev: '#bgPreview' },
+  gen: { prog: '#prog', bar: '#bar', stage: '#pStage', time: '#pTime', prev: '#genPreview' },
+};
+const P = { es: null, ui: null, id: '', hideT: null };
+
+function progStart(tab, id, label) {
+  progStop();
+  const ui = PROG[tab];
+  if (!ui) return;
+  P.ui = ui;
+  P.id = id || '';
+  $(ui.prog).classList.add('on', 'quiet');
+  const prev = $(ui.prev);
+  prev.hidden = true;
+  prev.removeAttribute('src');
+  $(ui.bar).querySelector('i').style.width = '';
+  $(ui.stage).textContent = label || 'в очереди';
+  $(ui.time).textContent = '';
+  if (!id) return;
+  try {
+    const es = new EventSource('/api/progress/stream?id=' + encodeURIComponent(id));
+    P.es = es;
+    es.onmessage = ev => {
+      let st;
+      try { st = JSON.parse(ev.data); } catch { return; }
+      if (!P.ui || P.ui !== ui) return;
+      if (st.state === 'unavailable' || st.state === 'closed') return;
+      if (st.state === 'error') {
+        $(ui.stage).textContent = 'Ошибка: ' + (st.error || 'ComfyUI');
+        return;
+      }
+      if (st.total) {
+        $(ui.prog).classList.remove('quiet');
+        $(ui.bar).querySelector('i').style.width =
+          Math.round(100 * st.step / Math.max(1, st.total)) + '%';
+        $(ui.stage).textContent = (st.label || 'рисую') + ` · ${st.step}/${st.total}`;
+      } else if (st.label) {
+        $(ui.stage).textContent = st.label;
+      }
+      if (st.preview) {
+        const im = $(ui.prev);
+        if (im.dataset.src !== st.preview) {
+          im.dataset.src = st.preview;
+          const pre = new Image();
+          pre.onload = () => { im.src = st.preview; im.hidden = false; };
+          pre.src = st.preview;
+        }
+      }
+      if (st.state === 'done') progDone();
+    };
+    es.onerror = () => { /* остаётся обычный опрос */ };
+  } catch { /* EventSource недоступен — не страшно */ }
+}
+
+function progDone(delay = 2500) {
+  if (P.es) { P.es.close(); P.es = null; }
+  const ui = P.ui;
+  if (!ui) return;
+  if (!$(ui.prog).classList.contains('quiet')) {
+    $(ui.bar).querySelector('i').style.width = '100%';
+  }
+  $(ui.stage).textContent = 'Готово';
+  clearTimeout(P.hideT);
+  P.hideT = setTimeout(() => {
+    $(ui.prog).classList.remove('on', 'quiet');
+    $(ui.prev).hidden = true;
+    P.ui = null;
+  }, delay);
+}
+
+function progStop() {
+  if (P.es) { P.es.close(); P.es = null; }
+  clearTimeout(P.hideT);
+  if (P.ui) {
+    $(P.ui.prog).classList.remove('on', 'quiet');
+    $(P.ui.prev).hidden = true;
+    P.ui = null;
+  }
+}
+
+function progAgent(tab, text) {
+  if (!P.ui || P.ui !== PROG[tab]) progStart(tab, '', text);
+  else if (text) $(PROG[tab].stage).textContent = text;
+}
+
+/* ---------- история прогонов ---------- */
+const RUN_KIND = { img: 'Картинка', bg: 'Убрать фон', anim: 'Анимация' };
+let runsCache = [];
+
+function recordRun(rec) {
+  fetch('/api/runs', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rec),
+  }).catch(() => { /* история не должна ломать генерацию */ });
+}
+
+function runMeta(r) {
+  const p = [];
+  if (r.model) p.push(r.model);
+  if (r.width && r.height) p.push(`${r.width}×${r.height}`);
+  if (r.steps) p.push(`${r.steps} шагов`);
+  if (r.seed) p.push(`seed ${r.seed}`);
+  if (r.kind === 'anim' && r.frames) p.push(`${r.frames} кадров`);
+  if (r.kind === 'anim' && r.mode) p.push(r.mode === 'cycle' ? 'цикл' : 'один раз');
+  if (r.kind === 'bg' && r.resolution !== undefined) {
+    p.push(r.resolution ? `${r.resolution} px` : 'исходный размер');
+  }
+  if (r.ref) p.push(r.refs > 1 ? `по исходнику (${r.refs})` : 'по исходнику');
+  return p.join(' · ');
+}
+
+let runsFilter = 'all';
+
+function runVisible(r) {
+  if (runsFilter === 'img') return r.kind === 'img' || r.kind === 'bg';
+  if (runsFilter === 'anim') return r.kind === 'anim';
+  return true;
+}
+
+async function refreshRuns() {
+  const box = $('#runsList');
+  box.innerHTML = '<div class="runs-empty">загружаю…</div>';
+  try {
+    runsCache = (await (await fetch('/api/runs?limit=80')).json()).runs || [];
+  } catch {
+    runsCache = [];
+  }
+  renderRuns();
+}
+
+function renderRuns() {
+  const box = $('#runsList');
+  const list = runsCache.map((r, i) => ({ r, i })).filter(({ r }) => runVisible(r));
+  if (!list.length) {
+    box.innerHTML = '<div class="runs-empty">' + (runsFilter === 'anim'
+      ? 'Анимаций пока нет.'
+      : runsFilter === 'img'
+        ? 'Изображений пока нет.'
+        : 'Пока пусто. Сгенерируйте что-нибудь —<br>прогоны появятся здесь с параметрами и кнопкой «Повторить».')
+      + '</div>';
+    return;
+  }
+  box.innerHTML = list.map(({ r, i }) => {
+    const when = new Date((r.ts || 0) * 1000);
+    const date = when.toLocaleString(window.AppI18N.lang === 'en' ? 'en-US' : 'ru-RU',
+      { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const isVid = r.outKind === 'video';
+    const th = r.thumb || (isVid ? null : r.out);
+    const thumb = th
+      ? `<div class="run-thumb" data-thumb="${i}" title="Открыть">
+           <img src="${fileUrl(th)}" alt="" loading="lazy">
+           ${isVid ? '<span class="play">▶</span>' : ''}
+         </div>`
+      : `<div class="run-thumb"${r.out ? ` data-thumb="${i}"` : ''}>${isVid ? '<span class="play">▶</span>' : ''}</div>`;
+    return `<div class="run">
+      ${thumb}
+      <div class="run-body">
+        <div class="run-top"><span class="run-kind">${esc(RUN_KIND[r.kind] || r.kind || '')}</span>
+          <span>${esc(date)}</span></div>
+        <div class="run-prompt">${esc(r.prompt || '')}</div>
+        <div class="run-meta">${esc(runMeta(r))}</div>
+        <div class="run-acts">
+          <button class="chip" type="button" data-rep="${i}">↻ Повторить</button>
+          ${r.out ? `<button class="chip" type="button" data-open="${i}">Открыть</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openRuns() {
+  $('#runsView').hidden = false;
+  document.body.style.overflow = 'hidden';
+  refreshRuns();
+}
+
+function closeRuns() {
+  $('#runsView').hidden = true;
+  document.body.style.overflow = '';
+}
+
+function applyRun(r) {
+  if (!r) return;
+  closeRuns();
+  if (r.kind === 'img') {
+    $('#imgPrompt').value = r.prompt || '';
+    if (r.model && ((S.image && S.image.models) || []).some(m => m.id === r.model)) I.model = r.model;
+    if (IMG_ASPECTS.some(a => a[0] === r.aspect)) I.aspect = r.aspect;
+    if ([768, 1024, 1536].includes(+r.base)) I.base = +r.base;
+    if (r.steps) I.steps = +r.steps;
+    if (r.seed) { I.seedFixed = true; I.seed = String(r.seed); }
+    I.refMode = r.ref ? 'edit' : 'new';
+    setTab('img');
+    imgGrow(); imgCount(); paintImg();
+  } else if (r.kind === 'bg') {
+    $('#bgPrompt').value = r.prompt || $('#bgPrompt').value;
+    B.res = [0, 768, 1024, 1536].includes(+r.resolution) ? +r.resolution : 1024;
+    setTab('bg');
+    paintBg();
+  } else if (r.kind === 'anim') {
+    if (r.mode && S.byRepeat[r.mode]) applyRepeat(r.mode);
+    if (r.prompt) {
+      $('#prompt').value = r.prompt;
+      colorizePrompt(); countPrompt(); checkPrompt();
+    }
+    if (r.name) $('#clipName').value = r.name;
+    if (r.width && r.height) {
+      S.size = { w: +r.width, h: +r.height };
+      S.custom = { w: +r.width, h: +r.height };
+    }
+    if (r.frames) { S.frames = +r.frames; $('#dur').value = nearestIdx(S.frames); }
+    if (r.steps) S.steps = +r.steps;
+    if (r.seed) { S.seedFixed = true; S.seed = String(r.seed); }
+    setTab('gen');
+    paintParams();
+  }
+  toast('Параметры прогона подставлены', 'ok');
+}
+
+$('#runsBtn').onclick = openRuns;
+$('#runsClose').onclick = closeRuns;
+$('#runsRefresh').onclick = refreshRuns;
+$('#runsFilter').onclick = e => {
+  const b = e.target.closest('button[data-f]');
+  if (!b) return;
+  runsFilter = b.dataset.f;
+  document.querySelectorAll('#runsFilter button')
+    .forEach(x => x.classList.toggle('on', x === b));
+  renderRuns();
+};
+$('#runsList').onclick = e => {
+  const rep = e.target.closest('[data-rep]');
+  if (rep) { applyRun(runsCache[+rep.dataset.rep]); return; }
+  const op = e.target.closest('[data-open]');
+  if (op) {
+    const r = runsCache[+op.dataset.open];
+    if (r && r.out) zoomOpen(fileUrl(r.out));
+    return;
+  }
+  const th = e.target.closest('[data-thumb]');
+  if (th) {
+    const r = runsCache[+th.dataset.thumb];
+    if (r && r.out) zoomOpen(fileUrl(r.out));
+  }
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#runsView').hidden) closeRuns();
+});
+
+/* ---------- восстановление активных заданий ---------- */
+function jobsDone(id) {
+  if (!id) return;
+  fetch('/api/jobs/done', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  }).catch(() => {});
+}
+
+function jobParamsImg(j) {
+  if (j.model && ((S.image && S.image.models) || []).some(m => m.id === j.model)) I.model = j.model;
+  if (j.prompt) $('#imgPrompt').value = j.prompt;
+  if ([768, 1024, 1536].includes(+j.base)) I.base = +j.base;
+  if (IMG_ASPECTS.some(a => a[0] === j.aspect)) I.aspect = j.aspect;
+  if (j.steps) I.steps = +j.steps;
+  if (j.seed) { I.seedFixed = true; I.seed = String(j.seed); }
+  I.refMode = j.ref_mode === 'edit' ? 'edit' : 'new';
+  I.job = { id: j.id, width: +j.width, height: +j.height, steps: +j.steps, seed: j.seed,
+            prompt: j.prompt, model: j.model, ref: !!j.ref, refs: j.refs || 0,
+            t0: performance.now() };
+  paintImg();
+}
+
+function jobParamsBg(j) {
+  if (j.prompt) $('#bgPrompt').value = j.prompt;
+  if ([0, 768, 1024, 1536].includes(+j.resolution)) B.res = +j.resolution;
+  B.job = { id: j.id, prompt: j.prompt, resolution: j.resolution, t0: performance.now() };
+  paintBg();
+}
+
+function jobParamsAnim(j) {
+  if (j.mode && S.byRepeat[j.mode]) applyRepeat(j.mode);
+  if (j.prompt) {
+    $('#prompt').value = j.prompt;
+    colorizePrompt(); countPrompt(); checkPrompt();
+  }
+  if (j.name) $('#clipName').value = j.name;
+  if (j.width && j.height) {
+    S.size = { w: +j.width, h: +j.height };
+    S.custom = { w: +j.width, h: +j.height };
+  }
+  if (j.frames) { S.frames = +j.frames; $('#dur').value = nearestIdx(S.frames); }
+  if (j.steps) S.steps = +j.steps;
+  if (j.seed) { S.seedFixed = true; S.seed = String(j.seed); }
+  S.job = { id: j.id, width: +j.width, height: +j.height, length: +j.frames,
+            seed: j.seed, prompt: j.prompt, name: j.name, steps: +j.steps,
+            t0: performance.now(), state: 'queued' };
+  paintParams();
+}
+
+async function restoreJobs() {
+  let jobs = [];
+  try {
+    jobs = (await (await fetch('/api/jobs')).json()).jobs || [];
+  } catch {
+    return;
+  }
+  if (!jobs.length) return;
+  jobs.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  let active = 0;
+  let gone = 0;
+  for (const j of jobs) {
+    if (j.state === 'lost') { jobsDone(j.id); gone++; continue; }
+    if (j.kind === 'img') {
+      jobParamsImg(j);
+      if (j.state === 'done') {
+        const st = await (await fetch('/api/job?id=' + encodeURIComponent(j.id))).json();
+        if (st.state === 'done') { imgFinish(st); continue; }
+      }
+      progStart('img', j.id, j.state === 'running' ? 'рисую' : 'в очереди');
+      imgPoll();
+      active++;
+    } else if (j.kind === 'bg') {
+      jobParamsBg(j);
+      if (j.state === 'done') {
+        const st = await (await fetch('/api/job?id=' + encodeURIComponent(j.id))).json();
+        if (st.state === 'done') { bgFinish(st); continue; }
+      }
+      progStart('bg', j.id, j.state === 'running' ? 'вырезаю фон' : 'в очереди');
+      bgPoll();
+      active++;
+    } else if (j.kind === 'anim') {
+      jobParamsAnim(j);
+      if (j.state === 'done') {
+        const st = await (await fetch('/api/job?id=' + encodeURIComponent(j.id))).json();
+        if (st.state === 'done') { finish(st, false); continue; }
+      }
+      progStart('gen', j.id, j.state === 'running' ? 'работаю' : 'в очереди');
+      poll();
+      active++;
+    }
+  }
+  const newest = jobs.filter(j => j.state !== 'lost').pop();
+  if (newest) setTab(newest.kind === 'anim' ? 'gen' : newest.kind);
+  if (active) toast('Незавершённые задания восстановлены', 'ok');
+  if (gone && !active) toast('Прошлый прогон не найден в очереди ComfyUI', 'bad');
+}
+
+/* ---------- настройки ---------- */
+let setInfo = { output_dir: '', default_dir: '', models_dir: '', models_default: '',
+                agent_dir: '', agent_default: '' };
+let dirTarget = 'output_dir';
+
+const PATH_FIELDS = {
+  output_dir: { input: '#setInput', def: 'default_dir', btn: 'setDefault', label: 'Папка сохранения' },
+  models_dir: { input: '#modelsInput', def: 'models_default', btn: 'modelsDefault', label: 'Папка моделей' },
+  agent_dir: { input: '#agentInput', def: 'agent_default', btn: 'agentDefault', label: 'Папка агента' },
+};
+
+function paintSettings(s) {
+  setInfo = {
+    output_dir: s.output_dir || '', default_dir: s.default_dir || '',
+    models_dir: s.models_dir || '', models_default: s.models_default || '',
+    agent_dir: s.agent_dir || '', agent_default: s.agent_default || '',
+  };
+  for (const [field, cfg] of Object.entries(PATH_FIELDS)) {
+    const el = $(cfg.input);
+    if (el && el !== document.activeElement) el.value = setInfo[field] || '';
+  }
+  if (s.theme) applyTheme(s.theme, false);
+}
+
+/* ---------- темы ---------- */
+const THEMES = [
+  ['studio', 'Тёмная фиолетовая', ['#0e1014', '#7c6cff', '#4ad6c0']],
+  ['maker', 'Sprite Sheet Maker', ['#121a17', '#d9a35a', '#9fc48c']],
+  ['light', 'Светлая бордовая', ['#f5f1ea', '#7d1f35', '#b08d57']],
+];
+let appTheme = 'studio';
+
+function paintThemes() {
+  const box = $('#themes');
+  if (!box) return;
+  box.innerHTML = THEMES.map(([id, title, dots]) =>
+    `<button class="theme-btn" data-t="${id}" type="button">`
+    + `<span class="theme-dots">${dots.map(c => `<i style="background:${c}"></i>`).join('')}</span>`
+    + `<span>${title}</span></button>`).join('');
+  box.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('on', b.dataset.t === appTheme));
+}
+
+async function setTheme(name, save = true) {
+  appTheme = name;
+  document.documentElement.dataset.theme = name;
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('on', b.dataset.t === name));
+  if (save) {
+    try {
+      await fetch('/api/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: name }),
+      });
+    } catch { }
+  }
+  const f = $('#sheetFrame');
+  if (f && f.src) {
+    try {
+      const u = new URL(f.src);
+      u.searchParams.set('theme', name);
+      f.src = u.pathname + u.search;
+    } catch { }
+  }
+}
+
+function applyTheme(name, save) {
+  const valid = THEMES.some(t => t[0] === name) ? name : 'studio';
+  setTheme(valid, save);
+}
+
+$('#themes').onclick = e => {
+  const b = e.target.closest('.theme-btn');
+  if (b) applyTheme(b.dataset.t, true);
+};
+
+/* ---------- язык интерфейса ---------- */
+function defaultLang() {
+  return (navigator.language || '').toLowerCase().startsWith('ru') ? 'ru' : 'en';
+}
+
+function applyLang(name, save = true, notifySheet = true) {
+  const lang = name === 'en' ? 'en' : 'ru';
+  window.AppI18N.set(lang);
+  $('#langRu')?.classList.toggle('on', lang === 'ru');
+  $('#langEn')?.classList.toggle('on', lang === 'en');
+  if (save) {
+    fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lang }),
+    }).catch(() => { });
+  }
+  if (notifySheet) {
+    const f = $('#sheetFrame');
+    try { f && f.contentWindow && f.contentWindow.postMessage({ type: 'app-lang', lang }, '*'); } catch { }
+  }
+  // Пересобираем открытые окна, где есть числа и даты.
+  if (!$('#runsView').hidden) renderRuns();
+  if (!$('#setView').hidden) {
+    paintSettings(setInfo || {});
+    paintThemes();
+    renderSetup();
+  }
+}
+
+$('#langRu').onclick = () => applyLang('ru', true);
+$('#langEn').onclick = () => applyLang('en', true);
+
+async function openSettings() {
+  $('#setView').hidden = false;
+  document.body.style.overflow = 'hidden';
+  try {
+    paintSettings(await (await fetch('/api/settings')).json());
+  } catch {
+    toast('Не удалось прочитать настройки', 'bad');
+  }
+  paintThemes();
+  loadSetup();
+  pollSetup(false);
+}
+
+function closeSettings() {
+  closeDirPicker();
+  $('#setView').hidden = true;
+  document.body.style.overflow = '';
+}
+
+async function saveSettings(value, field = 'output_dir') {
+  const r = await fetch('/api/settings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ [field]: value }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'не удалось сохранить');
+  paintSettings(j);
+  const label = (PATH_FIELDS[field] || PATH_FIELDS.output_dir).label;
+  toast(label + ': ' + (value || 'по умолчанию'), 'ok');
+  loadSetup();
+}
+
+function applyField(field) {
+  const cfg = PATH_FIELDS[field];
+  const el = $(cfg.input);
+  const v = el.value.trim();
+  if (v === (setInfo[field] || '')) return Promise.resolve();
+  return saveSettings(v, field).catch(e => {
+    toast(e.message, 'bad');
+    el.value = setInfo[field] || '';
+  });
+}
+
+for (const field of Object.keys(PATH_FIELDS)) {
+  const cfg = PATH_FIELDS[field];
+  const el = $(cfg.input);
+  el.onkeydown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); applyField(field); }
+  };
+  el.onblur = e => {
+    if (e.relatedTarget && e.relatedTarget.id === cfg.btn) {
+      el.value = setInfo[field] || '';
+      return;
+    }
+    applyField(field);
+  };
+}
+
+$('#setBtn').onclick = openSettings;
+$('#setClose').onclick = closeSettings;
+
+$('#setDefault').onclick = async () => {
+  try { await saveSettings(setInfo.default_dir, 'output_dir'); } catch (e) { toast(e.message, 'bad'); }
+};
+$('#modelsDefault').onclick = async () => {
+  try { await saveSettings('', 'models_dir'); } catch (e) { toast(e.message, 'bad'); }
+};
+$('#agentDefault').onclick = async () => {
+  try { await saveSettings('', 'agent_dir'); } catch (e) { toast(e.message, 'bad'); }
+};
+$('#setOpen').onclick = async () => {
+  try {
+    const r = await fetch('/api/settings/open', { method: 'POST' });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || 'не удалось открыть папку');
+    }
+  } catch (e) { toast(e.message, 'bad'); }
+};
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('#dirModal').hidden) { closeDirPicker(); return; }
+  if (!$('#setView').hidden) closeSettings();
+});
+
+/* ---------- выбор папки (в приложении) ---------- */
+let dirState = { path: '', parent: '', drives: [], dirs: [] };
+let dirItems = [];
+
+async function loadDirs(path) {
+  const r = await fetch('/api/fs/dirs?path=' + encodeURIComponent(path || ''));
+  const j = await r.json();
+  dirState = j;
+  dirItems = [];
+  $('#dirPath').textContent = j.path || 'Этот компьютер';
+  $('#dirPath').title = j.path || '';
+  $('#dirUp').disabled = !j.parent;
+  $('#dirDrives').innerHTML = (j.drives || [])
+    .map((d, i) => `<button class="chip" data-drive="${i}" type="button">${esc(d.name)}</button>`)
+    .join('');
+  const rows = [];
+  if (j.parent) { dirItems.push({ path: j.parent, name: '..' }); rows.push('<div class="dir-row" data-i="0">⬆ <span>..</span></div>'); }
+  for (const d of j.dirs || []) {
+    dirItems.push(d);
+    rows.push(`<div class="dir-row" data-i="${dirItems.length - 1}">📁 <span>${esc(d.name)}</span></div>`);
+  }
+  if (!rows.length) rows.push(`<div class="dir-empty">${j.error ? esc(j.error) : 'папок нет'}</div>`);
+  $('#dirList').innerHTML = rows.join('');
+  $('#dirOk').disabled = !j.path;
+}
+
+function openDirPicker(field = 'output_dir') {
+  dirTarget = field;
+  $('#dirTitle').textContent = (PATH_FIELDS[field] || PATH_FIELDS.output_dir).label;
+  $('#dirModal').hidden = false;
+  loadDirs(dirState.path || setInfo[field] || '');
+}
+
+function closeDirPicker() {
+  $('#dirModal').hidden = true;
+}
+
+$('#dirModal').addEventListener('click', e => {
+  if (e.target.id === 'dirModal') closeDirPicker();
+  const drive = e.target.closest('[data-drive]');
+  if (drive) { loadDirs(dirState.drives[Number(drive.dataset.drive)].path); return; }
+  const row = e.target.closest('.dir-row');
+  if (row) { loadDirs(dirItems[Number(row.dataset.i)].path); return; }
+});
+$('#dirUp').onclick = () => { if (dirState.parent) loadDirs(dirState.parent); };
+$('#dirClose').onclick = closeDirPicker;
+$('#dirCancel').onclick = closeDirPicker;
+$('#dirOk').onclick = async () => {
+  if (!dirState.path) return;
+  try {
+    await saveSettings(dirState.path, dirTarget);
+    closeDirPicker();
+  } catch (e) { toast(e.message, 'bad'); }
+};
+$('#setPick').onclick = () => openDirPicker('output_dir');
+$('#modelsPick').onclick = () => openDirPicker('models_dir');
+$('#agentPick').onclick = () => openDirPicker('agent_dir');
+
+/* ---------- установка: ComfyUI и модели ---------- */
+let setupData = null;
+let setupPoll = null;
+
+function fmtBytes(n) {
+  n = Number(n || 0);
+  if (n >= 1024 ** 3) return (n / 1024 ** 3).toFixed(1) + ' ГБ';
+  if (n >= 1024 ** 2) return Math.round(n / 1024 ** 2) + ' МБ';
+  if (n > 0) return Math.round(n / 1024) + ' КБ';
+  return '—';
+}
+
+function setupStateText(s) {
+  return s === 'ok' ? 'Готово' : s === 'partial' ? 'Не хватает файлов'
+    : s === 'off' ? 'пока не поддерживается' : 'Не установлено';
+}
+
+function setupStateClass(s) {
+  return s === 'ok' ? 'ok' : s === 'partial' ? 'warn' : s === 'off' ? '' : 'bad';
+}
+
+function renderSetup() {
+  const d = setupData;
+  if (!d) return;
+  $('#comfyState').textContent = d.comfy.online ? 'ComfyUI работает' : 'ComfyUI не отвечает';
+  $('#comfyState').className = 'setup-chip ' + (d.comfy.online ? 'ok' : 'bad');
+  $('#comfyPath').textContent = d.comfy.online
+    ? (d.comfy.version ? 'версия ' + d.comfy.version : '')
+    : 'установите ComfyUI, чтобы работали все вкладки';
+  $('#comfyRun').hidden = d.comfy.online || !d.comfy.portable;
+  $('#setupTotal').innerHTML = 'Всего моделей: <b>' + fmtBytes(d.total_size) + '</b>'
+    + (d.models_root ? ' · папка моделей: ' + esc(d.models_root) : '')
+    + ' · агент: ' + esc(d.agent_dir);
+
+  const wrap = $('#setupGroups');
+  wrap.innerHTML = d.groups.map(g => {
+    const files = (g.files || []).map(f => {
+      const size = f.size_hint || fmtBytes(f.size);
+      const mark = f.present ? '<span class="st ok">✓ есть</span>'
+        : '<span class="st no">✕ нет</span>';
+      return `<div class="mg-file"><span class="nm">${esc(f.name)}</span>
+        <span><span class="fwhat">${esc(f.what || '')}</span>${size !== '—' ? ' · ' + size : ''}</span>${mark}</div>`;
+    }).join('');
+    const action = g.enabled && g.state !== 'ok'
+      ? `<button class="chip mg-btn" data-group="${g.id}" type="button">⤓ Скачать недостающие</button>`
+      : '';
+    const micCheck = g.id === 'voice' && g.state === 'ok'
+      ? `<div class="mg-actions"><button class="chip" id="micCheck" type="button">🎙 Проверить микрофон</button></div>
+         <div class="setup-note" id="micCheckOut" hidden></div>`
+      : '';
+    const where = g.enabled && g.state !== 'ok' && g.target
+      ? `<div class="hint">Куда скачается: <b>${esc(g.target)}</b></div>`
+      : '';
+    return `<div class="mg ${g.enabled ? '' : 'off'}" id="mg-${g.id}">
+      <div class="mg-head">
+        <div><b>${esc(g.title)}</b><span class="mg-what">${esc(g.what)}</span></div>
+        <div class="mg-right">
+          <span class="setup-chip ${setupStateClass(g.state)}">${setupStateText(g.state)}</span>
+          <span>${g.size_text || ''}</span>
+        </div>
+      </div>
+      ${g.note ? `<div class="hint">${esc(g.note)}</div>` : ''}
+      ${where}
+      <div class="mg-files">${files}</div>
+      <div class="mg-actions">${action}</div>
+      ${micCheck}
+      <div class="mg-progress" id="mgp-${g.id}" hidden>
+        <div class="mg-bar"><i></i></div>
+        <span></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('.mg-btn').forEach(b => {
+    b.onclick = () => startGroupDownload(b.dataset.group);
+  });
+  const mc = $('#micCheck');
+  if (mc) mc.onclick = () => checkMic();
+}
+
+async function loadSetup() {
+  try {
+    setupData = await (await fetch('/api/setup')).json();
+    renderSetup();
+    const vg = (setupData.groups || []).find(g => g.id === 'voice');
+    S.voiceReady = !!(vg && vg.state === 'ok');
+    paintMics();
+  } catch {
+    toast('Не удалось получить состояние установки', 'bad');
+  }
+}
+
+function setButtonsDisabled(off) {
+  document.querySelectorAll('#setView .mg-btn, #comfyInstall, #setupRefresh')
+    .forEach(b => { b.disabled = off; });
+}
+
+function paintProgress(p) {
+  document.querySelectorAll('.mg-progress').forEach(el => { el.hidden = true; });
+  $('#comfyNote').hidden = true;
+  if (!p || !p.active) return;
+  const pct = p.total ? Math.min(100, Math.round(p.done / p.total * 100)) : 0;
+  const text = p.phase === 'extract'
+    ? (p.message || 'распаковка…')
+    : (p.file ? (p.file + ' — ' + pct + '% (' + fmtBytes(p.done) + ' из ' + fmtBytes(p.total) + ')'
+        + (p.speed ? ' · ' + fmtBytes(p.speed) + '/с' : ''))
+      : (p.message || 'подготовка…'));
+  const box = p.kind === 'comfy' ? null : $('#mgp-' + p.group);
+  if (box) {
+    box.hidden = false;
+    box.querySelector('i').style.width = (p.phase === 'extract' ? 100 : pct) + '%';
+    box.querySelector('span').textContent = text;
+  } else {
+    const note = $('#comfyNote');
+    note.hidden = false;
+    note.textContent = text;
+  }
+}
+
+function pollSetup(fromAction = false) {
+  clearTimeout(setupPoll);
+  const tick = async () => {
+    let p = null;
+    try { p = await (await fetch('/api/setup/progress')).json(); } catch { }
+    paintProgress(p);
+    if (p && p.active) {
+      setupPoll = setTimeout(tick, 700);
+    } else {
+      setupPoll = null;
+      setButtonsDisabled(false);
+      if (fromAction) {
+        if (p && p.phase === 'error') toast(p.error || 'ошибка загрузки', 'bad');
+        else if (p && p.phase === 'done') toast('Готово', 'ok');
+      }
+      await loadSetup();
+    }
+  };
+  if (fromAction) setButtonsDisabled(true);
+  tick();
+}
+
+async function startGroupDownload(id) {
+  const r = await fetch('/api/setup/download', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ group: id }),
+  });
+  const j = await r.json();
+  if (!r.ok || j.ok === false) { toast(j.error || 'не удалось начать загрузку', 'bad'); return; }
+  pollSetup(true);
+}
+
+$('#comfyInstall').onclick = async () => {
+  const r = await fetch('/api/setup/comfy/install', { method: 'POST' });
+  const j = await r.json();
+  if (!r.ok || j.ok === false) { toast(j.error || 'не удалось начать установку', 'bad'); return; }
+  pollSetup(true);
+};
+$('#setupRefresh').onclick = loadSetup;
+$('#comfyRun').onclick = async () => {
+  try {
+    const r = await fetch('/api/setup/comfy/run', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось запустить');
+    toast('ComfyUI запускается — это займёт несколько секунд', 'ok');
+    setTimeout(loadSetup, 5000);
+  } catch (e) { toast(e.message, 'bad'); }
+};
+
+async function checkSetupReady() {
+  try {
+    const d = await (await fetch('/api/setup')).json();
+    const vg = (d.groups || []).find(g => g.id === 'voice');
+    S.voiceReady = !!(vg && vg.state === 'ok');
+    paintMics();
+    // голосовой ввод необязателен — его отсутствие не считаем проблемой
+    const missing = (d.groups || []).filter(g => g.enabled && g.id !== 'voice' && g.state !== 'ok');
+    const bad = !d.comfy.online || missing.length > 0;
+    $('#setBtn').classList.toggle('attention', bad);
+    if (bad) {
+      const names = [];
+      if (!d.comfy.online) names.push('ComfyUI не запущен');
+      for (const g of missing) names.push(g.title);
+      toast('Не хватает: ' + names.join(', ') + ' — откройте «Настройки»', 'bad');
+    }
+  } catch { }
+}
+
+/* ---------- голосовой ввод ---------- */
+const voice = { rec: false, stream: null, ctx: null, node: null, src: null,
+                chunks: [], btn: null, ta: null, t0: 0, timer: null, busy: false };
+
+function paintMics() {
+  const ready = !!S.voiceReady;
+  document.querySelectorAll('.micBtn').forEach(b => { b.hidden = !ready; });
+  document.querySelectorAll('.imgComposer').forEach(c => c.classList.toggle('no-mic', !ready));
+}
+
+function resample16k(input, rate) {
+  if (rate === 16000) return input;
+  const ratio = 16000 / rate;
+  const out = new Float32Array(Math.round(input.length * ratio));
+  for (let i = 0; i < out.length; i++) {
+    const pos = i / ratio, j = Math.floor(pos), f = pos - j;
+    const a = input[j] || 0;
+    const b = input[j + 1] ?? a;
+    out[i] = a + (b - a) * f;
+  }
+  return out;
+}
+
+function insertAtCursor(ta, text) {
+  const start = ta.selectionStart ?? ta.value.length;
+  const end = ta.selectionEnd ?? ta.value.length;
+  const before = ta.value.slice(0, start);
+  const after = ta.value.slice(end);
+  const pad = before && !/\s$/.test(before) ? ' ' : '';
+  ta.value = before + pad + text + after;
+  const pos = (before + pad + text).length;
+  ta.setSelectionRange(pos, pos);
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+  ta.focus();
+}
+
+async function sendVoice(float32, ta, btn) {
+  const pcm = new Int16Array(float32.length);
+  for (let i = 0; i < float32.length; i++) {
+    pcm[i] = Math.max(-1, Math.min(1, float32[i])) * 32767;
+  }
+  voice.busy = true;
+  btn.classList.add('busy');
+  try {
+    const r = await fetch('/api/voice', {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
+      body: pcm.buffer,
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось распознать');
+    if (!j.text) { toast('Не расслышал — попробуйте ещё раз', 'bad'); return; }
+    insertAtCursor(ta, j.text);
+  } catch (e) {
+    toast('Голос: ' + e.message, 'bad');
+  } finally {
+    voice.busy = false;
+    btn.classList.remove('busy');
+  }
+}
+
+function gumWithTimeout(options, ms = 25000) {  let late = false;
+  const request = navigator.mediaDevices.getUserMedia(options);
+  const timer = new Promise((_, reject) => setTimeout(() => {
+    late = true;
+    const err = new Error('браузер не ответил на запрос доступа');
+    err.name = 'TimeoutError';
+    reject(err);
+  }, ms));
+  request.then(stream => {
+    if (late) stream.getTracks().forEach(t => t.stop());
+  }).catch(() => { });
+  return Promise.race([request, timer]);
+}
+
+async function micStart(btn, ta) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    const err = new Error('браузер не даёт доступ к микрофону');
+    err.name = 'UnsupportedError';
+    throw err;
+  }
+  const stream = await gumWithTimeout({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+  });
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx({ sampleRate: 16000 });
+  if (ctx.state === 'suspended') await ctx.resume();
+  const src = ctx.createMediaStreamSource(stream);
+  const node = ctx.createScriptProcessor(4096, 1, 1);
+  node.onaudioprocess = e => {
+    if (voice.rec) voice.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  };
+  src.connect(node);
+  node.connect(ctx.destination);
+  Object.assign(voice, { rec: true, stream, ctx, node, src, chunks: [], btn, ta,
+                         t0: performance.now() });
+  btn.classList.add('rec');
+  btn.title = 'Остановить запись';
+  voice.timer = setTimeout(() => micStop(), 60000);
+}
+
+async function micStop() {
+  if (!voice.rec) return;
+  const { stream, ctx, node, src, chunks, btn, ta, t0 } = voice;
+  const rate = ctx.sampleRate || 16000;
+  clearTimeout(voice.timer);
+  voice.rec = false;
+  voice.chunks = [];
+  try { node.disconnect(); src.disconnect(); } catch { }
+  try { stream.getTracks().forEach(t => t.stop()); } catch { }
+  try { await ctx.close(); } catch { }
+  btn.classList.remove('rec');
+  btn.title = 'Голосовой ввод';
+  const seconds = (performance.now() - t0) / 1000;
+  if (seconds < 0.5) { toast('Слишком короткая запись', 'bad'); return; }
+  let total = 0;
+  for (const c of chunks) total += c.length;
+  const all = new Float32Array(total);
+  let off = 0;
+  for (const c of chunks) { all.set(c, off); off += c.length; }
+  await sendVoice(resample16k(all, rate), ta, btn);
+}
+
+async function checkMic() {
+  const out = $('#micCheckOut');
+  if (!out) return;
+  out.hidden = false;
+  out.style.color = 'var(--muted)';
+  out.textContent = 'Проверяю микрофон…';
+  const lines = [];
+  lines.push('контекст: ' + (window.isSecureContext ? 'защищённый' : 'НЕ защищённый'));
+  let perm = 'неизвестно';
+  try {
+    perm = (await navigator.permissions.query({ name: 'microphone' })).state;
+  } catch { }
+  lines.push('разрешение: ' + perm);
+  let inputs = 0;
+  try {
+    inputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput').length;
+  } catch { }
+  lines.push('устройств ввода: ' + inputs);
+  let failed = false;
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('getUserMedia нет');
+    const stream = await gumWithTimeout({ audio: true }, 8000);
+    stream.getTracks().forEach(t => t.stop());
+    lines.push('микрофон: доступен ✓');
+    out.style.color = 'var(--ok)';
+  } catch (e) {
+    failed = true;
+    lines.push('микрофон: ' + (e.name || 'ошибка') + (e.message ? ' — ' + e.message : ''));
+    out.style.color = 'var(--bad)';
+  }
+  out.textContent = lines.join(' · ');
+  if (failed) {
+    const tip = document.createElement('div');
+    tip.style.marginTop = '6px';
+    tip.style.color = 'var(--muted)';
+    tip.textContent = 'Если окно разрешения не появилось: нажмите на значок сайта (замок) слева от адреса → '
+      + '«Настройки сайта» → «Микрофон» → «Разрешить», обновите страницу. '
+      + 'В Windows также: Параметры → Конфиденциальность → Микрофон → разрешить приложениям.';
+    out.appendChild(tip);
+  }
+}
+
+async function micToggle(btn, ta) {
+  if (voice.busy) return;
+  if (voice.rec) { await micStop(); return; }
+  if (!S.voiceReady) {
+    toast('Голосовая модель не установлена — скачайте её в настройках', 'bad');
+    return;
+  }
+  // Сразу показываем, что нажатие принято: браузер может ещё спрашивать доступ.
+  btn.classList.add('wait');
+  btn.title = 'Запрашиваю доступ к микрофону…';
+  toast('Разрешите доступ к микрофону в браузере', 'ok');
+  const slow = setTimeout(() => {
+    if (btn.classList.contains('wait')) {
+      toast('Браузер ждёт разрешения на микрофон — посмотрите на адресную строку', 'bad');
+    }
+  }, 6000);
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const state = (await navigator.permissions.query({ name: 'microphone' })).state;
+        if (state === 'denied') {
+          throw new Error('микрофон запрещён для этого сайта — нажмите на замок в адресной строке и разрешите');
+        }
+      } catch (e) {
+        if (e && /запрещён/.test(e.message || '')) throw e;
+      }
+    }
+    await micStart(btn, ta);
+  } catch (e) {
+    const msg = e.name === 'NotAllowedError' ? 'доступ к микрофону запрещён — разрешите его в настройках сайта'
+      : e.name === 'NotFoundError' ? 'браузер не видит микрофон'
+      : e.name === 'TimeoutError' ? 'браузер не показал окно разрешения — разрешите микрофон в настройках сайта (замок слева от адреса)'
+      : e.message || String(e);
+    toast('Микрофон: ' + msg, 'bad');
+    if (voice.rec) { try { await micStop(); } catch { } }
+  } finally {
+    clearTimeout(slow);
+    btn.classList.remove('wait');
+    if (!voice.rec) btn.title = 'Голосовой ввод';
+  }
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.micBtn');
+  if (!btn) return;
+  e.preventDefault();
+  const map = { imgMic: 'imgPrompt', bgMic: 'bgPrompt', genMic: 'prompt' };
+  const ta = $('#' + (map[btn.id] || 'prompt'));
+  if (ta) micToggle(btn, ta);
+});
+
+async function boot() {
+  try {
+    try {
+      const cfg = await (await fetch('/api/settings')).json();
+      applyTheme(cfg.theme || 'studio', false);
+      applyLang(cfg.lang || defaultLang(), false);
+    } catch { }
+    const st = await (await fetch('/api/state')).json();
+    S.modes = st.modes || [];
+    S.bgInfo = st.bg || {};
+    S.image = st.image || { models: [] };
+    paintComfy(st.comfy);
+    $('#queuePill').hidden = !(st.comfy && (st.comfy.running + st.comfy.pending));
+    if (st.comfy && st.comfy.running + st.comfy.pending) $('#queueN').textContent = st.comfy.running + st.comfy.pending;
+    if (!S.modes.length) throw new Error('нет воркфлоу в папке workflows');
+    S.byRepeat = {};
+    S.modes.forEach(m => { if (!S.byRepeat[m.repeat]) S.byRepeat[m.repeat] = m; });
+    renderRepeat();
+    applyRepeat(S.byRepeat.cycle ? 'cycle' : Object.keys(S.byRepeat)[0]);
+    if (!st.comfy || !st.comfy.online) toast('ComfyUI не отвечает — запустите его и обновите страницу', 'bad');
+    const jid = new URLSearchParams(location.search).get('job');
+    if (jid) openJob(jid);
+    else restoreJobs();
+    checkSetupReady();
+  } catch (e) {
+    toast('Не удалось прочитать состояние: ' + e.message, 'bad');
+  }
+  renderSizes();
+  paintParams();
+  paintBg();
+  paintImg();
+}
+
+function paintComfy(c) {
+  const on = !!(c && c.online);
+  $('#comfyDot').classList.toggle('on', on);
+  $('#comfyTxt').innerHTML = on
+    ? `ComfyUI <b>${esc(c.version || '')}</b>`
+    : 'ComfyUI <b>не запущен</b>';
+}
+
+/* Движение задаётся промптом; здесь остаётся только техническая разница:
+   обрезка одного цикла или одного действия (и полотно кадра). */
+function renderRepeat() {
+  const opts = [
+    ['cycle', 'Цикл', 'ходьба, бег, дыхание — повторяется'],
+    ['once', 'Один раз', 'атака, смерть — от стойки до стойки'],
+  ].filter(([k]) => S.byRepeat[k]);
+  $('#repeat').innerHTML = opts.map(([k, t, h]) =>
+    `<button data-r="${k}">${t}<small>${h}</small></button>`).join('');
+  $('#repeat').onclick = e => {
+    const b = e.target.closest('button[data-r]');
+    if (b) applyRepeat(b.dataset.r);
+  };
+}
+
+function applyRepeat(rep) {
+  if (!rep || !S.byRepeat[rep]) return;
+  if (S.repeat) {                       // правки не теряются при переключении
+    S.prompts[S.repeat] = $('#prompt').value;
+    S.names[S.repeat] = $('#clipName').value;
+  }
+  const m = S.byRepeat[rep];
+  S.repeat = rep;
+  S.size = { w: m.width, h: m.height };
+  S.custom = null;
+  S.frames = m.length || 124;
+  $('#dur').value = nearestIdx(S.frames);
+  document.querySelectorAll('#repeat button').forEach(b => b.classList.toggle('on', b.dataset.r === rep));
+  $('#repeatV').textContent = rep === 'cycle' ? 'цикл' : 'один раз';
+  $('#clipName').value = S.names[rep] ?? '';
+  $('#clipName').placeholder = rep === 'cycle' ? 'walk, run, idle' : 'attack, death, jump';
+  $('#prompt').value = S.prompts[rep] ?? '';
+  colorizePrompt();
+  countPrompt();
+  checkPrompt();
+  renderSizes();
+  paintParams();
+}
+
+/* ---------- персонаж ---------- */
+$('#drop').onclick = e => { if (!e.target.closest('#dropX')) $('#file').click(); };
+$('#file').onchange = e => { const f = e.target.files[0]; if (f) setImage(f); e.target.value = ''; };
+$('#drop').addEventListener('dragover', e => { e.preventDefault(); $('#drop').style.borderColor = 'var(--acc)'; });
+$('#drop').addEventListener('dragleave', () => { $('#drop').style.borderColor = ''; });
+$('#drop').addEventListener('drop', e => {
+  e.preventDefault(); $('#drop').style.borderColor = '';
+  const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) setImage(f);
+});
+$('#dropX').onclick = e => { e.stopPropagation(); S.img = null; $('#drop').classList.remove('filled'); $('#drop').innerHTML = window.__ph; $('#drop').append($('#dropX')); $('#dropX').hidden = true; };
+
+function setImage(file) {
+  if (!file.type.startsWith('image/')) { toast('Нужен файл изображения', 'bad'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    S.img = { name: file.name, data: String(reader.result) };
+    $('#drop').classList.add('filled');
+    $('#drop').innerHTML = `<img src="${S.img.data}" alt="">`;
+    const x = document.createElement('button');
+    x.className = 'x'; x.textContent = '✕';
+    x.onclick = ev => { ev.stopPropagation(); S.img = null; $('#drop').classList.remove('filled'); $('#drop').innerHTML = window.__ph; };
+    $('#drop').append(x);
+  };
+  reader.readAsDataURL(file);
+}
+window.__ph = $('#drop').innerHTML;
+
+/* ---------- параметры ---------- */
+function renderSizes() {
+  const presets = [[512, 512], [640, 512], [512, 640], [768, 768]];
+  $('#sizes').innerHTML = presets.map(([w, h]) =>
+    `<button class="chip${!S.custom && S.size && S.size.w === w && S.size.h === h ? ' on' : ''}" data-w="${w}" data-h="${h}">${w}×${h}</button>`).join('')
+    + (S.custom ? `<button class="chip on" data-w="${S.custom.w}" data-h="${S.custom.h}">${S.custom.w}×${S.custom.h}</button>` : '');
+  $('#sizes').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.custom = null; S.size = { w: +b.dataset.w, h: +b.dataset.h };
+    renderSizes(); paintParams();
+  };
+  $('#sizeV').textContent = S.custom ? `${S.custom.w}×${S.custom.h} · свой` : (S.size ? `${S.size.w}×${S.size.h}` : '');
+}
+$('#cwApply').onclick = () => {
+  const w = Math.round((+$('#cw').value || 0) / 32) * 32, h = Math.round((+$('#ch').value || 0) / 32) * 32;
+  if (w < 256 || h < 256) { toast('Впишите ширину и высоту от 256', 'bad'); return; }
+  if (w > 1536 || h > 1536) { toast('Слишком большой кадр: максимум 1536', 'bad'); return; }
+  S.custom = { w, h }; S.size = { w, h };
+  $('#cw').value = w; $('#ch').value = h;
+  renderSizes(); paintParams();
+};
+$('#dur').oninput = e => { S.frames = FRAMES[+e.target.value] || 124; paintParams(); };
+$('#steps').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.steps = +b.dataset.v; paintParams();
+};
+$('#seedMode').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.seedFixed = b.dataset.f === '1';
+  if (S.seedFixed && !S.seed) S.seed = String(Math.floor(Math.random() * 1e15));
+  paintParams();
+};
+$('#seedIn').oninput = e => { S.seed = e.target.value.replace(/\D/g, '').slice(0, 18); e.target.value = S.seed; };
+$('#seedNew').onclick = () => { S.seed = String(Math.floor(Math.random() * 1e15)); paintParams(); };
+$('#prompt').oninput = () => { countPrompt(); checkPrompt(); };
+
+/* Очистка полей промпта маленьким крестиком в углу. */
+[['imgClear', 'imgPrompt', imgCount], ['bgClear', 'bgPrompt', () => {}], ['genClear', 'prompt', () => {}]]
+  .forEach(([btn, field, after]) => {
+    const b = $('#' + btn);
+    if (!b) return;
+    b.onclick = () => {
+      const el = $('#' + field);
+      if (!el.value) return;
+      el.value = '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      if (after) after();
+      el.focus();
+    };
+  });
+
+/* Агент для спрайтовой анимации: скилл sprite-animation. */
+let genAgentBusy = false, genLastBrief = '', genAgentCtrl = null;
+async function runGenAgent(brief) {
+  if (genAgentBusy) return;
+  const btn = $('#agentGen'), box = $('#prompt');
+  const wasBrief = box.value;
+  genAgentBusy = true;
+  genLastBrief = brief;
+  genAgentCtrl = new AbortController();
+  btn.classList.add('busy');
+  btn.title = 'Нажмите, чтобы остановить';
+  btn.textContent = '✨ думаю…';
+  progAgent('gen', 'думаю…');
+  let live = '';
+  try {
+    await streamAgent({ model: 'sprite', brief }, {
+      onStatus: t => { btn.textContent = '✨ ' + t + '…'; progAgent('gen', t); },
+      onDelta: t => { live += t; box.value = live; countPrompt(); },
+      onDone: j => {
+        box.value = j.prompt;
+        countPrompt();
+        checkPrompt();
+        progDone(1500);
+        toast(`Промпт готов · скилл: ${j.skill || 'без скилла'}`, 'ok');
+      },
+    }, genAgentCtrl);
+  } catch (e) {
+    progStop();
+    if (e.name === 'AbortError') { toast('Остановлено — текст оставлен как есть'); checkPrompt(); }
+    else { toast('Агент: ' + e.message, 'bad'); if (!live) { box.value = wasBrief; countPrompt(); } }
+  } finally {
+    genAgentBusy = false;
+    genAgentCtrl = null;
+    btn.classList.remove('busy');
+    btn.title = '';
+    btn.textContent = '✨ Промпт агентом';
+  }
+}
+$('#agentGen').onclick = () => {
+  if (genAgentBusy) { genAgentCtrl?.abort(); return; }
+  const brief = $('#prompt').value.trim();
+  if (!brief) { toast('Опишите движение словами', 'bad'); return; }
+  runGenAgent(brief);
+};
+const COLOR_NAMES = { magenta: 'пурпурный', green: 'зелёный', blue: 'синий' };
+
+// Цвет и промпт — один контракт: если в тексте назван фон, слово меняется вместе с кнопкой.
+function colorizePrompt() {
+  const color = $('#keyColor').value || 'magenta';
+  const box = $('#prompt');
+  const text = box.value.replace(/\b(flat,\s*uniform\s+solid\s+)(magenta|green|blue)\b/gi,
+    (m, head) => head + color);
+  if (text === box.value) return false;
+  box.value = text;
+  countPrompt();
+  return true;
+}
+
+function paintKeyColor() {
+  const v = $('#keyColor').value || 'magenta';
+  document.querySelectorAll('#keyColors .kc').forEach(b => b.classList.toggle('on', b.dataset.c === v));
+  $('#keyColorV').textContent = COLOR_NAMES[v] || v;
+}
+
+$('#keyColors').onclick = e => {
+  const b = e.target.closest('.kc');
+  if (!b) return;
+  const before = $('#keyColor').value;
+  const color = b.dataset.c;
+  $('#keyColor').value = color;
+  const fixed = colorizePrompt();
+  paintKeyColor();
+  checkPrompt();
+  if (before !== color) {
+    toast(`Цвет подложки: ${COLOR_NAMES[color] || color}` + (fixed ? ' — и в промпте тоже' : ''));
+  }
+};
+paintKeyColor();
+function countPrompt() { const el = $('#pc'); if (el) el.textContent = $('#prompt').value.length + ' символов'; }
+
+/* Что приложение допишет в промпт само: фон под ключ и технические ограничения.
+   Считает сервер — здесь только показываем его ответ, чтобы не было двух правил. */
+let promptTimer = null;
+function checkPrompt() {
+  clearTimeout(promptTimer);
+  promptTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/prompt', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: $('#prompt').value, color: $('#keyColor').value }),
+      });
+      if (!r.ok) throw new Error();
+      paintTail(await r.json());
+    } catch {
+      $('#tailInfo').textContent = 'не удалось проверить промпт';
+    }
+  }, 250);
+}
+
+function paintTail(j) {
+  const box = $('#tailInfo');
+  if (j.conflict) {
+    box.innerHTML = `<b style="color:var(--warn)">Внимание:</b> ${esc(j.conflict)}. `
+      + 'Промпт и ключ должны называть один цвет — иначе фон вырежется плохо.';
+  } else if (j.added && j.added.length) {
+    box.innerHTML = `<b>Добавится в конец автоматически:</b><br>${j.added.map(esc).join('<br>')}`;
+  } else {
+    box.innerHTML = '<b>В промпте уже есть</b> нужный фон и технические ограничения — ничего не добавляю.';
+  }
+  $('#finalPrompt').textContent = j.final;
+}
+$('#copyFinal').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($('#finalPrompt').textContent);
+    toast('Итоговый промпт скопирован', 'ok');
+  } catch {
+    toast('Браузер не дал доступ к буферу — выделите текст вручную', 'bad');
+  }
+};
+
+function paintParams() {
+  const f = S.frames;
+  $('#durV').textContent = `${(f / 24).toFixed(1).replace('.', ',')} с · ${frameLabel(f)}`;
+  document.querySelectorAll('#steps button').forEach(b => b.classList.toggle('on', +b.dataset.v === S.steps));
+  $('#stepsV').textContent = S.steps + ' шагов';
+  document.querySelectorAll('#seedMode button').forEach(b => b.classList.toggle('on', (b.dataset.f === '1') === S.seedFixed));
+  $('#seedRow').hidden = !S.seedFixed;
+  if ($('#seedIn') !== document.activeElement) $('#seedIn').value = S.seed || '';
+  $('#seedV').textContent = S.seedFixed ? 'фиксированный' : 'случайный';
+  $('#go').textContent = 'Сгенерировать';
+  const gs = $('#genSummary');
+  if (gs) gs.textContent = `${S.size ? S.size.w + '×' + S.size.h : ''} · ${frameLabel(f)}`;
+}
+
+/* ---------- генерация ---------- */
+$('#go').onclick = async () => {
+  if (!S.img) { toast('Сначала загрузите картинку персонажа', 'bad'); return; }
+  if (!S.repeat) { toast('Не выбран тип повтора', 'bad'); return; }
+  if (!$('#prompt').value.trim()) { toast('Промпт пустой', 'bad'); return; }
+  const adv = {
+    key_color: $('#keyColor').value,
+    clip_black: +$('#clipBlack').value,
+    clip_white: +$('#clipWhite').value,
+    choke_px: +$('#choke').value,
+    edge_bleed_px: +$('#bleed').value,
+    max_frames: +$('#maxFrames').value || 0,
+    dedupe_twos: $('#dedupe').checked,
+  };
+  const body = {
+    mode: S.repeat, name: $('#clipName').value.trim(),
+    prompt: $('#prompt').value.trim(), image: S.img,
+    width: S.size.w, height: S.size.h, length: S.frames,
+    seed: S.seedFixed ? +S.seed : 0, steps: S.steps, advanced: adv,
+  };
+  setBusy(true);
+  try {
+    const r = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось поставить задание');
+    (j.warnings || []).forEach(w => toast('Воркфлоу: ' + w, 'bad'));
+    S.job = { ...j, prompt: body.prompt, name: body.name, steps: body.steps,
+              t0: performance.now(), state: 'queued' };
+    progStart('gen', j.id, 'в очереди');
+    $('#stop').hidden = false;
+    poll();
+  } catch (e) {
+    toast(e.message, 'bad');
+    progStop();
+    setBusy(false);
+  }
+};
+
+$('#stop').onclick = async () => {
+  if (!S.job) return;
+  $('#pStage').textContent = 'Останавливаю…';
+  await fetch('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: S.job.id }) }).catch(() => {});
+};
+
+function setBusy(on) {
+  $('#go').disabled = on;
+  $('#go').hidden = on;
+  $('#stop').hidden = !on;
+}
+
+async function poll() {
+  clearTimeout(S.tick);
+  if (!S.job) return;
+  $('#pTime').textContent = fmtT(performance.now() - S.job.t0);
+  let st = null;
+  try { st = await (await fetch('/api/job?id=' + encodeURIComponent(S.job.id))).json(); } catch { /* сеть */ }
+  if (!st) { S.tick = setTimeout(poll, 2000); return; }
+  if (!P.es) {
+    if (st.state === 'queued') $('#pStage').textContent = 'В очереди ComfyUI…';
+    else if (st.state === 'running') $('#pStage').textContent = 'Генерация: сэмплинг и сборка кадров…';
+  }
+  if (st.state === 'done') return finish(st);
+  else if (st.state === 'error') return fail(st.error || 'ComfyUI вернул ошибку');
+  else {
+    if (performance.now() - S.job.t0 > 15 * 60 * 1000) return fail('Задание пропало из очереди');
+  }
+  S.tick = setTimeout(poll, 1800);
+}
+
+function fail(msg) {
+  progStop();
+  jobsDone(S.job && S.job.id);
+  setBusy(false);
+  toast('Ошибка: ' + msg, 'bad');
+  S.job = null;
+}
+
+function finish(st, restored = false) {
+  clearTimeout(S.tick);
+  progDone();
+  jobsDone(S.job && S.job.id);
+  setBusy(false);
+  const meta = st.meta || {};
+  const out = st.outputs || [];
+  const video = out.find(o => o.kind === 'video');
+  const imgs = out.filter(o => o.kind === 'image');
+  const rgba = imgs.filter(o => o.node === '17');
+  const frames = rgba.length ? rgba : imgs;
+  const width = S.job?.width || meta.width || '';
+  const height = S.job?.height || meta.height || '';
+  const seed = S.job?.seed ?? meta.seed;
+  const slug = meta.slug || S.job?.slug || S.repeat || 'sprite';
+  S.framesList = frames;
+  $('#res').classList.add('on');
+  const _empty = $('#genEmpty');
+  if (_empty) _empty.remove();
+  const v = $('#video');
+  if (video) {
+    v.hidden = false; v.src = fileUrl(video);
+    $('#dlVid').hidden = false; $('#dlVid').href = fileUrl(video); $('#dlVid').setAttribute('download', video.filename);
+    $('#videoZoom').hidden = false;
+  } else { v.hidden = true; $('#dlVid').hidden = true; $('#videoZoom').hidden = true; }
+  const strip = $('#strip'); strip.innerHTML = '';
+  const urls = frames.map(fileUrl);
+  frames.slice(0, 14).forEach((o, idx) => {
+    const im = document.createElement('img');
+    im.loading = 'lazy'; im.src = fileUrl(o);
+    im.title = o.filename + ' — нажмите, чтобы увеличить';
+    im.onclick = () => zoomOpen(urls, idx);
+    strip.append(im);
+  });
+  const took = restored ? '' : ` · ${fmtT(performance.now() - S.job.t0)}`;
+  $('#resMeta').innerHTML = `${esc(slug)} · кадров: <b>${frames.length}</b> · ${width}×${height}`
+    + ` · seed <b>${seed ?? '—'}</b>${took}`;
+  if (!restored) {
+    recordRun({ kind: 'anim', id: S.job?.id, mode: S.repeat, name: slug,
+      prompt: S.job?.prompt || $('#prompt').value, seed, steps: S.job?.steps,
+      frames: frames.length, width, height,
+      out: video || frames[0], outKind: video ? 'video' : 'image',
+      thumb: frames[0] || video });
+  }
+  const zip = $('#dlZip');
+  zip.href = `/api/zip?id=${encodeURIComponent(S.job.id)}&name=${encodeURIComponent(slug)}`;
+  zip.style.display = frames.length ? '' : 'none';
+  toast(`Готово: ${frameLabel(frames.length)}`, 'ok');
+  S.lastPrompt = $('#prompt').value;
+  buildSheet();
+}
+
+/* ---------- спрайт-лист (собирается в браузере из кадров RGBA) ---------- */
+const loadImg = src => new Promise((res, rej) => {
+  const im = new Image();
+  im.onload = () => res(im);
+  im.onerror = () => rej(new Error('кадр не загрузился'));
+  im.src = src;
+});
+
+async function buildSheet() {
+  const frames = S.framesList || [];
+  if (!frames.length) return;
+  const hint = $('#sheetHint'), cv = $('#sheetCv');
+  $('#sheetInfo').textContent = '—';
+  if (S.sheetUrls) S.sheetUrls.forEach(u => URL.revokeObjectURL(u));
+  S.sheetUrls = [];
+  $('#sheetDl').hidden = true;
+  $('#sheetJson').hidden = true;
+  hint.textContent = `читаю кадры: 0 из ${frames.length}…`;
+  let imgs;
+  try {
+    imgs = [];
+    for (let i = 0; i < frames.length; i++) {
+      imgs.push(await loadImg(fileUrl(frames[i])));
+      if (i % 12 === 0) hint.textContent = `читаю кадры: ${i + 1} из ${frames.length}…`;
+    }
+  } catch (e) {
+    hint.textContent = 'Не удалось прочитать кадры: ' + e.message;
+    return;
+  }
+  const w = imgs[0].naturalWidth || imgs[0].width;
+  const h = imgs[0].naturalHeight || imgs[0].height;
+  const LIMIT = 8192;
+  const scale = Math.max(10, Math.min(100, +$('#sheetScale').value || 100)) / 100;
+  let cw = Math.max(1, Math.round(w * scale));
+  let ch = Math.max(1, Math.round(h * scale));
+  let cols = +$('#sheetCols').value || Math.ceil(Math.sqrt(frames.length));
+  cols = Math.max(1, Math.min(cols, frames.length));
+  while (cols > 1 && cols * cw > LIMIT) cols--;
+  const rows = Math.ceil(frames.length / cols);
+  if (rows * ch > LIMIT) {
+    hint.textContent = `Лист получится ${cols * cw}×${rows * ch} — больше ${LIMIT} px по высоте. Выберите масштаб меньше.`;
+    cv.hidden = true;
+    $('#sheetDl').hidden = true;
+    $('#sheetJson').hidden = true;
+    return;
+  }
+  cv.width = cols * cw;
+  cv.height = rows * ch;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  const cells = [];
+  imgs.forEach((im, i) => {
+    const x = (i % cols) * cw, y = Math.floor(i / cols) * ch;
+    ctx.drawImage(im, x, y, cw, ch);
+    cells.push({ i, x, y, w: cw, h: ch });
+  });
+  cv.hidden = false;
+  const name = ($('#resMeta').textContent.split('·')[0] || 'sprite').trim().replace(/[^\w\-]+/g, '-') || 'sprite';
+  cv.toBlob(blob => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    S.sheetUrls.push(url);
+    const a = $('#sheetDl');
+    a.href = url; a.download = `${name}-sheet.png`; a.hidden = false;
+    const atlas = { image: `${name}-sheet.png`, columns: cols, rows, count: frames.length,
+                    frame: { w: cw, h: ch }, frames: cells };
+    const jurl = URL.createObjectURL(new Blob([JSON.stringify(atlas, null, 1)], { type: 'application/json' }));
+    S.sheetUrls.push(jurl);
+    const j = $('#sheetJson');
+    j.href = jurl; j.download = `${name}-sheet.json`; j.hidden = false;
+  }, 'image/png');
+  hint.textContent = `${cols}×${rows}, ячейка ${cw}×${ch}, лист ${cv.width}×${cv.height} px.`;
+  $('#sheetInfo').textContent = `${frameLabel(frames.length)} → ${cols}×${rows}`;
+}
+
+$('#sheetBuild').onclick = () => buildSheet();
+$('#sheetCols').onchange = () => S.framesList.length && buildSheet();
+$('#sheetScale').onchange = () => S.framesList.length && buildSheet();
+
+/* Открыть готовый прогон по ссылке ?job=<id> — результат переживает перезагрузку. */
+async function openJob(id) {
+  try {
+    const st = await (await fetch('/api/job?id=' + encodeURIComponent(id))).json();
+    if (st.state !== 'done' || !(st.outputs || []).length) { toast('Этот прогон не найден в истории ComfyUI', 'bad'); return; }
+    S.job = { id, run: '', mode: st.meta?.slug || '', width: st.meta?.width, height: st.meta?.height, seed: st.meta?.seed, t0: performance.now() };
+    $('#prog').classList.remove('on');
+    finish(st, true);
+    $('#res').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    toast('Не удалось открыть прогон: ' + e.message, 'bad');
+  }
+}
+
+const fileUrl = o => `/api/file?filename=${encodeURIComponent(o.filename)}&subfolder=${encodeURIComponent(o.subfolder || '')}&type=${encodeURIComponent(o.type || 'output')}`;
+$('#again').onclick = () => { $('#go').click(); $('#genFeed').scrollTop = 0; };
+
+/* ---------- вкладка «Спрайт-лист»: встроенный редактор ---------- */
+function setTab(name) {
+  const sheet = name === 'sheet';
+  document.body.classList.toggle('sheet-on', sheet);
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  $('#genPage').hidden = name !== 'gen';
+  $('#bgPage').hidden = name !== 'bg';
+  $('#imgPage').hidden = name !== 'img';
+  document.body.classList.toggle('tab-img', name === 'img');
+  document.body.classList.toggle('tab-bg', name === 'bg');
+  document.body.classList.toggle('tab-gen', name === 'gen');
+  try {
+    const base = location.pathname + location.search;
+    history.replaceState(null, '', name === 'img' ? base : base + '#' + name);
+  } catch {}
+  if (sheet) { ensureSheet(); layoutSheet(); }
+  if (name === 'bg') paintBg();
+  if (name === 'img') paintImg();
+}
+
+/* Редактор занимает место под шапкой — той же, что и на остальных вкладках. */
+function layoutSheet() {
+  const view = $('#sheetView');
+  const top = document.querySelector('.top');
+  if (!view || !top) return;
+  view.style.top = Math.round(top.getBoundingClientRect().bottom + 12) + 'px';
+}
+
+window.addEventListener('resize', () => {
+  if (document.body.classList.contains('sheet-on')) layoutSheet();
+});
+
+async function ensureSheet() {
+  S.sheetUrl = '/sheet';
+  const msg = $('#sheetMsg');
+  if (msg) msg.hidden = true;
+  const f = $('#sheetFrame');
+  const want = { theme: appTheme, lang: window.AppI18N.lang };
+  if (!f.src) {
+    f.src = S.sheetUrl + '?theme=' + want.theme + '&lang=' + want.lang;
+    return;
+  }
+  try {
+    const u = new URL(f.src);
+    if (u.searchParams.get('theme') !== want.theme || u.searchParams.get('lang') !== want.lang) {
+      u.searchParams.set('theme', want.theme);
+      u.searchParams.set('lang', want.lang);
+      f.src = u.pathname + u.search;
+    }
+  } catch { }
+}
+
+function pollSheet() {
+  // встроенный редактор живёт в этом же сервере — следить не за чем
+}
+
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+
+/* Кадры текущего прогона → в редактор: он читает папку с диска. */
+$('#toEditor').onclick = async () => {
+  if (!S.job?.id) { toast('Сначала сгенерируйте анимацию', 'bad'); return; }
+  const btn = $('#toEditor');
+  btn.disabled = true;
+  const was = btn.textContent;
+  btn.textContent = 'готовлю кадры…';
+  try {
+    const r = await fetch('/api/frames', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: S.job.id }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось подготовить кадры');
+    await ensureSheet();
+    if (!S.sheetUrl) throw new Error('редактор не запустился');
+    // Имя файла — латиницей (его же использует сервер), имя клипа — как в поле.
+    const clipName = ($('#clipName').value || '').trim() || j.slug;
+    const qs = new URLSearchParams({ dir: j.dir, name: j.slug, anim: clipName });
+    const url = S.sheetUrl + '?' + qs + '&theme=' + appTheme + '&lang=' + window.AppI18N.lang;
+    $('#sheetFrame').src = url;
+    setTab('sheet');
+    toast(`В редакторе: ${frameLabel(j.count)} из ${j.dir}`, 'ok');
+  } catch (e) {
+    toast(e.message, 'bad');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = was;
+  }
+};
+
+/* ---------- вкладка «Убрать фон» (Qwen Image 2.1) ---------- */
+const B = { img: null, job: null, tick: null, res: 1024, result: '', url: '' };
+
+const bgPh = $('#bgDrop').innerHTML;
+
+$('#bgDrop').onclick = e => { if (!e.target.closest('#bgDropX')) $('#bgFile').click(); };
+$('#bgFile').onchange = e => { const f = e.target.files[0]; if (f) setBgImage(f); e.target.value = ''; };
+$('#bgDrop').addEventListener('dragover', e => { e.preventDefault(); $('#bgDrop').style.borderColor = 'var(--acc)'; });
+$('#bgDrop').addEventListener('dragleave', () => { $('#bgDrop').style.borderColor = ''; });
+$('#bgDrop').addEventListener('drop', e => {
+  e.preventDefault(); $('#bgDrop').style.borderColor = '';
+  const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) setBgImage(f);
+});
+
+function setBgImage(file) {
+  if (!file.type.startsWith('image/')) { toast('Нужен файл изображения', 'bad'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    B.img = { name: file.name, data: String(reader.result) };
+    $('#bgDrop').classList.add('filled');
+    $('#bgDrop').innerHTML = `<img src="${B.img.data}" alt="">`;
+    const x = document.createElement('button');
+    x.className = 'x'; x.textContent = '✕';
+    x.onclick = ev => {
+      ev.stopPropagation();
+      B.img = null;
+      $('#bgDrop').classList.remove('filled');
+      $('#bgDrop').innerHTML = bgPh;
+      paintBg();
+    };
+    $('#bgDrop').append(x);
+    paintBg();
+  };
+  reader.readAsDataURL(file);
+}
+
+function bgSizeFor(res) {
+  const im = $('#bgDrop img');
+  if (!im || !im.naturalWidth) return '';
+  const w = im.naturalWidth, h = im.naturalHeight;
+  const ratio = w / h;
+  if (!res) return `${Math.round(w / 32) * 32}×${Math.round(h / 32) * 32}`;
+  const W = Math.round(Math.sqrt(res * res * ratio) / 32) * 32;
+  const H = Math.round(Math.sqrt(res * res / ratio) / 32) * 32;
+  return `${Math.max(32, W)}×${Math.max(32, H)}`;
+}
+
+function paintBg() {
+  const b = S.bgInfo || {};
+  const size = bgSizeFor(B.res);
+  $('#bgResV').textContent = B.res ? `${B.res} px${size ? ' · ' + size : ''}` : (size ? `как в исходной · ${size}` : 'как в исходной картинке');
+  document.querySelectorAll('#bgRes button').forEach(x => x.classList.toggle('on', +x.dataset.v === B.res));
+  const bpc = $('#bgPc');
+  if (bpc) bpc.textContent = $('#bgPrompt').value.length + ' символов';
+  const missing = [];
+  if (!b.nodes) missing.push('ноды ComfyUI');
+  if (!b.unet) missing.push('diffusion-модель');
+  if (!b.clip) missing.push('text encoder');
+  if (!b.vae) missing.push('VAE');
+  const ready = !missing.length;
+  $('#bgWarn').hidden = ready;
+  if (!ready) {
+    $('#bgWarn').classList.add('warn');
+    $('#bgWarn').innerHTML = `<b>Не хватает для Qwen Image 2.1:</b> ${missing.join(', ')}. `
+      + 'Проверьте папки models файлового хранилища ComfyUI.';
+  }
+  $('#bgGo').disabled = !ready || !!B.job;
+  $('#bgGo').hidden = !!B.job;
+  $('#bgStop').hidden = !B.job;
+}
+
+$('#bgRes').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  B.res = +b.dataset.v; paintBg();
+};
+$('#bgPrompt').oninput = paintBg;
+$('#bgPromptReset').onclick = () => { $('#bgPrompt').value = (S.bgInfo || {}).prompt || ''; paintBg(); };
+
+$('#bgGo').onclick = async () => {
+  if (!B.img) { toast('Сначала загрузите картинку', 'bad'); return; }
+  B.job = { state: 'queued' };
+  progStart('bg', '', 'отправляю в ComfyUI…');
+  $('#bgStop').hidden = false;
+  paintBg();
+  try {
+    const r = await fetch('/api/bg', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: B.img, prompt: $('#bgPrompt').value.trim(), resolution: B.res }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось поставить задание');
+    B.job = { ...j, prompt: $('#bgPrompt').value.trim(), t0: performance.now() };
+    progStart('bg', j.id, 'в очереди');
+    bgPoll();
+  } catch (e) {
+    toast(e.message, 'bad');
+    bgFail();
+  }
+};
+
+$('#bgStop').onclick = async () => {
+  if (!B.job) return;
+  $('#bgStage').textContent = 'Останавливаю…';
+  await fetch('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: B.job.id }) }).catch(() => {});
+};
+
+async function bgPoll() {
+  clearTimeout(B.tick);
+  if (!B.job || !B.job.id) return;
+  $('#bgTime').textContent = fmtT(performance.now() - B.job.t0);
+  let st = null;
+  try { st = await (await fetch('/api/job?id=' + encodeURIComponent(B.job.id))).json(); } catch { /* сеть */ }
+  if (!st) { B.tick = setTimeout(bgPoll, 2000); return; }
+  if (!P.es) {
+    if (st.state === 'queued') $('#bgStage').textContent = 'В очереди ComfyUI…';
+    else if (st.state === 'running') $('#bgStage').textContent = 'Вырезаю фон…';
+  }
+  if (st.state === 'done') return bgFinish(st);
+  else if (st.state === 'error') { toast('Ошибка: ' + (st.error || 'ComfyUI вернул ошибку'), 'bad'); return bgFail(); }
+  else if (performance.now() - B.job.t0 > 20 * 60 * 1000) { toast('Задание пропало из очереди', 'bad'); return bgFail(); }
+  B.tick = setTimeout(bgPoll, 1800);
+}
+
+function bgFail() {
+  clearTimeout(B.tick);
+  progStop();
+  jobsDone(B.job && B.job.id);
+  B.job = null;
+  $('#bgStop').hidden = true;
+  paintBg();
+}
+
+function bgFinish(st) {
+  clearTimeout(B.tick);
+  progDone();
+  $('#bgStop').hidden = true;
+  const job = B.job;
+  B.job = null;
+  jobsDone(job && job.id);
+  paintBg();
+  const out = (st.outputs || []).find(o => o.kind === 'image');
+  if (!out) { toast('Модель не вернула картинку', 'bad'); return; }
+  addBgResult(out, job);
+  recordRun({ kind: 'bg', id: job.id, prompt: job.prompt, resolution: job.resolution ?? B.res, out });
+  toast('Фон убран — добавлено в ленту', 'ok');
+}
+
+function addBgResult(out, job) {
+  const raw = fileUrl(out);
+  const url = raw + '&t=' + Date.now();
+  B.url = url;
+  const msg = document.createElement('div');
+  msg.className = 'msg';
+  msg.innerHTML = `
+    <div class="msg-bubble" title="Инструкция"><span class="msg-text"></span></div>
+    <div class="msg-img"><img alt=""></div>
+    <div class="msg-foot">
+      <span class="msg-meta"><span class="sz">PNG с прозрачностью</span></span>
+      <span class="msg-acts">
+        <a href="#" download>⬇ PNG</a>
+        <button type="button" data-a="zoom">⤢ Крупно</button>
+        <button type="button" data-a="gen">В анимацию</button>
+      </span>
+    </div>`;
+  msg.querySelector('.msg-text').textContent = job.prompt || '';
+  msg.querySelector('.msg-bubble').onclick = () => msg.classList.toggle('open');
+
+  const img = msg.querySelector('img');
+  const feed = $('#bgFeed');
+  // как в чате: показываем начало нового сообщения
+  const scrollToMsg = () => {
+    const mr = msg.getBoundingClientRect(), fr = feed.getBoundingClientRect();
+    const at = feed.scrollTop + (mr.top - fr.top);
+    const after = parseFloat(getComputedStyle(msg).marginBottom) || 0;
+    const fit = msg.offsetHeight + after <= feed.clientHeight;
+    feed.scrollTop = fit ? feed.scrollHeight : at - 2;
+    const sz = msg.querySelector('.msg-meta .sz');
+    if (sz && img.naturalWidth) sz.textContent = `${img.naturalWidth}×${img.naturalHeight} · PNG с альфой`;
+  };
+  img.alt = out.filename;
+  img.onclick = () => zoomOpen(url);
+  img.onload = scrollToMsg;
+  img.src = url;
+
+  const dl = msg.querySelector('a');
+  dl.href = raw;
+  dl.setAttribute('download', out.filename);
+  msg.querySelector('[data-a="zoom"]').onclick = () => zoomOpen(url);
+  msg.querySelector('[data-a="gen"]').onclick = () => bgSendToGen(url);
+
+  const empty = $('#bgEmpty');
+  if (empty) empty.remove();
+  feed.append(msg);
+  requestAnimationFrame(scrollToMsg);
+
+  // правый блок «Результат» всегда про последний прогон
+  $('#bgDl').href = raw;
+  $('#bgDl').setAttribute('download', out.filename);
+  $('#bgDl').setAttribute('aria-disabled', 'false');
+  $('#bgToGen').disabled = false;
+  return url;
+}
+
+async function bgSendToGen(url) {
+  try {
+    setImage(await imgAsFile(url, 'character.png'));
+    setTab('gen');
+    toast('Картинка перенесена в «Анимацию»', 'ok');
+  } catch (e) {
+    toast('Не удалось перенести: ' + e.message, 'bad');
+  }
+}
+
+$('#bgToGen').onclick = () => { if (B.url) bgSendToGen(B.url); };
+
+/* ---------- просмотр с увеличением ---------- */
+const Z = { list: [], i: 0, scale: 0, video: false, drag: null };
+
+function zoomOpen(srcList, index = 0) {
+  Z.list = (Array.isArray(srcList) ? srcList : [srcList]).filter(Boolean);
+  if (!Z.list.length) return;
+  Z.i = Math.max(0, Math.min(index, Z.list.length - 1));
+  Z.scale = 0;
+  Z.drag = null;
+  $('#zoom').hidden = false;
+  document.body.style.overflow = 'hidden';
+  paintZoom();
+  requestAnimationFrame(placeZoomClose);
+}
+
+/* Кнопка «Закрыть» — красная, у правого верхнего края самой картинки. */
+function placeZoomClose() {
+  const btn = $('#zoomClose');
+  if ($('#zoom').hidden) return;
+  const vid = $('#zoomVideo');
+  const media = vid.hidden ? $('#zoomImg') : vid;
+  const r = media.getBoundingClientRect();
+  if (!r.width || !r.height) { btn.hidden = true; return; }
+  btn.hidden = false;
+  const w = btn.offsetWidth || 40, h = btn.offsetHeight || 40;
+  const left = Math.max(8, Math.min(r.right - w - 8, innerWidth - w - 8));
+  const top = Math.max(8, Math.min(r.top + 8, innerHeight - h - 8));
+  btn.style.left = Math.round(left) + 'px';
+  btn.style.top = Math.round(top) + 'px';
+}
+
+function fitScale() {
+  const stage = $('#zoomStage'), img = $('#zoomImg');
+  if (!img.naturalWidth) return 1;
+  const w = Math.max(100, stage.clientWidth - 24);
+  const h = Math.max(100, stage.clientHeight - 16);
+  return Math.min(w / img.naturalWidth, h / img.naturalHeight, 1);
+}
+
+function applyScale() {
+  const img = $('#zoomImg'), stage = $('#zoomStage');
+  if (Z.video) return;
+  const zoomed = Z.scale > 0;
+  stage.classList.toggle('zoomed', zoomed);
+  img.classList.toggle('actual', zoomed);
+  if (zoomed) {
+    img.style.width = Math.round(img.naturalWidth * Z.scale) + 'px';
+    img.style.height = 'auto';
+    $('#zoomLevel').textContent = Math.round(Z.scale * 100) + '%';
+  } else {
+    img.style.width = '';
+    img.style.height = '';
+    $('#zoomLevel').textContent = 'вписано';
+  }
+  requestAnimationFrame(placeZoomClose);
+}
+
+function paintZoom() {
+  const src = Z.list[Z.i];
+  Z.video = /\.(mp4|webm|mov|mkv)(\?|&|$)/i.test(src);
+  const img = $('#zoomImg'), vid = $('#zoomVideo');
+  const controls = ['#zoomIn', '#zoomOut', '#zoomActual', '#zoomFit'];
+  controls.forEach(sel => { $(sel).hidden = Z.video; });
+  img.hidden = Z.video;
+  vid.hidden = !Z.video;
+  if (Z.video) {
+    img.removeAttribute('src');
+    img.style.width = '';
+    $('#zoomStage').classList.remove('zoomed');
+    vid.src = src;
+    vid.onloadedmetadata = () => requestAnimationFrame(placeZoomClose);
+    $('#zoomLevel').textContent = 'видео';
+  } else {
+    vid.pause();
+    vid.removeAttribute('src');
+    img.src = src;
+    Z.scale = 0;
+    $('#zoomStage').classList.remove('zoomed');
+    if (img.complete && img.naturalWidth) applyScale();
+    else img.onload = () => { if (!Z.video) applyScale(); };
+    $('#zoomLevel').textContent = 'вписано';
+  }
+  $('#zoomCount').textContent = Z.list.length > 1 ? `${Z.i + 1} / ${Z.list.length}` : '';
+  $('#zoomPrev').hidden = $('#zoomNext').hidden = Z.list.length < 2;
+}
+
+function zoomBy(factor) {
+  if (Z.video) return;
+  const base = Z.scale || fitScale();
+  Z.scale = Math.min(8, Math.max(0.05, base * factor));
+  applyScale();
+}
+
+function zoomClose() {
+  $('#zoom').hidden = true;
+  $('#zoomClose').hidden = true;
+  $('#zoomImg').removeAttribute('src');
+  $('#zoomImg').style.width = '';
+  const vid = $('#zoomVideo');
+  vid.pause();
+  vid.removeAttribute('src');
+  $('#zoomStage').classList.remove('zoomed');
+  document.body.style.overflow = '';
+}
+
+function zoomStep(delta) {
+  if (Z.list.length < 2) return;
+  Z.i = (Z.i + delta + Z.list.length) % Z.list.length;
+  Z.scale = 0;
+  paintZoom();
+}
+
+$('#zoomClose').onclick = zoomClose;
+$('#zoomPrev').onclick = () => zoomStep(-1);
+$('#zoomNext').onclick = () => zoomStep(1);
+$('#zoomIn').onclick = () => zoomBy(1.25);
+$('#zoomOut').onclick = () => zoomBy(1 / 1.25);
+$('#zoomActual').onclick = () => { if (!Z.video) { Z.scale = 1; applyScale(); } };
+$('#zoomFit').onclick = () => { if (!Z.video) { Z.scale = 0; applyScale(); } };
+
+/* Кнопка закрытия едет за картинкой при прокрутке/масштабе/смене размера окна. */
+$('#zoomStage').addEventListener('scroll', () => requestAnimationFrame(placeZoomClose), { passive: true });
+window.addEventListener('resize', () => requestAnimationFrame(placeZoomClose));
+
+$('#zoomImg').ondblclick = () => {
+  if (Z.video) return;
+  Z.scale = Z.scale > 0 ? 0 : 1;
+  applyScale();
+};
+
+$('#zoom').addEventListener('wheel', e => {
+  if (Z.video || $('#zoom').hidden) return;
+  e.preventDefault();
+  zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
+}, { passive: false });
+
+(function zoomDrag() {
+  const stage = $('#zoomStage');
+  stage.addEventListener('pointerdown', e => {
+    if (Z.video || e.button !== 0) return;
+    Z.drag = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop };
+    stage.classList.add('drag');
+    try { stage.setPointerCapture(e.pointerId); } catch { /* ок */ }
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!Z.drag) return;
+    stage.scrollLeft = Z.drag.l - (e.clientX - Z.drag.x);
+    stage.scrollTop = Z.drag.t - (e.clientY - Z.drag.y);
+  });
+  const stop = () => { Z.drag = null; stage.classList.remove('drag'); };
+  stage.addEventListener('pointerup', stop);
+  stage.addEventListener('pointercancel', stop);
+})();
+
+document.addEventListener('keydown', e => {
+  if ($('#zoom').hidden) return;
+  if (e.key === 'Escape') { zoomClose(); return; }
+  if (e.key === 'ArrowLeft') zoomStep(-1);
+  if (e.key === 'ArrowRight') zoomStep(1);
+  if (Z.video) return;
+  if (e.key === '+' || e.key === '=') zoomBy(1.25);
+  if (e.key === '-') zoomBy(1 / 1.25);
+  if (e.key === '0') { Z.scale = 0; applyScale(); }
+  if (e.key === '1') { Z.scale = 1; applyScale(); }
+});
+
+$('#videoZoom').onclick = () => { const src = $('#video').src; if (src) zoomOpen(src); };
+$('#sheetCv').onclick = () => {
+  const cv = $('#sheetCv');
+  if (!cv.hidden && cv.width) zoomOpen(cv.toDataURL('image/png'));
+};
+
+/* ---------- вкладка «Картинка» (Qwen Image 2.1) ---------- */
+const I = { model: '', aspect: '1:1', base: 1024, steps: 25,
+  seedFixed: false, seed: '', job: null, tick: null, url: '', refs: [], agentBusy: false,
+  lastBrief: '', refMode: 'new', agentPrompt: '', agentCtrl: null };
+
+/* Режим исходника: «Изменить это» → картинка идёт в модель, «Новое по образцу» → нет. */
+function imgModel() {
+  return ((S.image && S.image.models) || []).find(m => m.id === I.model) || null;
+}
+function refSupported() {
+  const m = imgModel();
+  return !!(m && m.ref);
+}
+function resolvedRefMode() {
+  return I.refMode === 'edit' && refSupported() ? 'edit' : 'off';
+}
+
+const IMG_ASPECTS = [
+  ['1:1', 1, 1], ['16:9', 16, 9], ['9:16', 9, 16], ['4:3', 4, 3], ['3:4', 3, 4],
+];
+
+function imgSize() {
+  const [w, h] = I.aspect.split(':').map(Number);
+  const base = I.base;
+  if (w >= h) return [base, Math.max(256, Math.round(base * h / w / 16) * 16)];
+  return [Math.max(256, Math.round(base * w / h / 16) * 16), base];
+}
+
+function imgCount() {
+  const ipc = $('#imgPc');
+  if (ipc) ipc.textContent = $('#imgPrompt').value.length + ' символов';
+}
+
+/* Поле ввода растёт под текст, как в чате, и останавливается на 280 px. */
+function imgGrow() {
+  const t = $('#imgPrompt');
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight, 160) + 'px';
+}
+
+/* В режиме правки модель берёт пропорции из исходника, поэтому подгоняем картинку
+   под выбранный размер (обрезка по центру) — иначе результат выйдет другого размера. */
+function loadImage(src, ms = 4000) {
+  const im = new Image();
+  const ready = new Promise(res => { im.onload = im.onerror = () => res(im); });
+  im.src = src;
+  return Promise.race([ready, new Promise(res => setTimeout(() => res(im), ms))]);
+}
+
+async function refForEdit(w, h) {
+  const first = I.refs[0];
+  if (!first) return '';
+  const im = await loadImage(first.data);
+  const nw = im.naturalWidth, nh = im.naturalHeight;
+  if (!nw || !nh) return first.data;
+  if (nw === w && nh === h) return first.data;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  const s = Math.max(w / nw, h / nh);
+  const dw = Math.round(nw * s), dh = Math.round(nh * s);
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(im, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh);
+  return c.toDataURL('image/png');
+}
+
+/* Для агента уменьшаем картинки до 640 px: зрению хватает, а ответ заметно быстрее. */
+async function refsForAgent(max = 640) {
+  const out = [];
+  for (const r of I.refs) {
+    const im = await loadImage(r.data);
+    const w = im.naturalWidth, h = im.naturalHeight;
+    if (!w || !h) { out.push(r.data); continue; }
+    const s = Math.min(1, max / Math.max(w, h));
+    if (s >= 1) { out.push(r.data); continue; }
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * s);
+    c.height = Math.round(h * s);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    out.push(c.toDataURL('image/jpeg', 0.85));
+  }
+  return out;
+}
+
+function paintImg() {
+  const models = (S.image && S.image.models) || [];
+  if (!I.model && models.length) I.model = (models.find(m => m.ready) || models[0]).id;
+  const box = $('#imgModels');
+  box.innerHTML = models.map(m => {
+    const sub = m.ready ? (m.hint || '') : ('нет: ' + (m.missing || []).join(', '));
+    return `<button data-m="${esc(m.id)}"${m.ready ? '' : ' disabled'} class="${m.id === I.model ? 'on' : ''}">`
+      + `${esc(m.title)}<small>${esc(sub)}</small></button>`;
+  }).join('') || '<div class="hint">моделей нет</div>';
+  box.onclick = e => {
+    const b = e.target.closest('button[data-m]');
+    if (!b || b.disabled) return;
+    I.model = b.dataset.m;
+    const m = models.find(x => x.id === I.model);
+    if (m && m.steps) I.steps = m.steps;
+    paintImg();
+  };
+
+  const cur = models.find(m => m.id === I.model);
+  $('#imgModelHint').textContent = cur ? (cur.hint || '') : '';
+  const refOk = refSupported();
+  if (!refOk && I.refMode === 'edit') I.refMode = 'new';
+  const n = I.refs.length;
+  document.querySelectorAll('#imgRefMode button').forEach(b => {
+    b.classList.toggle('on', b.dataset.m === I.refMode);
+    b.disabled = !n || (b.dataset.m === 'edit' && !refOk);
+  });
+  const rm = resolvedRefMode();
+  $('#imgRefHint').textContent = !n
+    ? 'Без исходника генерация идёт по промпту.'
+    : !refOk
+      ? 'Эта модель рисует с нуля: исходник останется подсказкой для агента. Править картинку умеют Qwen Image 2.1 и MiniMax H3 Image.'
+      : rm === 'edit'
+        ? (n > 1
+          ? `Первая картинка правится, остальные (${n - 1}) — референсы: стиль, детали, второй ракурс.`
+          : 'Модель возьмёт исходник и изменит его по промпту: лицо, поза и фон сохраняются.')
+        : 'Исходник не используется: агент опишет стиль словами, модель нарисует новое.';
+  const [w, h] = imgSize();
+  $('#imgSizeV').textContent = `${w}×${h}`;
+  $('#imgBaseV').textContent = I.base + ' px';
+  $('#imgStepsV').textContent = I.steps + ' шагов';
+  $('#imgAspect').innerHTML = IMG_ASPECTS.map(([id, w, h]) =>
+    `<button class="chip aspect${I.aspect === id ? ' on' : ''}" data-a="${id}" title="${id}">`
+    + `<span class="shape" style="--w:${w};--h:${h}"></span><span>${id}</span></button>`).join('');
+  const stepsList = (cur && cur.step_options && cur.step_options.length) ? cur.step_options : [16, 25, 40];
+  if (!stepsList.includes(I.steps)) I.steps = (cur && cur.steps) || stepsList[1] || 25;
+  $('#imgSteps').innerHTML = stepsList.map((v, i) => {
+    const sub = i === 0 ? 'быстро' : i === stepsList.length - 1 ? 'чище' : 'обычно';
+    return `<button data-v="${v}"${v === I.steps ? ' class="on"' : ''}>${v}<small>${sub}</small></button>`;
+  }).join('');
+  $('#imgStepsV').textContent = I.steps + ' шагов';
+  document.querySelectorAll('#imgBase button').forEach(b => b.classList.toggle('on', +b.dataset.v === I.base));
+  document.querySelectorAll('#imgSteps button').forEach(b => b.classList.toggle('on', +b.dataset.v === I.steps));
+  document.querySelectorAll('#imgSeedMode button').forEach(b => b.classList.toggle('on', (b.dataset.f === '1') === I.seedFixed));
+  $('#imgSeedRow').hidden = !I.seedFixed;
+  if ($('#imgSeedIn') !== document.activeElement) $('#imgSeedIn').value = I.seed || '';
+  $('#imgSeedV').textContent = I.seedFixed ? 'фиксированный' : 'случайный';
+  imgCount();
+
+  const missing = models.length ? models.filter(m => !m.ready).map(m => `${m.title}: ${(m.missing || []).join(', ')}`) : ['нет данных о моделях'];
+  const ready = !!cur && cur.ready;
+  $('#imgWarn').hidden = ready;
+  if (!ready) {
+    $('#imgWarn').classList.add('warn');
+    $('#imgWarn').innerHTML = models.length && !missing.length
+      ? 'Нет готовой модели изображений в ComfyUI.'
+      : `<b>Чего не хватает:</b> ${esc(missing.join('; '))}`;
+  }
+  $('#imgGo').disabled = !ready || !!I.job;
+  $('#imgGo').hidden = !!I.job;
+  $('#imgStop').hidden = !I.job;
+}
+
+$('#imgAspect').onclick = e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  I.aspect = b.dataset.a; paintImg();
+};
+$('#imgBase').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  I.base = +b.dataset.v; paintImg();
+};
+$('#imgSteps').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  I.steps = +b.dataset.v; paintImg();
+};
+$('#imgSeedMode').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  I.seedFixed = b.dataset.f === '1';
+  if (I.seedFixed && !I.seed) I.seed = String(Math.floor(Math.random() * 1e15));
+  paintImg();
+};
+$('#imgSeedIn').oninput = e => { I.seed = e.target.value.replace(/\D/g, '').slice(0, 18); e.target.value = I.seed; };
+$('#imgSeedNew').onclick = () => { I.seed = String(Math.floor(Math.random() * 1e15)); paintImg(); };
+$('#imgPrompt').oninput = () => { imgGrow(); paintImg(); };
+
+$('#imgGo').onclick = async () => {
+  const prompt = $('#imgPrompt').value.trim();
+  if (!prompt) { toast('Напишите, что нарисовать', 'bad'); return; }
+  I.job = { state: 'queued' };
+  progStart('img', '', 'отправляю в ComfyUI…');
+  $('#imgStop').hidden = false;
+  paintImg();
+  try {
+    const [w, h] = imgSize();
+    const rm = resolvedRefMode();
+    const refs = rm === 'edit'
+      ? [await refForEdit(w, h), ...I.refs.slice(1).map(r => r.data)]
+      : [];
+    const r = await fetch('/api/image/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: I.model, prompt,
+        aspect: I.aspect, base: I.base, width: w, height: h, steps: I.steps,
+        refs, ref_mode: rm,
+        seed: I.seedFixed ? +I.seed : 0 }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось поставить задание');
+    I.job = { ...j, prompt, t0: performance.now() };
+    progStart('img', j.id, 'в очереди');
+    imgPoll();
+  } catch (e) {
+    toast(e.message, 'bad');
+    imgFail();
+  }
+};
+
+$('#imgStop').onclick = async () => {
+  if (!I.job) return;
+  $('#imgStage').textContent = 'Останавливаю…';
+  await fetch('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: I.job.id }) }).catch(() => {});
+};
+
+async function imgPoll() {
+  clearTimeout(I.tick);
+  if (!I.job || !I.job.id) return;
+  $('#imgTime').textContent = fmtT(performance.now() - I.job.t0);
+  let st = null;
+  try { st = await (await fetch('/api/job?id=' + encodeURIComponent(I.job.id))).json(); } catch { /* сеть */ }
+  if (!st) { I.tick = setTimeout(imgPoll, 2000); return; }
+  if (!P.es) {
+    if (st.state === 'queued') $('#imgStage').textContent = 'В очереди ComfyUI…';
+    else if (st.state === 'running') $('#imgStage').textContent = 'Рисую…';
+  }
+  if (st.state === 'done') return imgFinish(st);
+  else if (st.state === 'error') { toast('Ошибка: ' + (st.error || 'ComfyUI вернул ошибку'), 'bad'); return imgFail(); }
+  else if (performance.now() - I.job.t0 > 20 * 60 * 1000) { toast('Задание пропало из очереди', 'bad'); return imgFail(); }
+  I.tick = setTimeout(imgPoll, 1800);
+}
+
+function imgFail() {
+  clearTimeout(I.tick);
+  progStop();
+  jobsDone(I.job && I.job.id);
+  I.job = null;
+  $('#imgStop').hidden = true;
+  paintImg();
+}
+
+function addImgResult(out, job) {
+  const raw = fileUrl(out);
+  const url = raw + '&t=' + Date.now();
+  I.url = url;
+  const msg = document.createElement('div');
+  msg.className = 'msg';
+  msg.innerHTML = `
+    <div class="msg-bubble" title="Промпт"><span class="msg-text"></span></div>
+    <div class="msg-img"><img alt=""></div>
+    <div class="msg-foot">
+      <span class="msg-meta">
+        <span class="sz">${job.width}×${job.height}</span> · ${job.steps} шагов · seed <b></b>
+      </span>
+      <span class="msg-acts">
+        <a href="#" download>⬇ PNG</a>
+        <button type="button" data-a="zoom">⤢ Крупно</button>
+        <button type="button" data-a="bg">Убрать фон</button>
+        <button type="button" data-a="gen">В анимацию</button>
+      </span>
+    </div>`;
+  msg.querySelector('.msg-text').textContent = job.prompt || '';
+  msg.querySelector('.msg-meta b').textContent = job.seed;
+  if (job.ref) msg.querySelector('.msg-meta').append(' · по исходнику');
+  msg.querySelector('.msg-bubble').onclick = () => msg.classList.toggle('open');
+
+  const img = msg.querySelector('img');
+  const feed = $('#imgFeed');
+  // Как в чате: показываем начало нового сообщения — промпт и картинку под ним.
+  const scrollToMsg = () => {
+    const mr = msg.getBoundingClientRect(), fr = feed.getBoundingClientRect();
+    const at = feed.scrollTop + (mr.top - fr.top);
+    const after = parseFloat(getComputedStyle(msg).marginBottom) || 0;
+    const fit = msg.offsetHeight + after <= feed.clientHeight;
+    feed.scrollTop = fit ? feed.scrollHeight : at - 2;
+    const sz = msg.querySelector('.msg-meta .sz');
+    if (sz && img.naturalWidth) sz.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
+  };
+  img.alt = out.filename;
+  img.onclick = () => zoomOpen(url);
+  img.onload = scrollToMsg;
+  img.src = url;
+  const dl = msg.querySelector('a');
+  dl.href = raw;
+  dl.setAttribute('download', out.filename);
+  msg.querySelector('[data-a="zoom"]').onclick = () => zoomOpen(url);
+  msg.querySelector('[data-a="bg"]').onclick = async () => {
+    try {
+      setBgImage(await imgAsFile(url, 'image.png'));
+      setTab('bg');
+      toast('Картинка перенесена в «Убрать фон»', 'ok');
+    } catch (e) { toast('Не удалось перенести: ' + e.message, 'bad'); }
+  };
+  msg.querySelector('[data-a="gen"]').onclick = async () => {
+    try {
+      setImage(await imgAsFile(url, 'character.png'));
+      setTab('gen');
+      toast('Картинка перенесена в «Анимацию»', 'ok');
+    } catch (e) { toast('Не удалось перенести: ' + e.message, 'bad'); }
+  };
+  const empty = $('#imgEmpty');
+  if (empty) empty.remove();
+  feed.append(msg);
+  // После вставки в DOM — следующий кадр, чтобы картинка уже заняла своё место.
+  requestAnimationFrame(scrollToMsg);
+  return url;
+}
+
+function imgFinish(st) {
+  clearTimeout(I.tick);
+  progDone();
+  $('#imgStop').hidden = true;
+  const job = I.job;
+  I.job = null;
+  jobsDone(job && job.id);
+  paintImg();
+  const out = (st.outputs || []).find(o => o.kind === 'image');
+  if (!out) { toast('Модель не вернула картинку', 'bad'); return; }
+  addImgResult(out, job);
+  recordRun({ kind: 'img', id: job.id, model: job.model, prompt: job.prompt,
+    seed: job.seed, steps: job.steps, width: job.width, height: job.height,
+    base: I.base, aspect: I.aspect, ref: !!job.ref, refs: job.refs || 0, out });
+  toast('Картинка готова — добавлена в ленту', 'ok');
+}
+
+async function imgAsFile(url, name) {
+  const blob = await (await fetch(url)).blob();
+  return new File([blob], name || 'image.png', { type: 'image/png' });
+}
+
+/* Агент по промптам: скилл выбранной модели + (необязательно) картинки стиля. */
+const IMG_REFS_MAX = 5;   // 1-я картинка — основная (её правим), остальные — референсы
+
+function renderRefs() {
+  $('#imgRefList').innerHTML = I.refs.map((r, i) => `
+    <div class="ref-item${i === 0 ? ' base' : ''}" title="${esc(r.name)}${i === 0 ? ' — основная' : ''}">
+      <img src="${r.data}" alt="">
+      <span class="n">${i + 1}</span>
+      <button class="x" type="button" data-i="${i}" title="Убрать">✕</button>
+    </div>`).join('');
+  $('#imgStylePreview').hidden = !I.refs.length;
+  $('#imgStyleBtn').textContent = I.refs.length ? '📎 Добавить исходник' : '📎 Загрузить исходник';
+  const name = $('#imgStyleName');
+  name.hidden = !I.refs.length;
+  name.textContent = I.refs.length ? `${I.refs.length} из ${IMG_REFS_MAX}` : '';
+}
+
+async function addRefs(files) {
+  const room = IMG_REFS_MAX - I.refs.length;
+  if (room <= 0) { toast(`Больше ${IMG_REFS_MAX} картинок не нужно`, 'bad'); return; }
+  const take = [...files].filter(f => f.type.startsWith('image/')).slice(0, room);
+  if (!take.length) return;
+  const loaded = await Promise.all(take.map(f => new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res({ name: f.name, data: String(r.result) });
+    r.onerror = () => res(null);
+    r.readAsDataURL(f);
+  })));
+  I.refs.push(...loaded.filter(Boolean));
+  renderRefs();
+  paintImg();
+}
+
+$('#imgStyleBtn').onclick = () => $('#imgStyleFile').click();
+$('#imgStyleFile').onchange = e => {
+  addRefs(e.target.files);
+  e.target.value = '';
+};
+$('#imgRefList').onclick = e => {
+  const b = e.target.closest('button[data-i]');
+  if (!b) return;
+  I.refs.splice(+b.dataset.i, 1);
+  renderRefs();
+  paintImg();
+};
+
+$('#imgAgent').onclick = async () => {
+  if (I.agentBusy) { I.agentCtrl?.abort(); return; }
+  const brief = $('#imgPrompt').value.trim();
+  if (!brief) { toast('Опишите в двух словах, что нужно', 'bad'); return; }
+  await runAgent(brief);
+};
+
+$('#imgRefMode').onclick = e => {
+  const b = e.target.closest('button[data-m]');
+  if (!b) return;
+  I.refMode = b.dataset.m;
+  paintImg();
+};
+
+/* ---------- стриминг агента (общий для «Картинки» и «Анимации») ---------- */
+async function streamAgent(payload, handlers = {}, ctrl = new AbortController()) {
+  handlers.onStart && handlers.onStart(ctrl);
+  const res = await fetch('/api/agent/prompt/stream', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload), signal: ctrl.signal,
+  });
+  if (!res.ok) {
+    let msg = 'агент не ответил';
+    try { const j = await res.json(); msg = j.error || msg; } catch { /* не json */ }
+    throw new Error(msg);
+  }
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let k;
+    while ((k = buf.indexOf('\n\n')) >= 0) {
+      const chunk = buf.slice(0, k).trim();
+      buf = buf.slice(k + 2);
+      if (!chunk.startsWith('data:')) continue;
+      let ev = null;
+      try { ev = JSON.parse(chunk.slice(5)); } catch { continue; }
+      if (ev.type === 'delta') handlers.onDelta && handlers.onDelta(ev.text);
+      else if (ev.type === 'status') handlers.onStatus && handlers.onStatus(ev.text);
+      else if (ev.type === 'description') handlers.onDescription && handlers.onDescription(ev.text);
+      else if (ev.type === 'done') handlers.onDone && handlers.onDone(ev);
+      else if (ev.type === 'error') throw new Error(ev.message || 'ошибка агента');
+    }
+  }
+}
+
+async function runAgent(brief) {
+  if (I.agentBusy) return;
+  const btn = $('#imgAgent'), box = $('#imgPrompt');
+  const wasBrief = box.value;
+  I.agentBusy = true;
+  I.lastBrief = brief;
+  I.agentCtrl = new AbortController();
+  btn.classList.add('busy');
+  btn.title = 'Нажмите, чтобы остановить';
+  btn.textContent = '✨ думаю…';
+  progAgent('img', 'думаю…');
+  let live = '';
+  try {
+    const pics = await refsForAgent();
+    await streamAgent(
+      { model: I.model, brief, images: pics,
+        mode: I.refMode === 'edit' ? 'edit' : 'new' },
+      {
+        onStatus: t => { btn.textContent = '✨ ' + t + '…'; progAgent('img', t); },
+        onDescription: t => { $('#imgDescText').textContent = t; $('#imgDescBox').hidden = false; },
+        onDelta: t => { live += t; box.value = live; imgCount(); imgGrow(); },
+        onDone: j => {
+          box.value = j.prompt;
+          I.agentPrompt = j.prompt;
+          imgCount();
+          imgGrow();
+          if (j.aspect && IMG_ASPECTS.some(a => a[0] === j.aspect)) { I.aspect = j.aspect; paintImg(); }
+          if (j.description) { $('#imgDescText').textContent = j.description; $('#imgDescBox').hidden = false; }
+          progDone(1500);
+          toast(`Промпт готов · скилл: ${j.skill || 'без скилла'}`, 'ok');
+        },
+      },
+      I.agentCtrl);
+  } catch (e) {
+    progStop();
+    if (e.name === 'AbortError') {
+      toast('Остановлено — текст оставлен как есть');
+      imgCount();
+    } else {
+      toast('Агент: ' + e.message, 'bad');
+      if (!live) { box.value = wasBrief; imgCount(); }
+    }
+  } finally {
+    I.agentBusy = false;
+    I.agentCtrl = null;
+    btn.classList.remove('busy');
+    btn.title = '';
+    btn.textContent = '✨ Промпт агентом';
+  }
+}
+
+boot();
+const startTab = (location.hash || '').slice(1);
+if (['img', 'bg', 'gen', 'sheet'].includes(startTab)) setTab(startTab);
+setInterval(async () => {
+  try {
+    const j = await (await fetch('/api/state')).json();
+    paintComfy(j.comfy);
+    const jobs = (await (await fetch('/api/jobs')).json()).jobs || [];
+    const active = jobs.filter(x => x.state === 'running' || x.state === 'queued');
+    $('#queuePill').hidden = !active.length;
+    $('#queueN').textContent = active.length;
+    if ($('#queuePop').hidden === false) renderQueue(active);
+  } catch {}
+}, 5000);
+
+/* ---- очередь: список активных заданий и переход в нужную вкладку ---- */
+const QUEUE_KIND = { img: ['img', 'Изображение'], bg: ['bg', 'Фон'], anim: ['gen', 'Анимация'] };
+let queueItems = [];
+
+function renderQueue(active) {
+  queueItems = active;
+  const pop = $('#queuePop');
+  pop.innerHTML = active.length
+    ? active.map((j, i) => {
+      const [tab, label] = QUEUE_KIND[j.kind] || ['img', j.kind];
+      const text = String(j.prompt || '').trim().slice(0, 60) || 'без промпта';
+      const state = j.state === 'running' ? 'считается' : 'в очереди';
+      return `<button class="qrow" data-i="${i}" type="button" data-tab="${tab}">`
+        + `<b>${esc(label)}</b><span>${esc(text)}</span><small>${state}</small></button>`;
+    }).join('')
+    : '<div class="qempty">Очередь пуста</div>';
+}
+
+async function toggleQueue() {
+  const pop = $('#queuePop');
+  if (!pop.hidden) { pop.hidden = true; return; }
+  try {
+    const jobs = (await (await fetch('/api/jobs')).json()).jobs || [];
+    renderQueue(jobs.filter(x => x.state === 'running' || x.state === 'queued'));
+  } catch { queueItems = []; renderQueue([]); }
+  pop.hidden = false;
+}
+
+$('#queuePill').onclick = toggleQueue;
+$('#queuePop').onclick = e => {
+  const row = e.target.closest('.qrow');
+  if (!row) return;
+  $('#queuePop').hidden = true;
+  setTab(row.dataset.tab);
+};
+document.addEventListener('click', e => {
+  if (!$('#queuePop').hidden && !e.target.closest('#queuePop') && !e.target.closest('#queuePill')) {
+    $('#queuePop').hidden = true;
+  }
+});
+</script>
+</body>
+</html>

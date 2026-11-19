@@ -1,0 +1,20 @@
+# Локальные данные и сборки — не выкладываем
+.cache/
+output/
+.profile/
+.frames/
+__pycache__/
+*.pyc
+desktop/dist/
+desktop/build/
+build/work/
+voice/lib/
+voice/models/
+
+# Сторонние исходники, оставленные для сверки
+sheet/
+
+# Служебное
+*.log
+Thumbs.db
+desktop.ini

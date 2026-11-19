@@ -1,0 +1,2145 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<script>try{var _t=new URLSearchParams(location.search).get("theme");if(["studio","maker","light"].indexOf(_t)>=0)document.documentElement.dataset.theme=_t;}catch(e){}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprite Sheet Maker</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='10' width='56' height='44' rx='6' fill='%23d9a35a'/%3E%3Cg fill='%23121a17'%3E%3Crect x='12' y='18' width='12' height='12' rx='2'/%3E%3Crect x='26' y='18' width='12' height='12' rx='2'/%3E%3Crect x='40' y='18' width='12' height='12' rx='2'/%3E%3Crect x='12' y='34' width='12' height='12' rx='2'/%3E%3Crect x='26' y='34' width='12' height='12' rx='2'/%3E%3Crect x='40' y='34' width='12' height='12' rx='2'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #121a17; --panel: #18221e; --panel2: #1e2a25; --line: #2f3f37; --text: #e8e2cf; --muted: #93a093;
+  --gold: #e6b971; --accent: #d9a35a; --sel: #ffd27a; --bad: #ff8a6a; --ok: #9fc48c; --loop: #7fc4ff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px "Trebuchet MS", "Segoe UI", sans-serif; }
+body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+button, input, select, textarea { font: inherit; color: var(--text); }
+button { background: #2a3a32; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+button:hover { background: #33473d; }
+button.primary { background: var(--accent); color: #1b1408; border-color: #b8853f; font-weight: 700; }
+button.primary:hover { background: #e7b46c; }
+button.on { border-color: var(--accent); color: var(--gold); }
+button:disabled { opacity: .45; cursor: default; }
+input, select, textarea { background: #111915; border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; min-width: 0; }
+input[type=number] { width: 64px; }
+input[type=checkbox] { accent-color: var(--accent); }
+input[type=range] { accent-color: var(--accent); padding: 0; }
+input[type=color] { padding: 0 2px; width: 38px; height: 26px; }
+textarea { resize: vertical; width: 100%; font: 12px Consolas, monospace; }
+input:focus, select:focus, textarea:focus { outline: 1px solid var(--accent); }
+header { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header h1 { font-size: 15px; margin: 0 4px 0 0; color: var(--gold); white-space: nowrap; }
+header .sep { width: 1px; height: 22px; background: var(--line); }
+#gameBtn { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+#gameBtn.none { border-color: var(--bad); color: var(--bad); }
+#status { margin-left: auto; color: var(--muted); max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#status.ok { color: var(--ok); } #status.bad { color: var(--bad); }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 320px minmax(340px, .85fr); min-height: 0; }
+section { min-height: 0; display: flex; flex-direction: column; }
+#sheetCol { border-right: 1px solid var(--line); }
+#midCol { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; }
+#framesCol { background: var(--panel); }
+.title { padding: 8px 10px 6px; color: var(--gold); font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.title .sub { color: var(--muted); font-weight: 400; margin-left: auto; font-size: 12px; }
+.bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 0 10px 8px; }
+.bar label { display: flex; align-items: center; gap: 5px; color: var(--muted); }
+.block { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.hint { color: var(--muted); font-size: 11.5px; padding: 0 10px 8px; line-height: 1.4; }
+.warn { color: var(--bad); }
+#sheetWrap { flex: 1; min-height: 0; overflow: auto; padding: 0 10px 10px; position: relative; }
+#sheetView { display: block; border: 1px solid var(--line); border-radius: 4px; }
+#sheetInfo { padding: 0 10px 8px; color: var(--muted); }
+#empty { position: absolute; inset: 0 10px 10px; display: grid; place-items: center; text-align: center; color: var(--muted); border: 2px dashed var(--line); border-radius: 10px; pointer-events: none; padding: 10px; }
+#empty b { color: var(--gold); font-size: 15px; display: block; margin-bottom: 6px; }
+#player { display: block; margin: 0 auto; border: 1px solid var(--line); border-radius: 4px; max-width: 100%; }
+.pbar { display: flex; gap: 5px; align-items: center; justify-content: center; padding: 6px 10px; flex-wrap: wrap; }
+#frameLabel { color: var(--muted); text-align: center; padding: 0 10px 6px; }
+.field { padding: 0 10px 7px; }
+.field > label { display: block; color: var(--muted); font-size: 11.5px; margin-bottom: 3px; }
+.row { display: flex; gap: 6px; align-items: center; }
+.row > .grow { flex: 1; }
+.tabs { display: flex; margin: 0 10px 8px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 5px 4px; white-space: normal; }
+.tabs button.on { background: #2a3a32; color: var(--gold); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 8px; }
+.chip { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; font-size: 11.5px; color: var(--muted); cursor: pointer; }
+.chip.cur { border-color: var(--accent); color: var(--gold); }
+.chip.empty { border-style: dashed; opacity: .6; }
+.seq { display: flex; flex-wrap: wrap; gap: 3px; padding: 0 10px 6px; max-height: 96px; overflow: auto; }
+.seq span { background: #2b2a1d; border: 1px solid var(--sel); color: var(--sel); border-radius: 4px; padding: 0 5px; font-size: 11.5px; cursor: grab; user-select: none; }
+.seq span:hover { border-color: var(--bad); color: var(--bad); text-decoration: line-through; }
+.seq span.drag { opacity: .4; }
+#thumbs { flex: 1; min-height: 0; overflow: auto; padding: 4px 10px 10px; display: grid; gap: 6px; align-content: start; user-select: none; }
+.thumb { position: relative; background: var(--panel2); border: 2px solid transparent; border-radius: 6px; cursor: pointer; padding: 3px; }
+.thumb:hover { border-color: #4d6155; }
+.thumb.sel { border-color: var(--sel); background: #2b2a1d; }
+.thumb.loop { box-shadow: 0 0 0 2px var(--loop); }
+.thumb canvas { display: block; width: 100%; height: auto; border-radius: 3px; }
+.thumb .n { position: absolute; left: 4px; bottom: 4px; font-size: 10.5px; background: rgba(0,0,0,.65); padding: 0 4px; border-radius: 3px; color: var(--muted); }
+.thumb .o { position: absolute; right: 4px; top: 4px; font-size: 11px; font-weight: 700; background: var(--sel); color: #1b1408; padding: 0 5px; border-radius: 9px; display: none; }
+.thumb.sel .o { display: block; }
+.thumb .l { position: absolute; left: 4px; top: 4px; font-size: 10.5px; background: var(--loop); color: #0b1a26; padding: 0 4px; border-radius: 3px; font-weight: 700; }
+#drop { position: fixed; inset: 0; background: rgba(18,26,23,.85); display: none; place-items: center; z-index: 9; color: var(--gold); font-size: 20px; border: 3px dashed var(--accent); }
+body.dragging #drop { display: grid; }
+#busy { position: absolute; right: 18px; top: 6px; background: rgba(0,0,0,.6); padding: 3px 8px; border-radius: 6px; color: var(--gold); display: none; }
+.modal { position: fixed; inset: 0; background: rgba(5,9,7,.72); display: none; place-items: center; z-index: 20; padding: 16px; }
+.modal.open { display: grid; }
+.dialog { background: var(--panel); border: 1px solid #4d6155; border-radius: 10px; width: min(760px, 100%); max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.dialog .head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.dialog .head h2 { margin: 0; font-size: 16px; color: var(--gold); flex: 1; }
+.dialog .content { overflow: auto; padding: 12px 14px 16px; line-height: 1.5; }
+.dialog h3 { color: var(--gold); font-size: 14px; margin: 14px 0 4px; }
+.dialog h3:first-child { margin-top: 0; }
+.dialog p, .dialog li { margin: 4px 0; }
+.dialog ul, .dialog ol { padding-left: 20px; margin: 4px 0; }
+.dialog .tip { background: var(--panel2); border-left: 3px solid var(--accent); padding: 6px 10px; border-radius: 4px; margin: 6px 0; }
+.dialog code { background: #111915; padding: 0 4px; border-radius: 3px; }
+.recent { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.recent button { text-align: left; white-space: normal; }
+.box { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+.ok-text { color: var(--ok); } .bad-text { color: var(--bad); }
+[hidden] { display: none !important; }
+@media (max-width: 1100px) {
+  body { display: block; overflow: auto; height: auto; }
+  main { display: flex; flex-direction: column; }
+  section { flex: none; }
+  #midCol { overflow: visible; border-right: 0; border-top: 1px solid var(--line); }
+  #sheetWrap { max-height: 70vh; min-height: 260px; }
+  #thumbs { max-height: 70vh; }
+}
+
+/* ---------- оформление в стиле SpriteAnim Studio (темы) ---------- */
+:root, html[data-theme="studio"] {
+  --bg: #0e1014; --panel: #12151b; --panel2: #171b23; --line: #262c38; --line2: #333b4a;
+  --text: #e8ecf4; --muted: #98a2b4;
+  --gold: #c9c4ff; --accent: #7c6cff; --sel: #4ad6c0;
+  --bad: #ff5d6c; --ok: #43d08a; --loop: #4ad6c0;
+  --on-accent: #ffffff; --acc-soft: rgba(124,108,255,.18);
+  --sel-soft: rgba(74,214,192,.14); --sel-ink: #9ff0e2;
+  --overlay: rgba(14,16,20,.92); --overlay2: rgba(6,7,11,.72);
+}
+html[data-theme="maker"] {
+  --bg: #121a17; --panel: #18221e; --panel2: #1e2a25; --line: #2f3f37; --line2: #3d5347;
+  --text: #e8e2cf; --muted: #93a093;
+  --gold: #e6b971; --accent: #d9a35a; --sel: #ffd27a;
+  --bad: #ff8a6a; --ok: #9fc48c; --loop: #7fc4ff;
+  --on-accent: #241a0c; --acc-soft: rgba(217,163,90,.2);
+  --sel-soft: rgba(255,210,122,.14); --sel-ink: #ffd27a;
+  --overlay: rgba(18,26,23,.9); --overlay2: rgba(5,9,7,.72);
+}
+html[data-theme="light"] {
+  --bg: #f5f1ea; --panel: #fffdf9; --panel2: #f3eee5; --line: #ded5c7; --line2: #cdc2b1;
+  --text: #2b241f; --muted: #7b6f65;
+  --gold: #7d1f35; --accent: #7d1f35; --sel: #b08d57;
+  --bad: #a3251d; --ok: #4f7a4a; --loop: #b08d57;
+  --on-accent: #ffffff; --acc-soft: rgba(125,31,53,.12);
+  --sel-soft: rgba(176,141,87,.18); --sel-ink: #6d4f27;
+  --overlay: rgba(245,241,234,.92); --overlay2: rgba(43,36,31,.35);
+}
+html, body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 13px; }
+button {
+  background: var(--panel2); border-color: var(--line2); border-radius: 10px;
+  padding: 6px 11px; font-weight: 600; font-size: 12.5px;
+}
+button:hover { background: var(--panel); border-color: var(--line2); }
+button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+button.primary:hover { filter: brightness(1.08); }
+button.on { border-color: var(--accent); color: var(--gold); }
+input, select, textarea { background: var(--panel); border-color: var(--line2); border-radius: 9px; }
+input:focus, select:focus, textarea:focus { outline: 1px solid var(--accent); }
+header { background: var(--panel); border-bottom-color: var(--line); }
+header h1 { color: var(--text); font-weight: 700; }
+header .sep { background: var(--line); }
+.tabs { border-color: var(--line2); border-radius: 10px; }
+.tabs button.on { background: var(--panel2); color: var(--gold); }
+.chip { background: var(--panel2); border-color: var(--line2); border-radius: 10px; }
+.chip.cur { border-color: var(--accent); color: var(--gold); }
+.title { color: var(--text); }
+.title .sub { color: var(--muted); }
+.seq span { background: var(--sel-soft); border-color: var(--sel); color: var(--sel-ink); }
+.thumb { background: var(--panel2); border-radius: 10px; }
+.thumb:hover { border-color: var(--line2); }
+.thumb.sel { border-color: var(--sel); background: var(--sel-soft); }
+.thumb .o { background: var(--sel); color: var(--on-accent); }
+.thumb .l { background: var(--loop); color: var(--on-accent); }
+#drop { background: var(--overlay); color: var(--gold); border-color: var(--accent); }
+.modal { background: var(--overlay2); }
+.dialog { border-color: var(--line2); border-radius: 14px; }
+.dialog .head h2 { color: var(--text); }
+.dialog h3 { color: var(--gold); }
+.dialog .tip { border-left-color: var(--accent); background: var(--panel2); }
+.dialog code { background: var(--panel); }
+.box { background: var(--panel2); border-color: var(--line); border-radius: 10px; }
+#busy { color: var(--gold); }
+#status.ok { color: var(--ok); }
+/* в светлой теме тёмный текст на золотых плашках читается лучше */
+html[data-theme="light"] .thumb .o,
+html[data-theme="light"] .thumb .l { color: #2b1a12; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sprite Sheet Maker</h1>
+  <button id="gameBtn" data-tt="gameTip"></button>
+  <span class="sep"></span>
+  <button id="openFiles" class="primary" data-t="openFiles" data-tt="openFilesTip"></button>
+  <button id="openDir" data-t="openDir" data-tt="openDirTip"></button>
+  <input id="dirPath" data-tp="dirPathPh" style="width:220px">
+  <button id="loadPath" data-t="load"></button>
+  <input id="fileInput" type="file" accept="image/*,video/*,.gif,.mp4,.webm,.mov,.m4v,.mkv" multiple hidden>
+  <span id="status"></span>
+  <button id="helpBtn" class="primary" data-t="help"></button>
+</header>
+<main>
+  <!-- Лист / Sheet -->
+  <section id="sheetCol">
+    <div class="title"><span data-t="sheet"></span> <span class="sub" id="sheetSub"></span></div>
+    <div class="bar">
+      <label><span data-t="grid"></span> <select id="template"></select></label>
+      <label><span data-t="cols"></span> <input id="cols" type="number" min="1" max="64" value="5"></label>
+      <label><span data-t="rows"></span> <input id="rows" type="number" min="1" max="64" value="4"></label>
+      <button id="fitSel" data-t="fitSel" data-tt="fitSelTip"></button>
+    </div>
+    <div class="bar">
+      <label><span data-t="scale"></span> <select id="scale">
+        <option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option>
+        <option value="0.375">37.5%</option><option value="0.25">25%</option><option value="custom" data-t="custom"></option>
+      </select></label>
+      <label id="customScaleBox" hidden><input id="customScale" type="number" min="1" max="400" value="60">%</label>
+      <label data-tt="cropTip"><input id="crop" type="checkbox" checked> <span data-t="crop"></span></label>
+      <label data-tt="marginTip"><span data-t="margin"></span> <input id="margin" type="number" min="0" max="200" value="10"></label>
+      <label data-tt="gapTip"><span data-t="gap"></span> <input id="gap" type="number" min="0" max="64" value="8"></label>
+      <label><input id="gridLines" type="checkbox" checked> <span data-t="gridLines"></span></label>
+    </div>
+    <div id="sheetInfo"></div>
+    <div id="sheetWrap">
+      <canvas id="sheetView" width="10" height="10"></canvas>
+      <div id="empty"><div><b data-t="emptyTitle"></b><span data-t="emptyText"></span></div></div>
+      <div id="busy"></div>
+    </div>
+  </section>
+
+  <!-- Просмотр и в игру / Preview and install -->
+  <section id="midCol">
+    <div class="block">
+      <div class="title" data-t="preview"></div>
+      <canvas id="player" width="290" height="290"></canvas>
+      <div class="pbar">
+        <button id="prev" data-tt="prevTip">◀︎</button>
+        <button id="play" class="primary" data-tt="playTip"></button>
+        <button id="next" data-tt="nextTip">▶︎</button>
+      </div>
+      <div class="pbar">
+        <label class="row" data-tt="fpsTip">fps <input id="fps" type="number" min="1" max="60" value="12"></label>
+        <input id="fpsRange" type="range" min="1" max="60" value="12" style="width:110px">
+      </div>
+      <div class="pbar">
+        <select id="mode"><option value="loop" data-t="modeLoop"></option><option value="pingpong" data-t="modePing"></option></select>
+        <select id="bg"><option value="checker" data-t="bgChecker"></option><option value="dark" data-t="bgDark"></option><option value="light" data-t="bgLight"></option><option value="ground" data-t="bgGround"></option></select>
+        <select id="zoom"><option value="fit" data-t="zoomFit"></option><option value="1">1:1</option><option value="2">2×</option></select>
+      </div>
+      <div class="pbar"><label data-tt="footTip"><input id="footLine" type="checkbox" checked> <span data-t="footLine"></span></label><label data-tt="onionTip"><input id="onion" type="checkbox"> <span data-t="onion"></span></label></div>
+      <div id="frameLabel"></div>
+    </div>
+
+    <div class="block">
+      <div class="title"><span data-t="toGame"></span> <span class="sub" id="charCount"></span></div>
+      <div id="noGame" class="hint"></div>
+      <div id="gameArea">
+        <div class="field" id="charField">
+          <label data-t="charLabel"></label>
+          <div class="row"><select id="charSel" class="grow"></select><button id="refresh" data-tt="refreshTip">⟳</button></div>
+        </div>
+        <div class="hint" id="charInfo"></div>
+        <div id="unityBox" hidden>
+          <div class="field">
+            <label data-t="unityController"></label>
+            <div class="row"><select id="unityController" class="grow"></select><button id="unityAssets" data-tt="refreshTip">⟳</button></div>
+          </div>
+          <div class="field">
+            <label data-t="unityClip"></label>
+            <select id="unityClip" style="width:100%"></select>
+          </div>
+          <div class="field">
+            <label data-t="unityEvents"></label>
+            <div id="eventRows"></div>
+            <div class="row" style="margin-top:4px"><button id="eventAdd" data-t="eventAdd"></button></div>
+            <div class="hint" data-t="eventsHint"></div>
+          </div>
+        </div>
+        <div id="newSetBox">
+          <div class="field"><label data-t="setFolder"></label><select id="setDir" style="width:100%"></select></div>
+          <div class="field"><label data-t="setName"></label><div class="row"><input id="setName" class="grow" value="frames"><span style="color:var(--muted)">.tres</span></div></div>
+        </div>
+        <div class="chips" id="animChips"></div>
+        <div class="field">
+          <label data-t="animName"></label>
+          <div class="row"><input id="animName" class="grow" list="animNames" value="walk"><label class="row" style="color:var(--muted)" data-tt="loopTip"><input id="animLoop" type="checkbox" checked> <span data-t="loop"></span></label></div>
+          <datalist id="animNames"></datalist>
+        </div>
+        <div id="fitBox" class="field" hidden>
+          <label data-t="walkScale"></label>
+          <div class="row"><input id="walkScale" type="number" step="0.01" min="0.01" value="1" style="width:80px"><label class="grow" style="color:var(--muted)"><input id="autoScale" type="checkbox" checked> <span data-t="autoScale"></span></label></div>
+        </div>
+        <div id="hitBox" class="field" hidden>
+          <label data-t="hitFrame"></label>
+          <div class="row"><input id="hitFrame" type="number" min="1" value="6" style="width:64px"><button id="hitFromPlayer" class="grow" data-t="hitFromPlayer" data-tt="hitFromPlayerTip"></button></div>
+        </div>
+        <div class="hint" id="animHint"></div>
+        <div class="field"><button id="installAnim" class="primary" style="width:100%" disabled data-t="installAnim"></button></div>
+        <div class="field"><button id="removeAnim" style="width:100%" disabled data-t="removeAnim"></button></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="title" data-t="sheetFile"></div>
+      <div class="field"><label data-t="folder"></label><select id="folder" style="width:100%"></select></div>
+      <div class="field"><label data-t="fileName"></label><div class="row"><input id="fileName" class="grow" value="sheet"><span style="color:var(--muted)">.png</span></div></div>
+      <div class="field" id="importField"><label data-tt="importTip"><input id="doImport" type="checkbox" checked> <span data-t="doImport"></span></label></div>
+      <div class="field row">
+        <button id="save" class="grow" disabled data-t="saveOnly" data-tt="saveOnlyTip"></button>
+        <button id="undo" class="grow" disabled data-tt="undoTip"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Кадры / Frames -->
+  <section id="framesCol">
+    <div class="title"><span data-t="frames"></span> <span class="sub" id="framesSub"></span></div>
+    <div class="block">
+      <div class="bar">
+        <button id="selAll" data-t="selAll"></button><button id="selNone" data-t="selNone"></button>
+        <label><input id="reverse" type="checkbox"> <span data-t="reverse"></span></label>
+        <label style="margin-left:auto"><span data-t="thumbSize"></span> <input id="thumbSize" type="range" min="60" max="200" value="96" style="width:80px"></label>
+      </div>
+      <div class="bar">
+        <label><span data-t="from"></span> <input id="from" type="number" min="1" value="1"></label>
+        <label><span data-t="to"></span> <input id="to" type="number" min="1" value="1"></label>
+        <button id="selRange" data-t="selRange" data-tt="selRangeTip"></button>
+        <label><span data-t="every"></span> <input id="every" type="number" min="1" value="2"></label><button id="selEvery" data-t="everyBtn"></button>
+      </div>
+      <div class="bar">
+        <label><span data-t="evenly"></span> <input id="evenly" type="number" min="1" value="20"></label><button id="selEvenly" data-t="evenlyBtn" data-tt="evenlyTip"></button>
+        <button id="findLoop" data-t="findLoop" data-tt="findLoopTip"></button>
+      </div>
+      <div class="bar">
+        <label data-tt="orderTip"><span data-t="orderLabel"></span> <select id="orderMode"><option value="number" data-t="orderNumber"></option><option value="clicks" data-t="orderClicks"></option></select></label>
+        <label data-tt="videoFpsTip" style="margin-left:auto"><span data-t="videoFps"></span> <input id="videoFps" type="number" min="0" max="120" step="1" value="0" style="width:56px"></label>
+      </div>
+      <div class="hint" id="framesHint"></div>
+      <div id="seqBox" hidden>
+        <div class="seq" id="seqStrip"></div>
+        <div class="bar"><button id="seqBack" data-t="seqBack"></button><button id="seqClear" data-t="seqClear"></button><span class="hint" style="padding:0" data-t="seqTip"></span></div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="title" style="padding-top:4px" data-t="background"></div>
+      <div class="bar">
+        <label><input id="keyOn" type="checkbox"> <span data-t="keyOn"></span></label>
+        <select id="keyMode"><option value="auto" data-t="keyAuto"></option><option value="pick" data-t="keyPick"></option></select>
+        <input id="keyColor" type="color" value="#ff00ff" data-tt="keyColorTip">
+        <span id="keySeen" class="hint" style="padding:0"></span>
+      </div>
+      <div class="bar">
+        <label data-tt="nearTip"><span data-t="near"></span> <input id="near" type="range" min="8" max="90" value="34" style="width:90px"><span id="nearVal">34</span></label>
+        <label data-tt="pocketsTip"><input id="pockets" type="checkbox" checked> <span data-t="pockets"></span></label>
+        <label data-tt="cleanTip"><input id="clean" type="checkbox" checked> <span data-t="clean"></span></label>
+      </div>
+    </div>
+    <div id="thumbs"></div>
+  </section>
+</main>
+<div id="drop" data-t="drop"></div>
+
+<!-- Игра / Game -->
+<div class="modal" id="gameModal">
+  <div class="dialog">
+    <div class="head"><h2 data-t="gameTitle"></h2><button class="closeModal" data-t="close"></button></div>
+    <div class="content">
+      <div class="box" id="gameNow"></div>
+      <p data-t="gameExplain"></p>
+      <div class="row"><button id="pickGame" class="primary" data-t="pickGame"></button></div>
+      <p class="row" style="margin-top:8px"><input id="gamePath" class="grow" data-tp="gamePathPh"><button id="openGame" data-t="open"></button></p>
+      <div id="recentBox"><h3 data-t="recent"></h3><div class="recent" id="recentList"></div></div>
+      <div id="godotBlock">
+        <h3>Godot</h3>
+        <p data-t="godotExplain"></p>
+        <div class="box" id="godotNow"></div>
+        <div class="row"><button id="pickGodot" data-t="pickGodot"></button></div>
+      </div>
+      <div id="embeddedBox" hidden><h3 data-t="embeddedTitle"></h3><p data-t="embeddedText"></p><ul id="embeddedList"></ul></div>
+    </div>
+  </div>
+</div>
+
+<!-- Помощь / Help -->
+<div class="modal" id="helpModal">
+  <div class="dialog">
+    <div class="head"><h2 data-t="helpTitle"></h2><button class="closeModal" data-t="close"></button></div>
+    <div class="content" id="helpContent"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+// ---------- языки / languages ----------
+const L = {
+  ru: {
+    charLabel: 'Персонаж',
+    refreshTip: 'Перечитать игру (если меняли её в редакторе)',
+    refreshed: 'Список персонажей обновлён',
+    groupScene: 'Персонажи в сценах',
+    groupSet: 'Наборы анимаций без сцены',
+    groupData: 'Персонажи из данных игры',
+    newCharacter: '+ Новый персонаж (новый набор анимаций)…',
+    animCount: '{0} аним.',
+    charCount: 'персонажей: {0}',
+  charCountUnity: 'Unity {0} · папок: {1}',
+  engineUnity: 'Unity',
+  unityHint: 'Unity нарежет лист на спрайты и соберёт клип сам — при следующем открытии проекта. Папку выберите ниже, имя файла и имя анимации — справа.',
+  confirmInstallUnity: 'Записать лист {1}{2} и собрать анимацию «{0}» ({3} кадров, {4} кадр/с) для Unity?',
+  installedUnity: 'Готово: «{0}» → {1}. Откройте проект в Unity — он нарежет лист и соберёт клип.',
+  animEmpty: 'Впишите имя анимации',
+  savedUnity: 'Сохранено: {0} ({1} КБ). Unity нарежет лист при следующем открытии проекта.',
+    holdsScene: 'анимации хранятся в самой сцене',
+    holdsFile: 'анимации в файле {0}',
+    holdsNone: 'анимаций пока нет — набор создастся в сцене',
+    infoScene: 'Сцена <b>{0}</b>, узел <b>{1}</b> ({2}); {3}.',
+    infoSet: 'Набор <b>{0}</b> — ни одна сцена его пока не использует.',
+    infoData: 'Описан в данных игры: <b>{0}</b>.',
+    noCharacters: 'В игре не найдено ни одного персонажа с анимациями (узлов AnimatedSprite2D/3D).',
+    setInfoNew: 'Новый набор анимаций. После установки в Godot выберите узел AnimatedSprite2D (или 3D) и перетащите этот файл в поле Sprite Frames.',
+    chipEmpty: '{0} · нет', chipNoFps: '{0} · {1} кадр.',
+    dataUnknownAnim: 'Этот персонаж принимает только анимации: {0}.',
+    gameNow: 'Открыта: <b>{0}</b> ({1} {2})<br>{3}<br>Персонажей в сценах: {4}, наборов без сцены: {5}, из данных: {6}. Папок: {7}',
+    embeddedTitle: 'Ошибки в описании персонажей из данных',
+    embeddedText: 'Файл sprite_sheet_maker.json в папке игры прочитать не удалось:',
+    confirmInstall: 'Установить анимацию «{0}» персонажу «{1}»?\n\nКуда: {2}\nЛист: {3}{4}\n{5} кадров, {6} fps, {7}',
+    installing: 'Устанавливаю… (с импортом — до минуты)',
+    installingData: 'Сохраняю лист, импортирую в Godot и прописываю персонажа… (до минуты)',
+    installedAnim: 'Готово: «{0}» → {1}{2}. Если редактор Godot открыт, он подхватит изменения сам; запущенную игру перезапустите.',
+    confirmRemove: 'Удалить анимацию «{0}» у «{1}»? Картинки останутся на диске.',
+    gameTip: 'Игра, в которую ставятся анимации. Нажмите, чтобы выбрать другую',
+    noGameBtn: 'Игра не выбрана — выбрать…', gameBtn: 'Игра: {0}',
+    openFiles: 'Открыть файлы…', openFilesTip: 'Кадры-картинки, видео (mp4, webm, mov) или GIF', openDir: 'Открыть папку…', openDirTip: 'Выбрать папку с кадрами (например, вывод ComfyUI)',
+    dirPathPh: 'или путь к папке с кадрами, к видео или GIF', load: 'Загрузить', help: 'Помощь',
+    orderLabel: 'порядок', orderTip: 'Как кадры идут в лист', orderNumber: 'по номерам', orderClicks: 'как щёлкаю (с повторами)',
+    videoFps: 'из видео, кадров/с', videoFpsTip: 'Сколько кадров в секунду брать из видео. 0 — все кадры, как в ролике',
+    framesHintClicks: 'Щелчок добавляет кадр в конец ленты — один кадр можно добавить сколько угодно раз. Shift+щелчок добавляет все кадры до него. В ленте ниже щелчок по номеру убирает его, а перетаскиванием можно менять порядок.',
+    seqBack: 'Убрать последний', seqClear: 'Очистить', seqTip: 'перетаскивайте номера, чтобы менять порядок',
+    framesSubSeq: 'в листе {0} (разных {1}) из {2}',
+    splitting: 'Разбираю «{0}» на кадры: {1} / {2}', mediaFound: '«{0}»: {1} кадров, {2} кадров/с',
+    videoFail: 'Не удалось открыть видео «{0}» — этот формат или кодек не читается. Попробуйте mp4 (H.264) или webm.', gifFail: 'Не удалось разобрать GIF «{0}»',
+    manyFrames: 'Из «{0}» получится {1} кадров — это много и займёт много памяти. Продолжить? (Можно уменьшить «из видео, кадров/с».)',
+    sheet: 'Лист', grid: 'Сетка', cols: 'столбцов', rows: 'строк',
+    fitSel: 'Подогнать кадры под сетку', fitSelTip: 'Взять из диапазона «с–по» ровно столько кадров, сколько клеток в сетке',
+    scale: 'Масштаб', custom: 'свой…', crop: 'обрезать поля', cropTip: 'Одна общая рамка по всем кадрам: пустые поля срезаются, фигура не прыгает',
+    margin: 'запас', marginTip: 'Прозрачная кайма вокруг фигуры в клетке (пиксели исходника)',
+    gap: 'зазор', gapTip: 'Прозрачный зазор между клетками: при уменьшении в игре соседние кадры не «протекают»',
+    gridLines: 'линии сетки', emptyTitle: 'Здесь соберётся лист', emptyText: 'Откройте кадры и выберите нужные справа',
+    preview: 'Просмотр', prevTip: 'Кадр назад (←)', nextTip: 'Кадр вперёд (→)', playTip: 'Пуск / пауза (пробел)', play: '▶ Пуск', pause: '❚❚ Пауза',
+    fpsTip: 'Кадров в секунду: больше — быстрее', modeLoop: 'по кругу', modePing: 'туда-обратно',
+    bgChecker: 'шахматка', bgDark: 'тёмный', bgLight: 'светлый', bgGround: 'земля', zoomFit: 'вписать',
+    footLine: 'линия ног', footTip: 'Где стоят ноги: по ней видно, не «прыгает» ли фигура', onion: 'прошлый кадр', onionTip: 'Полупрозрачно показывает прошлый кадр',
+    frameLabel: 'кадр {0} / {1} · цикл {2} с',
+    toGame: 'В игру', 
+    noGame: 'Сначала выберите игру — кнопка вверху слева.',
+    setFolder: 'Папка для нового набора', setName: 'Имя нового набора',
+    animName: 'Имя анимации', loop: 'повторять', loopTip: 'Ходьба, бег, ожидание — повторяются. Атака, смерть — нет',
+    animExists: 'Анимация «{0}» уже есть ({1} кадров) — она будет заменена.', animNew: 'Будет добавлена новая анимация «{0}».',
+    installAnim: 'Установить анимацию', removeAnim: 'Удалить эту анимацию из набора',
+    chip: '{0} · {1} кадр. · {2} fps',
+    walkScale: 'Рост в игре (sprite_scale)', autoScale: 'как у неподвижного рисунка',
+    strideHint: 'В игре шаг идёт за пройденным путём. Чтобы при скорости <b>{0} м/с</b> кадры шли с частотой <b>{1} fps</b> (как в просмотре), нужен <b>stride {2}</b> м на цикл.',
+    strideEmpty: 'Соберите лист — здесь появится stride.',
+    hitFrame: 'Кадр удара (когда удар достигает цели)', hitFromPlayer: 'взять кадр из просмотра', hitFromPlayerTip: 'Остановите просмотр на кадре, где удар попадает, и нажмите',
+    hitMark: ' · удар',
+    unityController: 'Animator Controller', unityClip: 'Animation Clip',
+    unityNewController: '— создать новый рядом с листом —',
+    unityEvents: 'События анимации', eventAdd: '+ событие',
+    eventFramePh: 'кадр', eventFuncPh: 'функция', eventParamPh: 'параметр',
+    unityNewClip: '— новый: {0} —',
+    eventsHint: 'Кадр считается с 1. Функция вызовется у объекта с этим Animator; параметр — строка (необязательно).',
+    confirmUnityTarget: 'Обновить существующее: {0}',
+    attackHint: 'Клип: {0} кадров при {1} fps = {2} с. Персонаж бьёт раз в {3} с: кадр {4} покажется ровно в момент урона, замах — до него.',
+    attackHintFast: ' Клип длиннее промежутка между ударами — в игре он пойдёт в {0}× быстрее.',
+    sheetFile: 'Файл листа', folder: 'Папка в игре', fileName: 'Имя файла',
+    doImport: 'сразу импортировать в Godot', importTip: 'Без импорта игра увидит картинку только после открытия редактора Godot',
+    saveOnly: 'Сохранить только лист', saveOnlyTip: 'Только PNG, без анимаций', undo: 'Отменить ({0})', undoNone: 'Отменить',
+    undoTip: 'Вернуть файлы, как было до последней установки',
+    frames: 'Кадры', selAll: 'Все', selNone: 'Снять', reverse: 'обратный порядок', thumbSize: 'размер',
+    from: 'с', to: 'по', selRange: 'Диапазон', selRangeTip: 'Выбрать все кадры от «с» до «по»', every: 'каждый', everyBtn: '-й',
+    evenly: 'равномерно', evenlyBtn: 'кадров', evenlyTip: 'N кадров через равные промежутки диапазона (для петли)',
+    findLoop: 'Найти петлю', findLoopTip: 'Найти в диапазоне кадр, похожий на кадр «с», и выбрать один цикл движения',
+    framesHint: 'Щелчок — выбрать или снять кадр, Shift+щелчок — несколько подряд. В лист кадры идут по порядку номеров.',
+    framesSub: 'выбрано {0} из {1}',
+    background: 'Фон', keyOn: 'убрать фон', keyAuto: 'цвет с краёв кадра', keyPick: 'свой цвет', keyColorTip: 'Цвет фона',
+    keySeenColor: 'на краю: {0}', keySeenClear: 'фон уже прозрачный',
+    near: 'допуск', nearTip: 'Насколько цвет может отличаться от фона, чтобы тоже убираться', pockets: 'дыры внутри', pocketsTip: 'Убрать фон и в просветах внутри фигуры (между пальцами)',
+    clean: 'чистый край', cleanTip: 'Мягкий край без цветной каймы', drop: 'Отпустите — кадры загрузятся',
+    gameTitle: 'Игра', close: 'Закрыть',
+    gameExplain: 'Выберите папку проекта — Godot 4 (где лежит project.godot) или Unity (где есть ProjectSettings/ProjectVersion.txt). Утилита найдёт в нём папки и анимации и будет записывать только внутрь этого проекта.',
+    pickGame: 'Выбрать папку игры…', gamePathPh: 'или вставьте путь к папке игры', open: 'Открыть', recent: 'Недавние',
+    gameNone: 'Игра не выбрана.',
+    godotExplain: 'Путь к Godot.exe нужен, чтобы сразу импортировать новые картинки (иначе игра увидит их только после открытия редактора).',
+    godotFound: 'Godot: {0}', godotMissing: 'Godot.exe не найден — укажите его.', pickGodot: 'Указать Godot.exe…',
+    helpTitle: 'Помощь',
+    // статусы
+    loading: 'Загрузка кадров: {0} / {1}', loaded: 'Загружено кадров: {0}', sizesDiffer: ' — внимание: размеры разные ({0})', noImages: 'Картинок не найдено',
+    readingDir: 'Чтение папки: {0} / {1}', dirFail: 'Папка не открылась: {0}', pastePath: 'Вставьте путь к папке',
+    cutting: 'Убираю фон: {0} / {1}', reading: 'Читаю кадры: {0} / {1}',
+    tooBig: 'Лист выходит {0}×{1} px — больше {2}, Godot его не загрузит. Уменьшите масштаб или число кадров.',
+    sheetInfo: 'Лист <b>{0}×{1}</b> px · сетка {2}×{3} · кадров {4} · клетка {5}×{6}', gapInfo: ' (+ зазор {0})',
+    dropped: 'В сетку не влезло кадров: {0} — увеличьте сетку или нажмите «Подогнать кадры под сетку».', emptyCells: 'Пустых клеток: {0}.',
+    bigSide: 'Сторона больше {0} px — тяжело для веба и слабых видеокарт, лучше уменьшить масштаб.',
+    noCells: 'У этой сетки нет постоянного числа клеток',
+    loopFound: 'Петля: кадр {0} повторяет кадр {1} — цикл {2} кадров ({1}–{3}). Голубые метки — все повторы.',
+    loopNone: 'Повтора кадра {0} не нашлось — ролик короче цикла или фигура не возвращается в ту же позу',
+    nameEmpty: 'Введите имя файла', fileExists: 'Файл {0} уже есть. Заменить?',
+    saving: 'Сохраняю…', savingImport: 'Сохраняю и импортирую в Godot… (до минуты)', saved: 'Сохранено: {0} ({1} КБ)', importedOk: ', импортировано в Godot', importedNo: ' — но Godot не импортировал его (откройте редактор Godot)',
+    replaceFile: ' — файл уже есть, будет заменён', loopYes: 'с повтором', loopNo: 'без повтора',
+    newSetMade: ' (новый набор — подключите его к AnimatedSprite в редакторе)',
+    removed: 'Анимация «{0}» удалена.',
+    confirmUndo: 'Отменить последнюю установку? Файлы вернутся, как были до неё.', undone: 'Отменено: {0}',
+    copied: 'Скопировано', error: 'Ошибка: {0}', noServer: 'Сервер не отвечает — запустите утилиту заново',
+    oldServer: 'Окно сервера осталось от старой версии — закройте его и запустите утилиту заново, затем обновите страницу.',
+    gameOpened: 'Открыта игра: {0}', pickCancelled: 'Выбор отменён',
+    tplAuto: 'авто (почти квадрат)', tplStrip: 'одна строка', tplColumn: 'один столбец', tplCustom: 'свои числа',
+  },
+  en: {
+    charLabel: 'Character',
+    refreshTip: 'Read the game again (after changing it in the editor)',
+    refreshed: 'Character list refreshed',
+    groupScene: 'Characters in scenes',
+    groupSet: 'Animation sets without a scene',
+    groupData: 'Characters from the game data',
+    newCharacter: '+ New character (new animation set)…',
+    animCount: '{0} anim.',
+    charCount: 'characters: {0}',
+  charCountUnity: 'Unity {0} · folders: {1}',
+  engineUnity: 'Unity',
+  unityHint: 'Unity slices the sheet and builds the clip itself, the next time the project is opened. Pick the folder below; file name and animation name are on the right.',
+  confirmInstallUnity: 'Write the sheet {1}{2} and build the animation «{0}» ({3} frames, {4} fps) for Unity?',
+  installedUnity: 'Done: «{0}» → {1}. Open the project in Unity — it slices the sheet and builds the clip.',
+  animEmpty: 'Enter the animation name',
+  savedUnity: 'Saved: {0} ({1} KB). Unity slices the sheet the next time the project is opened.',
+    holdsScene: 'its animations are kept in the scene',
+    holdsFile: 'its animations are in {0}',
+    holdsNone: 'no animations yet — a set will be made in the scene',
+    infoScene: 'Scene <b>{0}</b>, node <b>{1}</b> ({2}); {3}.',
+    infoSet: 'Set <b>{0}</b> — no scene uses it yet.',
+    infoData: 'Described in the game data: <b>{0}</b>.',
+    noCharacters: 'No characters with animations (AnimatedSprite2D/3D nodes) were found in the game.',
+    setInfoNew: 'A new animation set. After installing, select an AnimatedSprite2D (or 3D) node in Godot and drag this file into its Sprite Frames field.',
+    chipEmpty: '{0} · none', chipNoFps: '{0} · {1} fr.',
+    dataUnknownAnim: 'This character takes only these animations: {0}.',
+    gameNow: 'Open: <b>{0}</b> ({1} {2})<br>{3}<br>Characters in scenes: {4}, sets without a scene: {5}, from data: {6}. Folders: {7}',
+    embeddedTitle: 'Errors in the data characters description',
+    embeddedText: 'The sprite_sheet_maker.json file in the game folder could not be read:',
+    confirmInstall: 'Install animation «{0}» for «{1}»?\n\nWhere: {2}\nSheet: {3}{4}\n{5} frames, {6} fps, {7}',
+    installing: 'Installing… (with import — up to a minute)',
+    installingData: 'Saving the sheet, importing into Godot and updating the character… (up to a minute)',
+    installedAnim: 'Done: «{0}» → {1}{2}. If the Godot editor is open, it picks the change up by itself; restart a running game.',
+    confirmRemove: 'Remove animation «{0}» from «{1}»? The pictures stay on disk.',
+    gameTip: 'The game the animations go into. Click to choose another',
+    noGameBtn: 'No game chosen — choose…', gameBtn: 'Game: {0}',
+    openFiles: 'Open files…', openFilesTip: 'Frame pictures, video (mp4, webm, mov) or GIF', openDir: 'Open folder…', openDirTip: 'Choose a folder with frames (e.g. ComfyUI output)',
+    dirPathPh: 'or a path to a frames folder, a video or a GIF', load: 'Load', help: 'Help',
+    orderLabel: 'order', orderTip: 'How frames go into the sheet', orderNumber: 'by number', orderClicks: 'as I click (repeats allowed)',
+    videoFps: 'from video, frames/s', videoFpsTip: 'How many frames per second to take from a video. 0 — every frame, as in the clip',
+    framesHintClicks: 'A click adds the frame to the end of the strip — the same frame can be added any number of times. Shift+click adds every frame up to it. In the strip below, click a number to remove it, drag numbers to change the order.',
+    seqBack: 'Remove last', seqClear: 'Clear', seqTip: 'drag numbers to change the order',
+    framesSubSeq: '{0} in sheet ({1} different) of {2}',
+    splitting: 'Cutting «{0}» into frames: {1} / {2}', mediaFound: '«{0}»: {1} frames, {2} frames/s',
+    videoFail: 'Could not open video «{0}» — this format or codec cannot be read. Try mp4 (H.264) or webm.', gifFail: 'Could not read GIF «{0}»',
+    manyFrames: '«{0}» gives {1} frames — that is a lot and takes much memory. Continue? (You can lower «from video, frames/s».)',
+    sheet: 'Sheet', grid: 'Grid', cols: 'columns', rows: 'rows',
+    fitSel: 'Fit frames to grid', fitSelTip: 'Take exactly as many frames from the «from–to» range as the grid has cells',
+    scale: 'Scale', custom: 'custom…', crop: 'trim margins', cropTip: 'One shared box for all frames: empty margins are cut, the figure does not jump',
+    margin: 'padding', marginTip: 'Transparent border around the figure in a cell (source pixels)',
+    gap: 'gap', gapTip: 'Transparent gap between cells so neighbouring frames do not bleed when scaled down in the game',
+    gridLines: 'grid lines', emptyTitle: 'Your sheet will appear here', emptyText: 'Open frames and pick the ones you need on the right',
+    preview: 'Preview', prevTip: 'Previous frame (←)', nextTip: 'Next frame (→)', playTip: 'Play / pause (Space)', play: '▶ Play', pause: '❚❚ Pause',
+    fpsTip: 'Frames per second: more is faster', modeLoop: 'loop', modePing: 'ping-pong',
+    bgChecker: 'checker', bgDark: 'dark', bgLight: 'light', bgGround: 'ground', zoomFit: 'fit',
+    footLine: 'foot line', footTip: 'Where the feet stand: shows whether the figure jumps', onion: 'previous frame', onionTip: 'Shows the previous frame faintly',
+    frameLabel: 'frame {0} / {1} · loop {2} s',
+    toGame: 'Into the game', 
+    noGame: 'Choose a game first — the button at the top left.',
+    setFolder: 'Folder for the new set', setName: 'New set name',
+    animName: 'Animation name', loop: 'loop', loopTip: 'Walk, run, idle loop. Attack and death do not',
+    animExists: 'Animation «{0}» already exists ({1} frames) — it will be replaced.', animNew: 'A new animation «{0}» will be added.',
+    installAnim: 'Install animation', removeAnim: 'Remove this animation from the set',
+    chip: '{0} · {1} fr. · {2} fps',
+    walkScale: 'Height in game (sprite_scale)', autoScale: 'same as the still drawing',
+    strideHint: 'In the game the steps follow the distance walked. For frames to play at <b>{1} fps</b> (as in the preview) at <b>{0} m/s</b>, stride must be <b>{2}</b> m per loop.',
+    strideEmpty: 'Build a sheet — stride will appear here.',
+    hitFrame: 'Hit frame (when the blow lands)', hitFromPlayer: 'take the preview frame', hitFromPlayerTip: 'Stop the preview on the frame where the blow lands and press',
+    hitMark: ' · hit',
+    unityController: 'Animator Controller', unityClip: 'Animation Clip',
+    unityNewController: '— create a new one next to the sheet —',
+    unityEvents: 'Animation events', eventAdd: '+ event',
+    eventFramePh: 'frame', eventFuncPh: 'function', eventParamPh: 'parameter',
+    unityNewClip: '— new: {0} —',
+    eventsHint: 'Frames count from 1. The function is called on the object with this Animator; the parameter is a string (optional).',
+    confirmUnityTarget: 'Update the existing: {0}',
+    attackHint: 'Clip: {0} frames at {1} fps = {2} s. The character strikes every {3} s: frame {4} shows exactly when the damage lands, the wind-up comes before it.',
+    attackHintFast: ' The clip is longer than the time between blows — in the game it plays {0}× faster.',
+    sheetFile: 'Sheet file', folder: 'Folder in the game', fileName: 'File name',
+    doImport: 'import into Godot right away', importTip: 'Without importing, the game sees the picture only after the Godot editor is opened',
+    saveOnly: 'Save sheet only', saveOnlyTip: 'Only the PNG, no animations', undo: 'Undo ({0})', undoNone: 'Undo',
+    undoTip: 'Put the files back as they were before the last install',
+    frames: 'Frames', selAll: 'All', selNone: 'None', reverse: 'reverse order', thumbSize: 'size',
+    from: 'from', to: 'to', selRange: 'Range', selRangeTip: 'Select every frame from «from» to «to»', every: 'every', everyBtn: 'th',
+    evenly: 'evenly', evenlyBtn: 'frames', evenlyTip: 'N frames at equal steps across the range (for a loop)',
+    findLoop: 'Find loop', findLoopTip: 'Find a frame in the range that looks like the «from» frame and select one motion cycle',
+    framesHint: 'Click to select or unselect a frame, Shift+click for several in a row. Frames go into the sheet in number order.',
+    framesSub: '{0} of {1} selected',
+    background: 'Background', keyOn: 'remove background', keyAuto: 'colour from frame edges', keyPick: 'my colour', keyColorTip: 'Background colour',
+    keySeenColor: 'at the edge: {0}', keySeenClear: 'background already transparent',
+    near: 'tolerance', nearTip: 'How far a colour may be from the background and still be removed', pockets: 'holes inside', pocketsTip: 'Also remove background in gaps inside the figure (between fingers)',
+    clean: 'clean edge', cleanTip: 'Soft edge without a coloured fringe', drop: 'Drop — frames will load',
+    gameTitle: 'Game', close: 'Close',
+    gameExplain: 'Choose the project folder — Godot 4 (with project.godot) or Unity (with ProjectSettings/ProjectVersion.txt). The tool finds its folders and animations and writes only inside this project.',
+    pickGame: 'Choose game folder…', gamePathPh: 'or paste the path to the game folder', open: 'Open', recent: 'Recent',
+    gameNone: 'No game chosen.',
+    godotExplain: 'The path to Godot.exe lets the tool import new pictures right away (otherwise the game sees them only after the editor is opened).',
+    godotFound: 'Godot: {0}', godotMissing: 'Godot.exe not found — point to it.', pickGodot: 'Choose Godot.exe…',
+    helpTitle: 'Help',
+    loading: 'Loading frames: {0} / {1}', loaded: 'Frames loaded: {0}', sizesDiffer: ' — note: sizes differ ({0})', noImages: 'No pictures found',
+    readingDir: 'Reading folder: {0} / {1}', dirFail: 'The folder did not open: {0}', pastePath: 'Paste a folder path',
+    cutting: 'Removing background: {0} / {1}', reading: 'Reading frames: {0} / {1}',
+    tooBig: 'The sheet would be {0}×{1} px — over {2}, Godot cannot load it. Lower the scale or the number of frames.',
+    sheetInfo: 'Sheet <b>{0}×{1}</b> px · grid {2}×{3} · frames {4} · cell {5}×{6}', gapInfo: ' (+ gap {0})',
+    dropped: '{0} frame(s) did not fit — enlarge the grid or press «Fit frames to grid».', emptyCells: 'Empty cells: {0}.',
+    bigSide: 'A side is over {0} px — heavy for the web and weak GPUs; better lower the scale.',
+    noCells: 'This grid has no fixed number of cells',
+    loopFound: 'Loop: frame {0} repeats frame {1} — a cycle of {2} frames ({1}–{3}). Blue marks show every repeat.',
+    loopNone: 'Frame {0} does not repeat — the clip is shorter than a cycle or the figure never returns to the same pose',
+    nameEmpty: 'Enter a file name', fileExists: 'The file {0} already exists. Replace it?',
+    saving: 'Saving…', savingImport: 'Saving and importing into Godot… (up to a minute)', saved: 'Saved: {0} ({1} KB)', importedOk: ', imported into Godot', importedNo: ' — but Godot did not import it (open the Godot editor)',
+    replaceFile: ' — the file exists and will be replaced', loopYes: 'looping', loopNo: 'not looping',
+    newSetMade: ' (a new set — assign it to an AnimatedSprite in the editor)',
+    removed: 'Animation «{0}» removed.',
+    confirmUndo: 'Undo the last install? The files go back to how they were before it.', undone: 'Undone: {0}',
+    copied: 'Copied', error: 'Error: {0}', noServer: 'The server does not answer — start the tool again',
+    oldServer: 'The server window is from an old version — close it, start the tool again and reload the page.',
+    gameOpened: 'Game opened: {0}', pickCancelled: 'Cancelled',
+    tplAuto: 'auto (near square)', tplStrip: 'one row', tplColumn: 'one column', tplCustom: 'custom numbers',
+  },
+};
+
+const HELP = {
+  ru: `
+<h3>Что это за программа?</h3>
+<p>Она делает из кучи отдельных картинок-кадров один <b>лист кадров</b> — большую картинку, где все кадры движения лежат по клеточкам, как в тетради. Игра показывает клеточки по очереди — и персонаж «оживает», как в мультике.</p>
+<p>Программа сама ставит готовую анимацию в вашу игру на Godot 4.</p>
+
+<h3>Шаг 1. Выберите игру</h3>
+<p>Нажмите кнопку <b>«Игра»</b> вверху слева и выберите папку вашей игры — ту, где лежит файл <code>project.godot</code>. Программа запомнит её.</p>
+<div class="tip">Программа записывает файлы только внутрь этой папки. Перед каждой установкой она сохраняет копию того, что меняет, — всегда можно нажать «Отменить».</div>
+
+<h3>Шаг 2. Загрузите кадры</h3>
+<ul>
+<li><b>«Открыть файлы…»</b> — выбрать картинки, видео или GIF мышкой;</li>
+<li><b>«Открыть папку…»</b> — выбрать папку, где лежат кадры;</li>
+<li>или вставить путь к папке и нажать <b>«Загрузить»</b>;</li>
+<li>или просто перетащить картинки или папку в окно.</li>
+</ul>
+<p>Кадры появятся справа по порядку номеров.</p>
+<div class="tip"><b>Видео и GIF.</b> Можно открыть не только картинки, но и видео (mp4, webm, mov) или GIF — программа сама разрежет его на кадры. Поле <b>«из видео, кадров/с»</b>: 0 — взять все кадры ролика; например, 12 — брать 12 кадров на каждую секунду (кадров станет меньше, лист — легче).</div>
+
+<h3>Шаг 3. Выберите нужные кадры</h3>
+<ul>
+<li><b>Щелчок</b> по кадру — выбрать или убрать. <b>Shift + щелчок</b> — выбрать несколько подряд.</li>
+<li><b>«Найти петлю»</b> — программа сама найдёт место, где движение начинает повторяться, и выберет ровно один круг движения. Удобно для ходьбы и бега.</li>
+<li><b>«Равномерно N кадров»</b> — взять N кадров через одинаковые промежутки. Так анимация получается плавной и не слишком тяжёлой.</li>
+<li>Поля <b>«с»</b> и <b>«по»</b> — с какого и по какой кадр работать (если в папке лежит несколько роликов подряд).</li>
+</ul>
+<p><b>Свой порядок кадров.</b> В списке <b>«порядок»</b> выберите <b>«как щёлкаю»</b>. Теперь каждый щелчок добавляет кадр в конец ленты, и один кадр можно брать сколько угодно раз: например, 1, потом 10, потом снова 1. Лента видна под кнопками: щелчок по номеру убирает его, а номера можно перетаскивать мышкой, чтобы поменять местами.</p>
+
+<h3>Шаг 4. Уберите фон (если нужно)</h3>
+<p>Если кадры на сплошном цветном фоне (например, ярко-розовом), включите <b>«убрать фон»</b>. Цвет программа возьмёт с краёв кадра сама.</p>
+<ul>
+<li>Осталась цветная полоска по краю — передвиньте <b>«допуск»</b> вправо.</li>
+<li>Пропали кусочки персонажа — передвиньте «допуск» влево.</li>
+</ul>
+
+<h3>Шаг 5. Соберите лист</h3>
+<p>Слева сразу видно, как выглядит лист. Выберите <b>сетку</b> — сколько клеточек в ширину и в высоту (например, 5 × 4 = 20 кадров). Кнопка <b>«Подогнать кадры под сетку»</b> возьмёт столько кадров, сколько клеточек.</p>
+<p><b>Масштаб</b> делает лист меньше. Для небольших персонажей в игре хватит 50%.</p>
+
+<h3>Шаг 6. Посмотрите анимацию</h3>
+<p>Нажмите <b>▶ Пуск</b>. <b>fps</b> — сколько кадров показывается за секунду: больше — быстрее движение. Голубая линия показывает, где стоят ноги, — по ней видно, не прыгает ли фигура.</p>
+
+<h3>Шаг 7. Поставьте в игру</h3>
+<p>Сборщик сам находит в игре персонажей и показывает их в списке <b>«Персонаж»</b>:</p>
+<ul>
+<li><b>Персонажи в сценах</b> — узлы <b>AnimatedSprite2D</b> и <b>AnimatedSprite3D</b>. Неважно, где лежат их анимации: в самой сцене или отдельным файлом — сборщик правит их там, где они есть.</li>
+<li><b>Наборы анимаций без сцены</b> — файлы <code>.tres</code>, которые пока ни к чему не подключены.</li>
+<li><b>Персонажи из данных игры</b> — если игра описывает персонажей в своих файлах (см. «Для разработчиков» ниже).</li>
+</ul>
+<ol>
+<li>Выберите персонажа. Под списком видны его анимации — щёлкните по нужной, чтобы её заменить.</li>
+<li>Или напишите новое <b>имя анимации</b>: <code>walk</code> — ходьба, <code>run</code> — бег, <code>idle</code> — стоит, <code>attack</code> — атака, <code>hurt</code> — получил удар, <code>death</code> — смерть. Можно любое своё имя.</li>
+<li>Галочка <b>«повторять»</b>: ходьба и бег повторяются по кругу, атака и смерть — проигрываются один раз.</li>
+<li>Нажмите <b>«Установить анимацию»</b>. Затем выбирайте следующего персонажа — и так по очереди.</li>
+</ol>
+<p>Нет нужного персонажа? Выберите <b>«+ Новый персонаж»</b> — получится новый набор анимаций. Его нужно один раз подключить в Godot: выберите узел <b>AnimatedSprite2D</b> (или 3D) и перетащите файл набора в поле <b>Sprite Frames</b>. Если меняли игру в редакторе — нажмите ⟳ рядом со списком.</p>
+
+<h3>Unity: Animator и события</h3>
+<p>В Unity сборщик не трогает сцены: он пишет лист в <code>Assets/</code>, а клип и контроллер собирает сам Unity при следующем открытии проекта (или через <b>Tools &gt; Sprite Anim Studio &gt; Process Requests</b>).</p>
+<ul>
+<li><b>Animator Controller</b> — оставьте «создать новый», и рядом с листом появится <code>&lt;анимация&gt;.controller</code>. Или выберите <b>существующий</b> контроллер: в нём обновится состояние с именем анимации (или добавится), дефолтное состояние не меняется.</li>
+<li><b>Animation Clip</b> — оставьте «новый» или выберите существующий клип, чтобы перезаписать именно его.</li>
+<li><b>События анимации</b> — строки «кадр · функция · параметр». Кадр считается с 1: событие на кадре 5 при 12 fps сработает через <code>4/12</code> секунды. Функция вызывается у объекта с этим Animator; параметр — строка. Старые события клипа заменяются новыми.</li>
+</ul>
+
+<h3>Для разработчиков: персонажи из данных</h3>
+<p>Если персонажи игры описаны в JSON (список врагов, юнитов…), положите в папку игры файл <code>sprite_sheet_maker.json</code> — и они появятся в списке. В нём для каждой анимации перечисляется, какие поля записать в запись персонажа. Сборщик умеет считать: <code>texture, cols, rows, frames, fps, hit_frame, stride, sprite_scale, sprite_foot, sprite_top</code>. Если анимация пишет <code>hit_frame</code>, появится поле «кадр удара» (с кнопкой «взять кадр из просмотра»); если <code>sprite_scale</code> — рост подгоняется под неподвижный рисунок персонажа; если <code>stride</code> — шаг считается по скорости персонажа. Читать эти поля и проигрывать кадры должна сама игра.</p>
+
+<h3>Ошиблись?</h3>
+<p>Кнопка <b>«Отменить»</b> возвращает файлы так, как было до последней установки. Можно нажимать несколько раз.</p>
+
+<h3>Частые проблемы</h3>
+<ul>
+<li><b>Персонаж «плывёт» по земле, ноги скользят.</b> Шаг на рисунке короче, чем персонаж проходит в игре. Увеличьте fps или сгенерируйте ролик с длинными шагами «как на беговой дорожке».</li>
+<li><b>Движение рывками.</b> Каждый второй кадр в ролике повторяет предыдущий. Сделайте ролик длиннее или возьмите «каждый 2-й» кадр.</li>
+<li><b>Цветная кайма вокруг персонажа.</b> Двигайте «допуск», включите «чистый край».</li>
+<li><b>Игра не видит картинку.</b> Godot ещё не «импортировал» её. Откройте редактор Godot — он сделает это сам, или укажите путь к Godot.exe в окне «Игра».</li>
+<li><b>Нужного персонажа нет в списке наборов.</b> Его набор хранится прямо внутри сцены. В Godot выберите узел AnimatedSprite, у поля Sprite Frames нажмите стрелку → «Сохранить как…» и сохраните в файл <code>.tres</code>.</li>
+<li><b>Лист слишком большой.</b> Уменьшите масштаб или число кадров.</li>
+</ul>
+
+<h3>Горячие клавиши</h3>
+<p><b>Пробел</b> — пуск/пауза, <b>← →</b> — кадр назад/вперёд.</p>
+`,
+  en: `
+<h3>What is this program?</h3>
+<p>It turns a pile of separate frame pictures into one <b>sprite sheet</b> — a big picture where all frames of a motion sit in cells, like in a notebook. The game shows the cells one after another, and the character comes alive like a cartoon.</p>
+<p>The program also installs the finished animation into your Godot 4 game.</p>
+
+<h3>Step 1. Choose your game</h3>
+<p>Click the <b>«Game»</b> button at the top left and choose your game folder — the one with the <code>project.godot</code> file. The program remembers it.</p>
+<div class="tip">The program writes files only inside this folder. Before every install it keeps a copy of what it changes — you can always press «Undo».</div>
+
+<h3>Step 2. Load frames</h3>
+<ul>
+<li><b>«Open files…»</b> — pick pictures, a video or a GIF with the mouse;</li>
+<li><b>«Open folder…»</b> — pick the folder with the frames;</li>
+<li>or paste a folder path and press <b>«Load»</b>;</li>
+<li>or just drag pictures or a folder into the window.</li>
+</ul>
+<p>The frames appear on the right in number order.</p>
+<div class="tip"><b>Video and GIF.</b> You can open not only pictures but also a video (mp4, webm, mov) or a GIF — the program cuts it into frames by itself. The <b>«from video, frames/s»</b> field: 0 takes every frame of the clip; 12, for example, takes 12 frames for each second (fewer frames, a lighter sheet).</div>
+
+<h3>Step 3. Pick the frames you need</h3>
+<ul>
+<li><b>Click</b> a frame to select or unselect it. <b>Shift + click</b> selects several in a row.</li>
+<li><b>«Find loop»</b> — the program finds where the motion starts repeating and selects exactly one cycle. Handy for walking and running.</li>
+<li><b>«Evenly N frames»</b> — take N frames at equal steps. The animation stays smooth and not too heavy.</li>
+<li>The <b>«from»</b> and <b>«to»</b> fields set which frames to work with (useful when a folder holds several clips in a row).</li>
+</ul>
+<p><b>Your own frame order.</b> In the <b>«order»</b> list choose <b>«as I click»</b>. Now every click adds a frame to the end of the strip, and the same frame can be used any number of times: for example 1, then 10, then 1 again. The strip is shown under the buttons: click a number to remove it, drag numbers with the mouse to swap places.</p>
+
+<h3>Step 4. Remove the background (if needed)</h3>
+<p>If the frames are on a flat coloured background (for example, bright pink), turn on <b>«remove background»</b>. The program takes the colour from the frame edges by itself.</p>
+<ul>
+<li>A coloured strip is left around the edge — move <b>«tolerance»</b> to the right.</li>
+<li>Bits of the character disappeared — move «tolerance» to the left.</li>
+</ul>
+
+<h3>Step 5. Build the sheet</h3>
+<p>The sheet is shown on the left right away. Choose a <b>grid</b> — how many cells across and down (for example, 5 × 4 = 20 frames). <b>«Fit frames to grid»</b> takes as many frames as there are cells.</p>
+<p><b>Scale</b> makes the sheet smaller. For small characters 50% is enough.</p>
+
+<h3>Step 6. Watch the animation</h3>
+<p>Press <b>▶ Play</b>. <b>fps</b> is how many frames are shown per second: more is faster. The blue line shows where the feet stand — it tells you if the figure jumps.</p>
+
+<h3>Step 7. Put it into the game</h3>
+<p>The tool finds the game's characters by itself and lists them under <b>«Character»</b>:</p>
+<ul>
+<li><b>Characters in scenes</b> — <b>AnimatedSprite2D</b> and <b>AnimatedSprite3D</b> nodes. Wherever their animations are kept — inside the scene or in a file of their own — the tool edits them right there.</li>
+<li><b>Animation sets without a scene</b> — <code>.tres</code> files not connected to anything yet.</li>
+<li><b>Characters from the game data</b> — when the game describes characters in its own files (see «For developers» below).</li>
+</ul>
+<ol>
+<li>Choose a character. Its animations are shown under the list — click one to replace it.</li>
+<li>Or type a new <b>animation name</b>: <code>walk</code>, <code>run</code>, <code>idle</code> (standing), <code>attack</code>, <code>hurt</code>, <code>death</code>. Any name of your own works too.</li>
+<li>The <b>«loop»</b> box: walking and running repeat, attack and death play once.</li>
+<li>Press <b>«Install animation»</b>. Then pick the next character — one after another.</li>
+</ol>
+<p>Character missing? Choose <b>«+ New character»</b> — it makes a new animation set. Connect it in Godot once: select the <b>AnimatedSprite2D</b> (or 3D) node and drag the set file into its <b>Sprite Frames</b> field. Changed the game in the editor? Press ⟳ next to the list.</p>
+
+<h3>Unity: Animator and events</h3>
+<p>In Unity the tool does not touch scenes: it writes the sheet under <code>Assets/</code>, and the clip and controller are built by Unity itself when the project is next opened (or via <b>Tools &gt; Sprite Anim Studio &gt; Process Requests</b>).</p>
+<ul>
+<li><b>Animator Controller</b> — keep «create a new one» and <code>&lt;animation&gt;.controller</code> appears next to the sheet. Or pick an <b>existing</b> controller: the state named after the animation is updated (or added), the default state is left as is.</li>
+<li><b>Animation Clip</b> — keep «new» or pick an existing clip to overwrite it.</li>
+<li><b>Animation events</b> — rows of «frame · function · parameter». Frames count from 1: an event on frame 5 at 12 fps fires after <code>4/12</code> seconds. The function is called on the object with this Animator; the parameter is a string. Old clip events are replaced.</li>
+</ul>
+
+<h3>For developers: characters from data</h3>
+<p>If the game describes its characters in JSON (a list of enemies, units…), put a <code>sprite_sheet_maker.json</code> file in the game folder and they appear in the list. For each animation it lists which fields to write into the character's entry. The tool can work out: <code>texture, cols, rows, frames, fps, hit_frame, stride, sprite_scale, sprite_foot, sprite_top</code>. If an animation writes <code>hit_frame</code>, a «hit frame» field appears (with «take the preview frame»); with <code>sprite_scale</code> the height is fitted to the character's still drawing; with <code>stride</code> the step follows the character's speed. Reading these fields and playing the frames is up to the game itself.</p>
+
+<h3>Made a mistake?</h3>
+<p><b>«Undo»</b> puts the files back as they were before the last install. You can press it several times.</p>
+
+<h3>Common problems</h3>
+<ul>
+<li><b>The character «floats», feet slide.</b> The drawn step is shorter than the distance the character covers in the game. Raise fps, or generate a clip with long strides «as if on a treadmill».</li>
+<li><b>Jerky motion.</b> Every second frame of the clip repeats the one before. Make the clip longer, or take «every 2nd» frame.</li>
+<li><b>A coloured fringe around the character.</b> Move «tolerance», turn on «clean edge».</li>
+<li><b>The game does not see the picture.</b> Godot has not «imported» it yet. Open the Godot editor — it does that by itself — or set the path to Godot.exe in the «Game» window.</li>
+<li><b>A character is missing from the sets list.</b> Its set is stored inside the scene. In Godot select the AnimatedSprite node, click the arrow of the Sprite Frames field → «Save As…» and save it to a <code>.tres</code> file.</li>
+<li><b>The sheet is too big.</b> Lower the scale or the number of frames.</li>
+</ul>
+
+<h3>Keys</h3>
+<p><b>Space</b> — play/pause, <b>← →</b> — previous/next frame.</p>
+`,
+};
+const store = {
+  get(key, fallback) { try { const v = localStorage.getItem('sheet.' + key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },
+  set(key, value) { try { localStorage.setItem('sheet.' + key, JSON.stringify(value)); } catch (e) {} },
+};
+let lang = (function () {
+  const fromUrl = (new URLSearchParams(location.search).get('lang') || '').toLowerCase();
+  if (fromUrl === 'ru' || fromUrl === 'en') return fromUrl;
+  return store.get('lang', (navigator.language || '').toLowerCase().startsWith('ru') ? 'ru' : 'en');
+})();
+function t(key, ...args) {
+  const text = (L[lang] && L[lang][key]) ?? L.ru[key] ?? key;
+  return text.replace(/\{(\d+)\}/g, (_, n) => (args[n] ?? ''));
+}
+function applyLang() {
+  document.documentElement.lang = lang;
+  for (const el of document.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
+  for (const el of document.querySelectorAll('[data-tt]')) el.title = t(el.dataset.tt);
+  for (const el of document.querySelectorAll('[data-tp]')) el.placeholder = t(el.dataset.tp);
+  $('helpContent').innerHTML = HELP[lang];
+}
+
+const TEMPLATES = [
+  ['auto', 'tplAuto'], ['strip', 'tplStrip'], ['column', 'tplColumn'],
+  ['4x1'], ['6x1'], ['8x1'], ['2x2'], ['3x3'], ['4x2'], ['4x3'], ['4x4'], ['5x4'], ['6x4'], ['5x5'], ['8x2'], ['8x4'], ['6x6'], ['8x8'], ['10x10'],
+  ['custom', 'tplCustom'],
+];
+const INK = [14, 12, 10];      // цвет контура рисунка — к нему тянется мягкий край
+const EDGE = 2;                // сколько пикселей края «отделяются» от фона
+const SPILL = 4;               // в скольких пикселях от фона убирается его оттенок
+const POCKET_T = 0.45;         // насколько ярким должен быть просвет внутри фигуры
+const MAX_SIDE = 16384;        // больше Godot не загрузит
+const WARN_SIDE = 8192;
+const API = 5;
+// Анимации, которые обычно не повторяются.
+const ONCE = /^(attack|hit|hurt|death|die|dead|jump|land|shoot|cast|spawn|appear|ko)/i;
+const COMMON_ANIMS = ['walk', 'run', 'idle', 'attack', 'hurt', 'death', 'jump', 'fall'];
+
+const state = {
+  frames: [],          // {name, file, w, h, thumb, tiny}
+  selected: new Set(),
+  sequence: [],        // «как щёлкаю»: номера кадров по порядку, с повторами
+  dragK: -1,
+  mediaFps: 0,         // частота кадров последнего разобранного видео или GIF
+  lastClick: -1,
+  loopMarks: new Map(),
+  cache: new Map(),    // индекс кадра → {canvas, box}
+  cacheKey: '',
+  sheet: null,
+  pending: false,
+  build: 0,
+  frame: 0, dir: 1, playing: false, clock: 0, last: 0,
+  folderName: '',
+  project: null,       // описание открытой игры от сервера
+  godot: null,
+  recent: [],
+  tab: 'godot',
+};
+
+// ---------- общие мелочи ----------
+function status(text, kind = '') { const s = $('status'); s.textContent = text; s.className = kind; s.title = text; }
+function busy(text) { const b = $('busy'); b.textContent = text || ''; b.style.display = text ? 'block' : 'none'; }
+const natural = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
+const PERSIST = ['template', 'cols', 'rows', 'scale', 'customScale', 'crop', 'margin', 'gap', 'gridLines', 'fps', 'mode', 'bg', 'zoom',
+  'footLine', 'onion', 'doImport', 'autoScale', 'keyMode', 'keyColor', 'near', 'pockets', 'clean', 'thumbSize', 'every', 'evenly', 'orderMode', 'videoFps', 'hitFrame'];
+function persist() {
+  for (const id of PERSIST) { const el = $(id); store.set(id, el.type === 'checkbox' ? el.checked : el.value); }
+}
+function restore() {
+  for (const id of PERSIST) {
+    const el = $(id); const v = store.get(id, null);
+    if (v === null) continue;
+    if (el.type === 'checkbox') el.checked = v; else el.value = v;
+  }
+}
+const nextFrame = () => new Promise((r) => setTimeout(r, 0));
+// Ответ сервера как JSON; язык страницы — в заголовке, чтобы ошибки шли на нём же.
+async function api(url, options = {}) {
+  options.headers = Object.assign({'X-Lang': lang}, options.headers || {});
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch (error) { throw new Error(response.status === 404 ? t('oldServer') : text.slice(0, 160)); }
+  if (!response.ok) throw new Error(data.error || response.statusText);
+  return data;
+}
+const q = (params) => Object.entries(params).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+
+// ---------- загрузка кадров ----------
+const IMAGE = /\.(png|jpe?g|webp|bmp|gif)$/i;
+const VIDEO = /\.(mp4|webm|mov|m4v|mkv)$/i;
+const isVideo = (f) => VIDEO.test(f.name) || String(f.type).startsWith('video/');
+const isGif = (f) => /\.gif$/i.test(f.name) || f.type === 'image/gif';
+const pad = (n) => String(n).padStart(4, '0');
+const toPng = (canvas) => new Promise((r) => canvas.toBlob(r, 'image/png'));
+const baseName = (name) => name.replace(/\.[^.]+$/, '');
+const once = (el, ok, bad = 'error') => new Promise((resolve, reject) => {
+  const done = () => { el.removeEventListener(ok, done); el.removeEventListener(bad, fail); resolve(); };
+  const fail = () => { el.removeEventListener(ok, done); el.removeEventListener(bad, fail); reject(new Error(bad)); };
+  el.addEventListener(ok, done); el.addEventListener(bad, fail);
+});
+// GIF → кадры: браузер сам собирает каждый кадр целиком (с учётом прозрачности
+// и наложения); частота — по средней длительности кадра.
+async function gifFrames(file) {
+  if (!('ImageDecoder' in window)) return [file];
+  let decoder;
+  try {
+    decoder = new ImageDecoder({data: await file.arrayBuffer(), type: 'image/gif'});
+    await decoder.tracks.ready;
+    const count = decoder.tracks.selectedTrack.frameCount;
+    if (count < 2) { decoder.close(); return [file]; }
+    if (count > 600 && !confirm(t('manyFrames', file.name, count))) { decoder.close(); return []; }
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const out = [];
+    let time = 0;
+    for (let i = 0; i < count; i++) {
+      if (i % 4 === 0) { status(t('splitting', file.name, i, count)); await nextFrame(); }
+      const {image} = await decoder.decode({frameIndex: i});
+      canvas.width = image.displayWidth; canvas.height = image.displayHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0);
+      time += image.duration || 0;
+      image.close();
+      out.push(new File([await toPng(canvas)], baseName(file.name) + '_' + pad(i + 1) + '.png', {type: 'image/png'}));
+    }
+    decoder.close();
+    state.mediaFps = time > 0 ? Math.round(count / (time / 1e6) * 10) / 10 : 0;
+    status(t('mediaFound', file.name, count, state.mediaFps || '?'), 'ok');
+    return out;
+  } catch (error) {
+    if (decoder) decoder.close();
+    status(t('gifFail', file.name), 'bad');
+    return [];
+  }
+}
+// Частота кадров mp4/mov — из самого файла: у видеодорожки шкала времени
+// (mdhd) и длительность кадра (stts); так точнее любого замера.
+async function mp4Fps(file) {
+  if (file.size > 400e6) return 0;
+  const data = new DataView(await file.arrayBuffer());
+  const type = (o) => String.fromCharCode(data.getUint8(o + 4), data.getUint8(o + 5), data.getUint8(o + 6), data.getUint8(o + 7));
+  const boxes = (start, end) => {
+    const out = [];
+    for (let o = start; o + 8 <= end;) {
+      let size = data.getUint32(o);
+      let head = 8;
+      if (size === 1) { size = Number(data.getBigUint64(o + 8)); head = 16; } else if (size === 0) size = end - o;
+      if (size < head || o + size > end) break;
+      out.push({type: type(o), start: o + head, end: o + size});
+      o += size;
+    }
+    return out;
+  };
+  const find = (list, name) => list.find((b) => b.type === name);
+  const moov = find(boxes(0, data.byteLength), 'moov');
+  if (!moov) return 0;
+  for (const trak of boxes(moov.start, moov.end).filter((b) => b.type === 'trak')) {
+    const mdia = find(boxes(trak.start, trak.end), 'mdia');
+    if (!mdia) continue;
+    const inside = boxes(mdia.start, mdia.end);
+    const hdlr = find(inside, 'hdlr');
+    if (!hdlr || String.fromCharCode(...[8, 9, 10, 11].map((k) => data.getUint8(hdlr.start + k))) !== 'vide') continue;
+    const mdhd = find(inside, 'mdhd');
+    const scale = data.getUint8(mdhd.start) === 1 ? data.getUint32(mdhd.start + 20) : data.getUint32(mdhd.start + 12);
+    const minf = find(inside, 'minf');
+    const stbl = minf && find(boxes(minf.start, minf.end), 'stbl');
+    const stts = stbl && find(boxes(stbl.start, stbl.end), 'stts');
+    if (!stts || !scale) return 0;
+    // Самая частая длительность кадра.
+    let best = 0, most = 0;
+    const n = data.getUint32(stts.start + 4);
+    for (let k = 0; k < n; k++) {
+      const count = data.getUint32(stts.start + 8 + k * 8), delta = data.getUint32(stts.start + 12 + k * 8);
+      if (count > most) { most = count; best = delta; }
+    }
+    return best ? Math.round(scale / best * 1000) / 1000 : 0;
+  }
+  return 0;
+}
+// Частота кадров других роликов: несколько кадров при проигрывании, по их времени.
+function detectFps(video) {
+  if (!video.requestVideoFrameCallback) return Promise.resolve(0);
+  return new Promise((resolve) => {
+    const times = [];
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      video.pause();
+      const steps = [];
+      for (let k = 1; k < times.length; k++) if (times[k] > times[k - 1]) steps.push(times[k] - times[k - 1]);
+      steps.sort((a, b) => a - b);
+      const step = steps.length ? steps[0] : 0;
+      resolve(step > 0 ? Math.round(1 / step * 100) / 100 : 0);
+    };
+    const each = (now, meta) => { times.push(meta.mediaTime); if (times.length < 14) video.requestVideoFrameCallback(each); else finish(); };
+    video.requestVideoFrameCallback(each);
+    video.play().catch(finish);
+    setTimeout(finish, 2500);
+  });
+}
+// Видео → кадры: перемотка на середину каждого кадра и снимок.
+async function videoFrames(file) {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  const url = URL.createObjectURL(file);
+  video.src = url;
+  try {
+    await once(video, 'loadeddata');
+    if (!video.videoWidth || !isFinite(video.duration)) throw new Error('no video');
+    let native = 0;
+    try { native = await mp4Fps(file); } catch (error) { native = 0; }
+    if (!(native >= 5 && native <= 240)) native = await detectFps(video);
+    // Замер в свёрнутом окне бывает занижен: правдоподобная частота или 24.
+    if (!(native >= 5 && native <= 240)) native = 24;
+    const wanted = Number($('videoFps').value) || 0;
+    const fps = wanted > 0 ? Math.min(wanted, native) : native;
+    const count = Math.max(1, Math.floor(video.duration * fps + 1e-6));
+    if (count > 600 && !confirm(t('manyFrames', file.name, count))) return [];
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      if (i % 4 === 0) status(t('splitting', file.name, i, count));
+      video.currentTime = Math.min(video.duration - 0.001, (i + 0.5) / fps);
+      await once(video, 'seeked');
+      ctx.drawImage(video, 0, 0);
+      out.push(new File([await toPng(canvas)], baseName(file.name) + '_' + pad(i + 1) + '.png', {type: 'image/png'}));
+    }
+    state.mediaFps = fps;
+    status(t('mediaFound', file.name, count, fps), 'ok');
+    return out;
+  } catch (error) {
+    status(t('videoFail', file.name), 'bad');
+    return [];
+  } finally {
+    video.removeAttribute('src');
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}
+async function loadFiles(files, folder = '') {
+  files = files.filter((f) => IMAGE.test(f.name) || isVideo(f)).sort((a, b) => natural.compare(a.webkitRelativePath || a.name, b.webkitRelativePath || b.name));
+  if (!files.length) { status(t('noImages'), 'bad'); return; }
+  stop();
+  // Видео и GIF — сразу на кадры; одиночный ролик даёт и имя, и частоту просмотра.
+  state.mediaFps = 0;
+  const media = files.filter((f) => isVideo(f) || isGif(f));
+  if (media.length) {
+    const expanded = [];
+    for (const f of files) expanded.push(...(isVideo(f) ? await videoFrames(f) : isGif(f) ? await gifFrames(f) : [f]));
+    if (media.length === 1 && !folder) folder = baseName(media[0].name);
+    files = expanded;
+    if (!files.length) return;
+    if (media.length === 1 && state.mediaFps > 0) {
+      $('fps').value = Math.max(1, Math.min(60, Math.round(state.mediaFps)));
+      $('fpsRange').value = $('fps').value;
+    }
+  }
+  state.frames = [];
+  state.sequence = [];
+  state.selected.clear();
+  state.loopMarks.clear();
+  state.cache.clear();
+  state.sheet = null;
+  drawSheet();
+  state.lastClick = -1;
+  state.folderName = folder || (files[0].webkitRelativePath || '').split('/').slice(-2, -1)[0] || '';
+  const size = 200;
+  for (let i = 0; i < files.length; i++) {
+    if (i % 8 === 0) { status(t('loading', i, files.length)); await nextFrame(); }
+    try {
+      const bitmap = await createImageBitmap(files[i]);
+      const k = Math.min(1, size / Math.max(bitmap.width, bitmap.height));
+      const thumb = document.createElement('canvas');
+      thumb.width = Math.max(1, Math.round(bitmap.width * k));
+      thumb.height = Math.max(1, Math.round(bitmap.height * k));
+      const tc = thumb.getContext('2d');
+      tc.imageSmoothingQuality = 'high';
+      tc.drawImage(bitmap, 0, 0, thumb.width, thumb.height);
+      // Крошечная копия — для поиска петли.
+      const tiny24 = document.createElement('canvas'); tiny24.width = 24; tiny24.height = 24;
+      const ttx = tiny24.getContext('2d'); ttx.drawImage(bitmap, 0, 0, 24, 24);
+      const tiny = ttx.getImageData(0, 0, 24, 24).data;
+      state.frames.push({name: files[i].name, file: files[i], w: bitmap.width, h: bitmap.height, thumb, tiny});
+      if (i === 0) detectBackground(bitmap);
+      bitmap.close();
+    } catch (error) { console.warn('not opened', files[i].name, error); }
+  }
+  const sizes = new Set(state.frames.map((f) => f.w + '×' + f.h));
+  $('from').value = 1; $('to').value = state.frames.length;
+  $('fileName').value = suggestName();
+  renderThumbs();
+  status(t('loaded', state.frames.length) + (sizes.size > 1 ? t('sizesDiffer', [...sizes].join(', ')) : ''), sizes.size > 1 ? 'bad' : 'ok');
+  rebuild();
+}
+function suggestName() {
+  const base = (state.folderName && !/^frames?$/i.test(state.folderName) ? state.folderName : (state.frames[0]?.name || 'sheet').replace(/[_-]?\d+[_-]?\.\w+$/, '').replace(/\.\w+$/, ''));
+  return (base || 'sheet').toLowerCase().replace(/[^\p{L}\p{N}_-]+/gu, '_') + '_sheet';
+}
+// Фон уже прозрачный — вырезать нечего; сплошной цвет по краю — включаем вырезку.
+function detectBackground(bitmap) {
+  const c = document.createElement('canvas'); c.width = bitmap.width; c.height = bitmap.height;
+  const x = c.getContext('2d'); x.drawImage(bitmap, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height).data;
+  let clear = 0, total = 0;
+  for (let i = 0; i < c.width; i += 4) for (const y of [0, c.height - 1]) { total++; if (d[(y * c.width + i) * 4 + 3] < 200) clear++; }
+  const on = clear / total < 0.5;
+  $('keyOn').checked = on;
+  const key = on ? borderKey(d, c.width, c.height) : null;
+  state.keySeen = key;
+  showKeySeen();
+  if (key && $('keyMode').value === 'auto') $('keyColor').value = hex(key);
+}
+function showKeySeen() { $('keySeen').textContent = state.keySeen === undefined ? '' : state.keySeen ? t('keySeenColor', hex(state.keySeen)) : t('keySeenClear'); }
+const hex = (c) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+
+async function entriesToFiles(items) {
+  const files = [];
+  let folder = '';
+  const walk = async (entry) => {
+    if (entry.isFile) files.push(await new Promise((res, rej) => entry.file(res, rej)));
+    else if (entry.isDirectory) {
+      if (!folder) folder = entry.name;
+      const reader = entry.createReader();
+      for (;;) {
+        const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+        if (!batch.length) break;
+        for (const e of batch) await walk(e);
+      }
+    }
+  };
+  for (const item of items) { const e = item.webkitGetAsEntry && item.webkitGetAsEntry(); if (e) await walk(e); }
+  return {files, folder};
+}
+async function loadPath(dir) {
+  dir = String(dir ?? $('dirPath').value).trim().replace(/^"|"$/g, '');
+  if (!dir) { status(t('pastePath'), 'bad'); return; }
+  $('dirPath').value = dir;
+  try {
+    const list = await api('/sheet/api/list?' + q({dir}));
+    store.set('dirPath', dir);
+    const files = [];
+    for (let i = 0; i < list.files.length; i++) {
+      if (i % 16 === 0) status(t('readingDir', i, list.files.length));
+      const blob = await fetch('/sheet/api/file?' + q({dir: list.dir, name: list.files[i]})).then((r) => r.blob());
+      files.push(new File([blob], list.files[i], {type: blob.type}));
+    }
+    await loadFiles(files, list.folder);
+  } catch (error) { status(t('dirFail', error.message), 'bad'); }
+}
+
+// ---------- кадры справа ----------
+function renderThumbs() {
+  const box = $('thumbs');
+  box.innerHTML = '';
+  box.style.gridTemplateColumns = 'repeat(auto-fill, minmax(' + $('thumbSize').value + 'px, 1fr))';
+  state.frames.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.dataset.i = i;
+    div.title = f.name + ' — ' + f.w + '×' + f.h;
+    div.appendChild(f.thumb);
+    div.insertAdjacentHTML('beforeend', '<span class="n">' + (i + 1) + '</span><span class="o"></span>');
+    box.appendChild(div);
+  });
+  refreshThumbs();
+}
+// Порядок кадров в листе: по номерам — выбранные по возрастанию; «как щёлкаю» —
+// лента щелчков, где кадр может стоять несколько раз.
+const byClicks = () => $('orderMode').value === 'clicks';
+function order() {
+  const list = byClicks() ? state.sequence.slice() : [...state.selected].sort((a, b) => a - b);
+  return $('reverse').checked ? list.reverse() : list;
+}
+function refreshThumbs() {
+  const list = order();
+  const place = new Map();
+  list.forEach((i, k) => { if (!place.has(i)) place.set(i, []); place.get(i).push(k + 1); });
+  for (const div of $('thumbs').children) {
+    const i = Number(div.dataset.i);
+    div.classList.toggle('sel', place.has(i));
+    const at = place.get(i) || [];
+    div.querySelector('.o').textContent = at.length > 3 ? at.slice(0, 3).join(',') + '…' : at.join(',');
+    div.classList.toggle('loop', state.loopMarks.has(i));
+    let mark = div.querySelector('.l');
+    if (state.loopMarks.has(i)) {
+      if (!mark) { mark = document.createElement('span'); mark.className = 'l'; div.appendChild(mark); }
+      mark.textContent = state.loopMarks.get(i);
+    } else if (mark) mark.remove();
+  }
+  $('framesSub').textContent = !state.frames.length ? '' : byClicks()
+    ? t('framesSubSeq', state.sequence.length, new Set(state.sequence).size, state.frames.length)
+    : t('framesSub', state.selected.size, state.frames.length);
+  $('framesHint').textContent = t(byClicks() ? 'framesHintClicks' : 'framesHint');
+  $('seqBox').hidden = !byClicks();
+  if (byClicks()) renderSequence();
+}
+// Лента «как щёлкаю»: щелчок по номеру убирает его, перетаскивание меняет место.
+function renderSequence() {
+  $('seqStrip').innerHTML = state.sequence.map((i, k) => '<span draggable="true" data-k="' + k + '">' + (i + 1) + '</span>').join('');
+}
+function sequenceChanged() { state.selected = new Set(state.sequence); selectionChanged(); }
+$('seqStrip').addEventListener('click', (e) => {
+  const chip = e.target.closest('span');
+  if (!chip) return;
+  state.sequence.splice(Number(chip.dataset.k), 1);
+  sequenceChanged();
+});
+$('seqStrip').addEventListener('dragstart', (e) => {
+  const chip = e.target.closest('span');
+  if (!chip) return;
+  state.dragK = Number(chip.dataset.k);
+  chip.classList.add('drag');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', chip.dataset.k);
+});
+$('seqStrip').addEventListener('dragover', (e) => { if (state.dragK >= 0) { e.preventDefault(); e.stopPropagation(); } });
+$('seqStrip').addEventListener('drop', (e) => {
+  if (!(state.dragK >= 0)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const chip = e.target.closest('span');
+  const from = state.dragK;
+  state.dragK = -1;
+  const [moved] = state.sequence.splice(from, 1);
+  let to = chip ? Number(chip.dataset.k) : state.sequence.length;
+  if (chip && from < to) to -= 1;
+  state.sequence.splice(Math.max(0, to), 0, moved);
+  sequenceChanged();
+});
+$('seqStrip').addEventListener('dragend', () => { state.dragK = -1; renderSequence(); });
+$('seqBack').onclick = () => { state.sequence.pop(); sequenceChanged(); };
+$('seqClear').onclick = () => { state.sequence = []; sequenceChanged(); };
+$('orderMode').onchange = () => {
+  if (byClicks()) state.sequence = [...state.selected].sort((a, b) => a - b);
+  else state.selected = new Set(state.sequence);
+  persist();
+  selectionChanged();
+};
+$('thumbs').addEventListener('click', (event) => {
+  const div = event.target.closest('.thumb');
+  if (!div) return;
+  const i = Number(div.dataset.i);
+  if (byClicks()) {
+    // В ленту: один кадр или, с Shift, все кадры от прошлого щелчка до этого.
+    if (event.shiftKey && state.lastClick >= 0 && state.lastClick !== i) {
+      const step = i > state.lastClick ? 1 : -1;
+      for (let k = state.lastClick + step; k !== i + step; k += step) state.sequence.push(k);
+    } else state.sequence.push(i);
+    state.lastClick = i;
+    sequenceChanged();
+    return;
+  }
+  if (event.shiftKey && state.lastClick >= 0) {
+    const on = !state.selected.has(i) || state.selected.has(state.lastClick);
+    for (let k = Math.min(i, state.lastClick); k <= Math.max(i, state.lastClick); k++) on ? state.selected.add(k) : state.selected.delete(k);
+  } else if (state.selected.has(i)) state.selected.delete(i);
+  else state.selected.add(i);
+  state.lastClick = i;
+  selectionChanged();
+});
+function selectionChanged() { refreshThumbs(); rebuild(); }
+function range() {
+  const n = state.frames.length;
+  let a = Math.max(1, Math.min(n, Number($('from').value) || 1));
+  let b = Math.max(1, Math.min(n, Number($('to').value) || n));
+  if (a > b) [a, b] = [b, a];
+  return [a - 1, b - 1];
+}
+function pick(indices) {
+  if (byClicks()) state.sequence = indices.slice();
+  state.selected = new Set(indices);
+  selectionChanged();
+}
+$('selAll').onclick = () => pick(state.frames.map((_, i) => i));
+$('selNone').onclick = () => pick([]);
+$('selRange').onclick = () => { const [a, b] = range(); pick(Array.from({length: b - a + 1}, (_, k) => a + k)); };
+$('selEvery').onclick = () => {
+  const [a, b] = range(); const step = Math.max(1, Number($('every').value) || 1); const out = [];
+  for (let i = a; i <= b; i += step) out.push(i);
+  pick(out);
+};
+// N кадров на равных расстояниях: диапазон — один цикл, его конец не повторяет начало.
+function evenly(count) {
+  const [a, b] = range(); const len = b - a + 1; const n = Math.max(1, Math.min(len, count));
+  const out = new Set();
+  for (let k = 0; k < n; k++) out.add(a + Math.min(len - 1, Math.round(k * len / n)));
+  return [...out];
+}
+$('selEvenly').onclick = () => pick(evenly(Number($('evenly').value) || 1));
+$('fitSel').onclick = () => {
+  const cells = gridFor(state.selected.size || 1).cells;
+  if (!isFinite(cells)) { status(t('noCells'), 'bad'); return; }
+  $('evenly').value = cells;
+  pick(evenly(cells));
+};
+$('reverse').onchange = () => selectionChanged();
+$('thumbSize').oninput = () => { $('thumbs').style.gridTemplateColumns = 'repeat(auto-fill, minmax(' + $('thumbSize').value + 'px, 1fr))'; persist(); };
+
+// Петля: кадр, снова похожий на кадр «с», после того как фигура от него ушла.
+// Ищется внутри диапазона «с–по»: в одной папке бывает несколько роликов.
+$('findLoop').onclick = () => {
+  if (state.frames.length < 4) return;
+  const [a, b] = range();
+  const base = state.frames[a].tiny;
+  const dist = state.frames.slice(0, b + 1).map((f) => { let s = 0; for (let i = 0; i < base.length; i += 4) s += Math.abs(base[i] - f.tiny[i]) + Math.abs(base[i + 1] - f.tiny[i + 1]) + Math.abs(base[i + 2] - f.tiny[i + 2]); return s / (base.length / 4); });
+  const far = Math.max(...dist.slice(a + 1));
+  state.loopMarks.clear();
+  let found = -1;
+  let left = false;
+  for (let j = a + 2; j < dist.length; j++) {
+    if (dist[j] > far * 0.5) left = true;
+    if (!left) continue;
+    const local = dist[j] <= dist[j - 1] && (j + 1 >= dist.length || dist[j] <= dist[j + 1]);
+    if (local && dist[j] < far * 0.3) {
+      state.loopMarks.set(j, '↺ ' + Math.round(100 - dist[j] / far * 100) + '%');
+      if (found < 0) found = j;
+    }
+  }
+  if (found < 0) { refreshThumbs(); status(t('loopNone', a + 1), 'bad'); return; }
+  $('from').value = a + 1; $('to').value = found;
+  status(t('loopFound', found + 1, a + 1, found - a, found), 'ok');
+  const [x, y] = range();
+  pick(Array.from({length: y - x + 1}, (_, k) => x + k));
+};
+
+// ---------- вырезка фона / background removal ----------
+function borderKey(d, w, h) {
+  const counts = new Map(); let best = null, most = 0;
+  const vote = (x, y) => {
+    const i = (y * w + x) * 4;
+    if (d[i + 3] < 200) return;
+    const q = (d[i] >> 2) << 16 | (d[i + 1] >> 2) << 8 | (d[i + 2] >> 2);
+    const c = (counts.get(q) || 0) + 1; counts.set(q, c);
+    if (c > most) { most = c; best = q; }
+  };
+  for (let x = 0; x < w; x++) { vote(x, 0); vote(x, h - 1); }
+  for (let y = 0; y < h; y++) { vote(0, y); vote(w - 1, y); }
+  if (best === null) return [255, 0, 255];
+  return [((best >> 16) & 255) * 4 + 2, ((best >> 8) & 255) * 4 + 2, (best & 255) * 4 + 2];
+}
+function keySettings() {
+  const on = $('keyOn').checked;
+  const color = $('keyColor').value;
+  return {on, auto: $('keyMode').value === 'auto', color: [1, 3, 5].map((k) => parseInt(color.substr(k, 2), 16)),
+    near: Number($('near').value), pockets: $('pockets').checked, clean: $('clean').checked};
+}
+// Фон — то, что пиксели, близкие к линии «чёрный → цвет фона», достают от краёв
+// кадра; плюс просветы этого цвета внутри фигуры. По краю каждый пиксель
+// отделяется от фона (доля фона снимается), остаток тянется к цвету контура;
+// оттенок фона у края убирается.
+function keyOut(src, opt) {
+  const w = src.width, h = src.height, n = w * h, d = src.data;
+  const key = opt.auto ? borderKey(d, w, h) : opt.color;
+  const kk = key[0] * key[0] + key[1] * key[1] + key[2] * key[2] || 1;
+  const rgb = new Float32Array(n * 3);
+  const like = new Uint8Array(n), shade = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+    rgb[i * 3] = r; rgb[i * 3 + 1] = g; rgb[i * 3 + 2] = b;
+    if (d[i * 4 + 3] < 8) { like[i] = 1; shade[i] = 1; continue; }
+    const t = Math.min(1.1, Math.max(0, (r * key[0] + g * key[1] + b * key[2]) / kk));
+    const dr = r - key[0] * t, dg = g - key[1] * t, db = b - key[2] * t;
+    shade[i] = t;
+    like[i] = Math.sqrt(dr * dr + dg * dg + db * db) < opt.near && t > 0.45 ? 1 : 0;
+  }
+  const bg = new Uint8Array(n);
+  const stamp = new Int32Array(n);
+  const stack = new Int32Array(n);
+  let mark = 0;
+  // Заливка: что достаётся от стартов через похожие на фон пиксели не темнее bright.
+  const flood = (starts, bright, found) => {
+    mark++; let sp = 0, count = 0;
+    const take = (j) => { if (stamp[j] !== mark && !bg[j] && like[j] && shade[j] >= bright) { stamp[j] = mark; stack[sp++] = j; } };
+    for (const s of starts) take(s);
+    while (sp) {
+      const i = stack[--sp];
+      found[count++] = i;
+      const x = i % w;
+      if (x > 0) take(i - 1);
+      if (x < w - 1) take(i + 1);
+      if (i >= w) take(i - w);
+      if (i < n - w) take(i + w);
+    }
+    return count;
+  };
+  const found = new Int32Array(n);
+  const starts = [];
+  for (let x = 0; x < w; x++) starts.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y++) starts.push(y * w, y * w + w - 1);
+  let c = flood(starts, 0, found);
+  for (let k = 0; k < c; k++) bg[found[k]] = 1;
+  if (opt.pockets) {
+    for (let s = 0; s < n; s++) {
+      if (bg[s] || !like[s] || shade[s] < POCKET_T) continue;
+      c = flood([s], POCKET_T, found);
+      for (let k = 0; k < c; k++) bg[found[k]] = 1;
+    }
+  }
+  const alpha = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (bg[i]) continue;
+    alpha[i] = 1;
+    if (!opt.clean) continue;
+    const x = i % w, y = (i / w) | 0;
+    let near = 0, count = 0;
+    for (let dy = -EDGE; dy <= EDGE; dy++) {
+      const ny = y + dy; if (ny < 0 || ny >= h) continue;
+      for (let dx = -EDGE; dx <= EDGE; dx++) {
+        const nx = x + dx; if (nx < 0 || nx >= w) continue;
+        const j = ny * w + nx;
+        if (bg[j]) { near += shade[j]; count++; }
+      }
+    }
+    if (!count) continue;
+    const t = near / count;
+    const back = [key[0] * t, key[1] * t, key[2] * t];
+    const span = [back[0] - INK[0], back[1] - INK[1], back[2] - INK[2]];
+    const cr = [rgb[i * 3] - INK[0], rgb[i * 3 + 1] - INK[1], rgb[i * 3 + 2] - INK[2]];
+    const ss = span[0] * span[0] + span[1] * span[1] + span[2] * span[2];
+    const a = 1 - Math.min(1, Math.max(0, (cr[0] * span[0] + cr[1] * span[1] + cr[2] * span[2]) / Math.max(1, ss)));
+    const ox = cr[0] - span[0] * (1 - a), oy = cr[1] - span[1] * (1 - a), oz = cr[2] - span[2] * (1 - a);
+    // Цвет далеко от линии «контур → фон» (кожа, ткань) — это рисунок, не смесь.
+    if (Math.sqrt(ox * ox + oy * oy + oz * oz) > 60) continue;
+    alpha[i] = a;
+    if (a > 0.02) {
+      // Деление на малую альфу раздувает шум видео: слабый край тянется к контуру.
+      for (let ch = 0; ch < 3; ch++) {
+        const f = (rgb[i * 3 + ch] - back[ch] * (1 - a)) / a;
+        rgb[i * 3 + ch] = Math.min(255, Math.max(0, INK[ch] + (f - INK[ch]) * a * a));
+      }
+    }
+  }
+  if (opt.clean) {
+    // Оттенок фона у края: сильные каналы фона не выше слабых.
+    const top = Math.max(key[0], key[1], key[2], 1);
+    const strong = [0, 1, 2].filter((ch) => key[ch] / top > 0.5);
+    const weak = [0, 1, 2].filter((ch) => key[ch] / top <= 0.5);
+    if (strong.length && weak.length) {
+      for (let i = 0; i < n; i++) {
+        if (bg[i]) continue;
+        const x = i % w;
+        let edge = false;
+        for (const [dx, dy] of [[-SPILL, 0], [SPILL, 0], [0, -SPILL], [0, SPILL]]) {
+          const nx = Math.min(w - 1, Math.max(0, x + dx));
+          const ny = Math.min(h - 1, Math.max(0, ((i / w) | 0) + dy));
+          if (bg[ny * w + nx]) { edge = true; break; }
+        }
+        if (!edge) continue;
+        let floor = 0;
+        for (const ch of weak) floor = Math.max(floor, rgb[i * 3 + ch]);
+        let spill = Infinity;
+        for (const ch of strong) spill = Math.min(spill, rgb[i * 3 + ch] - floor);
+        if (spill > 0) for (const ch of strong) rgb[i * 3 + ch] -= spill;
+      }
+    }
+  }
+  const out = new ImageData(w, h);
+  for (let i = 0; i < n; i++) {
+    if (alpha[i] <= 0) continue;
+    out.data[i * 4] = rgb[i * 3]; out.data[i * 4 + 1] = rgb[i * 3 + 1]; out.data[i * 4 + 2] = rgb[i * 3 + 2];
+    out.data[i * 4 + 3] = Math.round(alpha[i] * d[i * 4 + 3]);
+  }
+  return out;
+}
+function alphaBox(img) {
+  const {width: w, height: h, data: d} = img;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (d[(y * w + x) * 4 + 3] < 8) continue;
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return x1 < 0 ? {x: 0, y: 0, w: w, h: h, empty: true} : {x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1};
+}
+async function processed(i) {
+  const key = JSON.stringify(keySettings());
+  if (key !== state.cacheKey) { state.cache.clear(); state.cacheKey = key; }
+  if (state.cache.has(i)) return state.cache.get(i);
+  const f = state.frames[i];
+  const bitmap = await createImageBitmap(f.file);
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width; canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d', {willReadFrequently: true});
+  ctx.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  let img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const opt = keySettings();
+  if (opt.on) { img = keyOut(img, opt); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.putImageData(img, 0, 0); }
+  const entry = {canvas, box: alphaBox(img)};
+  state.cache.set(i, entry);
+  return entry;
+}
+
+
+// ---------- сетка и лист / grid and sheet ----------
+function gridFor(n) {
+  const tp = $('template').value;
+  if (tp === 'auto') { const cols = Math.ceil(Math.sqrt(n)); return {cols, rows: Math.ceil(n / cols), cells: Infinity}; }
+  if (tp === 'strip') return {cols: n, rows: 1, cells: Infinity};
+  if (tp === 'column') return {cols: 1, rows: n, cells: Infinity};
+  const cols = Math.max(1, Number($('cols').value) || 1), rows = Math.max(1, Number($('rows').value) || 1);
+  return {cols, rows, cells: cols * rows};
+}
+function applyTemplate() {
+  const tp = $('template').value;
+  const m = /^(\d+)x(\d+)$/.exec(tp);
+  if (m) { $('cols').value = m[1]; $('rows').value = m[2]; }
+  const fixed = !['auto', 'strip', 'column'].includes(tp);
+  $('cols').disabled = !fixed; $('rows').disabled = !fixed;
+  $('fitSel').disabled = !fixed;
+}
+function fillTemplates() {
+  const keep = $('template').value;
+  $('template').innerHTML = '';
+  for (const [value, key] of TEMPLATES) $('template').insertAdjacentHTML('beforeend', '<option value="' + value + '">' + (key ? t(key) : value.replace('x', ' × ')) + '</option>');
+  if (keep) $('template').value = keep;
+}
+function scale() {
+  const v = $('scale').value;
+  $('customScaleBox').hidden = v !== 'custom';
+  return v === 'custom' ? Math.max(0.01, (Number($('customScale').value) || 100) / 100) : Number(v);
+}
+let rebuildTimer = 0;
+// Пока лист пересобирается, сохранять нечего: кнопки ждут нового листа.
+function rebuild() { state.pending = true; updateOutputs(); clearTimeout(rebuildTimer); rebuildTimer = setTimeout(build, 30); }
+async function build() {
+  const token = ++state.build;
+  persist();
+  const list = order();
+  $('empty').style.display = state.frames.length && list.length ? 'none' : 'grid';
+  if (!list.length) { state.sheet = null; state.pending = false; drawSheet(); updateOutputs(); return; }
+  const grid = gridFor(list.length);
+  const used = list.slice(0, Math.min(list.length, grid.cells));
+  const keyed = $('keyOn').checked;
+  const entries = [];
+  for (let k = 0; k < used.length; k++) {
+    if (!state.cache.has(used[k]) || JSON.stringify(keySettings()) !== state.cacheKey) {
+      busy(t(keyed ? 'cutting' : 'reading', k + 1, used.length));
+      await nextFrame();
+      if (token !== state.build) return;
+    }
+    entries.push(await processed(used[k]));
+    if (token !== state.build) return;
+  }
+  busy('');
+  // Общая рамка по всем кадрам — фигура стоит в клетках так же, как в кадрах.
+  const sw = Math.max(...entries.map((e) => e.canvas.width)), sh = Math.max(...entries.map((e) => e.canvas.height));
+  let ux = 0, uy = 0, uw = sw, uh = sh;
+  const real = entries.filter((e) => !e.box.empty);
+  if ($('crop').checked && real.length) {
+    const m = Math.max(0, Number($('margin').value) || 0);
+    const x0 = Math.min(...real.map((e) => e.box.x)) - m, y0 = Math.min(...real.map((e) => e.box.y)) - m;
+    const x1 = Math.max(...real.map((e) => e.box.x + e.box.w)) + m, y1 = Math.max(...real.map((e) => e.box.y + e.box.h)) + m;
+    ux = Math.max(0, x0); uy = Math.max(0, y0); uw = Math.min(sw, x1) - ux; uh = Math.min(sh, y1) - uy;
+  }
+  const k = scale();
+  const gap = Math.max(0, Math.round(Number($('gap').value) || 0));
+  const cellW = Math.max(1, Math.round(uw * k)), cellH = Math.max(1, Math.round(uh * k));
+  const stepW = cellW + gap, stepH = cellH + gap;
+  const {cols, rows} = grid;
+  const W = stepW * cols, H = stepH * rows;
+  if (W > MAX_SIDE || H > MAX_SIDE) {
+    state.sheet = null; state.pending = false; drawSheet(); updateOutputs();
+    $('sheetInfo').innerHTML = '<span class="warn">' + t('tooBig', W, H, MAX_SIDE) + '</span>';
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  const lead = Math.floor(gap / 2);
+  entries.forEach((e, n) => ctx.drawImage(e.canvas, ux, uy, uw, uh, (n % cols) * stepW + lead, Math.floor(n / cols) * stepH + lead, cellW, cellH));
+  // Ноги — самая нижняя закрашенная строка по всем кадрам, верх — самая верхняя;
+  // доли шага клетки (с зазором), как режет лист игра.
+  const bottom = real.length ? Math.max(...real.map((e) => e.box.y + e.box.h)) - uy : uh;
+  const topRow = real.length ? Math.min(...real.map((e) => e.box.y)) - uy : 0;
+  // Рост фигуры в кадре (средний, px исходника) — для подгонки к неподвижному рисунку.
+  const heights = real.map((e) => e.box.h).sort((a, b) => a - b);
+  const figure = heights.length ? heights[heights.length >> 1] : uh;
+  state.sheet = {canvas, cols, rows, n: entries.length, cellW, cellH, stepW, stepH, lead, k, figure,
+    foot: (lead + bottom * k) / stepH, top: (lead + topRow * k) / stepH, dropped: list.length - used.length, cells: cols * rows};
+  state.pending = false;
+  if (state.frame >= state.sheet.n) state.frame = 0;
+  drawSheet();
+  updateOutputs();
+  drawPlayer();
+}
+function checker(ctx, w, h, size = 10) {
+  ctx.fillStyle = '#24272e'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#2c3038';
+  for (let y = 0; y < h; y += size) for (let x = (y / size) % 2 ? size : 0; x < w; x += size * 2) ctx.fillRect(x, y, size, size);
+}
+function drawSheet() {
+  const view = $('sheetView');
+  const s = state.sheet;
+  if (!s) { view.width = 10; view.height = 10; view.style.display = 'none'; $('sheetInfo').textContent = ''; $('sheetSub').textContent = ''; return; }
+  view.style.display = 'block';
+  const room = Math.max(100, $('sheetWrap').clientWidth - 22);
+  const k = Math.min(1, room / s.canvas.width);
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.round(s.canvas.width * k), h = Math.round(s.canvas.height * k);
+  view.width = Math.round(w * dpr); view.height = Math.round(h * dpr);
+  view.style.width = w + 'px'; view.style.height = h + 'px';
+  const ctx = view.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  checker(ctx, w, h);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(s.canvas, 0, 0, w, h);
+  if ($('gridLines').checked) {
+    ctx.strokeStyle = 'rgba(230,185,113,.55)'; ctx.lineWidth = 1;
+    for (let c = 0; c <= s.cols; c++) { const x = Math.round(c * s.stepW * k) + .5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+    for (let r = 0; r <= s.rows; r++) { const y = Math.round(r * s.stepH * k) + .5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+    ctx.font = '11px Trebuchet MS'; ctx.textBaseline = 'top';
+    for (let n = 0; n < s.cells; n++) {
+      const x = (n % s.cols) * s.stepW * k + 3, y = Math.floor(n / s.cols) * s.stepH * k + 3;
+      ctx.fillStyle = n < s.n ? 'rgba(0,0,0,.6)' : 'rgba(80,20,10,.6)';
+      ctx.fillRect(x, y, 20, 14);
+      ctx.fillStyle = n < s.n ? '#e6b971' : '#ff8a6a';
+      ctx.fillText(n < s.n ? n + 1 : '—', x + 3, y + 1);
+    }
+  }
+  const empty = s.cells - s.n;
+  let info = t('sheetInfo', s.canvas.width, s.canvas.height, s.cols, s.rows, s.n, s.cellW, s.cellH) + (s.stepW !== s.cellW ? t('gapInfo', s.stepW - s.cellW) : '');
+  if (s.dropped > 0) info += '<br><span class="warn">' + t('dropped', s.dropped) + '</span>';
+  if (empty > 0 && isFinite(gridFor(1).cells)) info += '<br><span class="warn">' + t('emptyCells', empty) + '</span>';
+  if (Math.max(s.canvas.width, s.canvas.height) > WARN_SIDE) info += '<br><span class="warn">' + t('bigSide', WARN_SIDE) + '</span>';
+  $('sheetInfo').innerHTML = info;
+  $('sheetSub').textContent = s.cols + '×' + s.rows;
+}
+new ResizeObserver(() => drawSheet()).observe($('sheetWrap'));
+
+// ---------- просмотр / preview ----------
+const BG = {dark: '#121a17', light: '#d9d9d1', ground: '#6b5434'};
+function drawPlayer() {
+  const canvas = $('player');
+  const ctx = canvas.getContext('2d');
+  const s = state.sheet;
+  const W = canvas.width, H = canvas.height;
+  if ($('bg').value === 'checker') checker(ctx, W, H, 12); else { ctx.fillStyle = BG[$('bg').value]; ctx.fillRect(0, 0, W, H); }
+  if (!s) { $('frameLabel').textContent = ''; return; }
+  const z = $('zoom').value;
+  const k = z === 'fit' ? Math.min((W - 10) / s.stepW, (H - 10) / s.stepH) : Number(z);
+  const dw = s.stepW * k, dh = s.stepH * k;
+  const ox = (W - dw) / 2, oy = (H - dh) / 2;
+  ctx.imageSmoothingQuality = 'high';
+  const cell = (n) => [(n % s.cols) * s.stepW, Math.floor(n / s.cols) * s.stepH];
+  if ($('onion').checked && s.n > 1) {
+    const prev = ($('mode').value === 'pingpong' ? state.frame - state.dir : state.frame - 1 + s.n) % s.n;
+    const [px, py] = cell(Math.max(0, prev));
+    ctx.globalAlpha = 0.3; ctx.drawImage(s.canvas, px, py, s.stepW, s.stepH, ox, oy, dw, dh); ctx.globalAlpha = 1;
+  }
+  const [sx, sy] = cell(state.frame);
+  ctx.drawImage(s.canvas, sx, sy, s.stepW, s.stepH, ox, oy, dw, dh);
+  if ($('footLine').checked) {
+    const y = Math.round(oy + s.foot * dh) + .5;
+    ctx.strokeStyle = 'rgba(127,196,255,.8)'; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  const fps = Number($('fps').value) || 12;
+  const cycle = ($('mode').value === 'pingpong' ? Math.max(1, 2 * s.n - 2) : s.n) / fps;
+  const hitShown = !$('hitBox').hidden && state.frame + 1 === Number($('hitFrame').value);
+  $('frameLabel').textContent = t('frameLabel', state.frame + 1, s.n, cycle.toFixed(2)) + (hitShown ? t('hitMark') : '');
+}
+function advance(step) {
+  const s = state.sheet; if (!s || s.n < 1) return;
+  if ($('mode').value === 'pingpong' && s.n > 1) {
+    let f = state.frame + state.dir * step;
+    if (f >= s.n) { state.dir = -1; f = s.n - 2; } else if (f < 0) { state.dir = 1; f = 1; }
+    state.frame = Math.max(0, Math.min(s.n - 1, f));
+  } else state.frame = ((state.frame + step) % s.n + s.n) % s.n;
+  drawPlayer();
+}
+function tick(now) {
+  if (!state.playing) return;
+  const fps = Math.max(1, Number($('fps').value) || 12);
+  state.clock += (now - state.last) / 1000; state.last = now;
+  while (state.clock >= 1 / fps) { state.clock -= 1 / fps; advance(1); }
+  requestAnimationFrame(tick);
+}
+function showPlay() { $('play').textContent = t(state.playing ? 'pause' : 'play'); }
+function play() { if (!state.sheet) return; state.playing = true; state.last = performance.now(); state.clock = 0; showPlay(); requestAnimationFrame(tick); }
+function stop() { state.playing = false; showPlay(); }
+$('play').onclick = () => state.playing ? stop() : play();
+$('prev').onclick = () => { stop(); advance(-1); };
+$('next').onclick = () => { stop(); advance(1); };
+$('fps').oninput = () => { $('fpsRange').value = $('fps').value; updateOutputs(); drawPlayer(); persist(); };
+$('fpsRange').oninput = () => { $('fps').value = $('fpsRange').value; updateOutputs(); drawPlayer(); persist(); };
+for (const id of ['mode', 'bg', 'zoom', 'footLine', 'onion']) $(id).onchange = () => { state.dir = 1; drawPlayer(); persist(); };
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') { for (const m of document.querySelectorAll('.modal.open')) m.classList.remove('open'); return; }
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.querySelector('.modal.open')) return;
+  if (event.code === 'Space') { event.preventDefault(); state.playing ? stop() : play(); }
+  else if (event.code === 'ArrowLeft') { stop(); advance(-1); }
+  else if (event.code === 'ArrowRight') { stop(); advance(1); }
+});
+
+// ---------- игра и персонажи / game and characters ----------
+function sheetName() { return $('fileName').value.trim().replace(/\.png$/i, ''); }
+const animName = () => $('animName').value.trim();
+const currentChar = () => ($('charSel').value === 'new' || !state.project ? null : state.project.characters.find((c) => c.id === $('charSel').value) || null);
+const charAnim = (c, name) => (c ? c.animations.find((a) => a.name === name) || null : null);
+const isData = (c) => !!c && c.kind === 'data';
+const isUnity = () => !!state.project && state.project.engine === 'unity';
+// Путь так, как его понимает открытый движок: Godot ждёт res://, Unity — путь от корня проекта.
+// Пустая папка значит корень: у Unity это Assets (всё вне Assets редактор не видит).
+const atPath = (folder, name) => isUnity()
+  ? (folder ? folder + '/' : 'Assets/') + name
+  : 'res://' + (folder ? folder + '/' : '') + name;
+const esc = (text) => String(text).replace(/[&<>"]/g, (ch) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
+function showProject() {
+  const p = state.project;
+  const unityMode = !!p && p.engine === 'unity';
+  $('gameBtn').textContent = p ? t('gameBtn', p.name) : t('noGameBtn');
+  $('gameBtn').classList.toggle('none', !p);
+  $('gameArea').hidden = !p;
+  $('noGame').hidden = !!p;
+  $('noGame').textContent = t('noGame');
+  // В Unity нет ни персонажей Godot, ни наборов SpriteFrames — прячем их поля.
+  $('charField').hidden = unityMode;
+  $('removeAnim').hidden = unityMode;
+  $('importField').hidden = unityMode;
+  $('godotBlock').hidden = unityMode;
+  $('unityBox').hidden = !unityMode;
+  if (unityMode) loadUnityAssets();
+  // Выбор в списках помнится для каждой игры свой: при смене игры прошлый не годится.
+  const same = !!p && state.shownRoot === p.root;
+  state.shownRoot = p ? p.root : null;
+  const prefix = unityMode ? '' : 'res://';
+  for (const id of ['folder', 'setDir']) {
+    const select = $(id);
+    const keep = same ? select.value : store.get(id + ':' + (p ? p.root : ''), '');
+    select.innerHTML = '<option value="">' + (unityMode ? 'Assets/' : 'res://') + '</option>'
+      + (p ? p.folders.map((f) => '<option value="' + esc(f) + '">' + prefix + esc(f) + '</option>').join('') : '');
+    if ([...select.options].some((o) => o.value === keep)) select.value = keep;
+  }
+  // Персонажи: из сцен, наборы без сцены, из данных игры.
+  const sel = $('charSel');
+  if (unityMode) {
+    sel.innerHTML = '<option value="unity">' + esc(t('engineUnity')) + '</option>';
+    sel.value = 'unity';
+  } else {
+    const keep = state.selectAfter || (same ? sel.value : store.get('char:' + (p ? p.root : ''), ''));
+    state.selectAfter = null;
+    let html = '';
+    for (const [kind, label] of [['scene', 'groupScene'], ['set', 'groupSet'], ['data', 'groupData']]) {
+      const list = p ? p.characters.filter((c) => c.kind === kind) : [];
+      if (!list.length) continue;
+      html += '<optgroup label="' + esc(t(label)) + '">' + list.map((c) => {
+        const count = c.animations.filter((a) => !isData(c) || a.installed).length;
+        return '<option value="' + esc(c.id) + '">' + esc(c.name) + (count ? ' · ' + t('animCount', count) : '') + '</option>';
+      }).join('') + '</optgroup>';
+    }
+    sel.innerHTML = html + '<option value="new">' + esc(t('newCharacter')) + '</option>';
+    sel.value = [...sel.options].some((o) => o.value === keep) ? keep : (p && p.characters.length ? p.characters[0].id : 'new');
+  }
+  $('charCount').textContent = p ? (unityMode ? t('charCountUnity', p.version || '4', p.folders.length) : t('charCount', p.characters.length)) : '';
+  $('undo').textContent = p && p.undo ? t('undo', p.undo) : t('undoNone');
+  $('undo').disabled = !(p && p.undo);
+  charChanged(false);
+  if (unityMode) $('charInfo').textContent = t('unityHint');
+}
+function charChanged(byUser) {
+  const c = currentChar();
+  const isNew = $('charSel').value === 'new';
+  $('newSetBox').hidden = !isNew;
+  if (isNew && byUser) $('setName').value = (sheetName().replace(/_(sheet|walk|run|idle|attack|death|jump)$/, '') || 'character') + '_frames';
+  const holds = c && c.kind === 'scene' ? t(c.holds === 'scene' ? 'holdsScene' : c.holds === 'file' ? 'holdsFile' : 'holdsNone', c.setRes || '') : '';
+  $('charInfo').innerHTML = isNew ? (state.project && !state.project.characters.length ? t('noCharacters') + ' ' : '') + t('setInfoNew')
+    : !c ? '' : c.kind === 'scene' ? t('infoScene', esc(c.scene), esc(c.node), c.type, holds)
+    : c.kind === 'set' ? t('infoSet', esc(c.setRes)) : t('infoData', esc(c.source));
+  const names = isData(c) ? c.animations.map((a) => a.name) : [...new Set([...(c ? c.animations.map((a) => a.name) : []), ...COMMON_ANIMS])];
+  $('animNames').innerHTML = names.map((n) => '<option value="' + esc(n) + '">').join('');
+  $('animChips').innerHTML = c ? c.animations.map((a) => '<span class="chip' + (isData(c) && !a.installed ? ' empty' : '') + '" data-name="' + esc(a.name) + '">' +
+    esc(isData(c) && !a.installed ? t('chipEmpty', a.name) : a.speed > 0 ? t('chip', a.name, a.frames, a.speed) : t('chipNoFps', a.name, a.frames)) + '</span>').join('') : '';
+  // У персонажа из данных — только его анимации.
+  if (isData(c) && !charAnim(c, animName()) && c.animations.length) $('animName').value = c.animations[0].name;
+  if (byUser && c && c.folder !== undefined && [...$('folder').options].some((o) => o.value === c.folder)) $('folder').value = c.folder;
+  if (state.project) store.set('char:' + state.project.root, $('charSel').value);
+  animChanged(byUser);
+}
+// Имя листа: <персонаж>_<анимация>, пока его не переписали руками.
+function suggestSheetName() {
+  const c = currentChar();
+  const who = c ? c.name.replace(/[^\p{L}\p{N}_-]+/gu, '_') : ($('setName').value.trim().replace(/_frames$/, '') || 'character');
+  if (!sheetName() || sheetName() === 'sheet' || state.autoName === sheetName() || /_sheet$/.test(sheetName())) {
+    state.autoName = who + '_' + (animName() || 'anim');
+    $('fileName').value = state.autoName;
+  }
+}
+function animChanged(byUser) {
+  const c = currentChar();
+  const a = charAnim(c, animName());
+  if (isData(c) && a) $('animLoop').checked = a.loop;
+  $('animLoop').disabled = isData(c);
+  $('fitBox').hidden = !(isData(c) && a && a.fit);
+  $('hitBox').hidden = !(isData(c) && a && a.hit);
+  for (const chip of $('animChips').children) chip.classList.toggle('cur', chip.dataset.name === animName());
+  $('removeAnim').disabled = !(a && (!isData(c) || a.installed));
+  if (byUser) suggestSheetName();
+  updateOutputs();
+}
+$('charSel').onchange = () => charChanged(true);
+$('refresh').onclick = () => refreshProject().then(() => status(t('refreshed'), 'ok')).catch((e) => status(t('error', e.message), 'bad'));
+$('animName').oninput = () => { if (!isData(currentChar())) $('animLoop').checked = !ONCE.test(animName()); animChanged(true); };
+$('setName').oninput = () => { suggestSheetName(); updateOutputs(); };
+$('animChips').onclick = (e) => {
+  const chip = e.target.closest('.chip');
+  const c = currentChar();
+  if (!chip || !c) return;
+  const a = charAnim(c, chip.dataset.name);
+  $('animName').value = a.name;
+  $('animLoop').checked = a.loop;
+  animChanged(true);
+};
+async function refreshProject() {
+  const answer = await api('/sheet/api/refresh');
+  state.project = answer.project;
+  showProject();
+}
+async function openGame(dir) {
+  try {
+    const answer = await api('/sheet/api/project?' + q({path: dir}), {method: 'POST'});
+    state.project = answer.project;
+    $('gameModal').classList.remove('open');
+    showProject();
+    status(t('gameOpened', state.project.name) + ' — ' + (state.project.engine === 'unity' ? t('charCountUnity', state.project.version || '4', state.project.folders.length) : t('charCount', state.project.characters.length)), 'ok');
+    const st = await api('/sheet/api/state');
+    state.recent = st.recent; state.godot = st.godot;
+  } catch (error) { status(t('error', error.message), 'bad'); showGameModal(); }
+}
+function showGameModal() {
+  const p = state.project;
+  const kinds = p ? ['scene', 'set', 'data'].map((k) => p.characters.filter((c) => c.kind === k).length) : [];
+  $('gameNow').innerHTML = p ? t('gameNow', esc(p.name), p.engine === 'unity' ? t('engineUnity') : 'Godot', p.version || '4', esc(p.root), kinds[0], kinds[1], kinds[2], p.folders.length) : t('gameNone');
+  $('recentList').innerHTML = state.recent.map((r) => '<button data-path="' + esc(r) + '">' + esc(r) + '</button>').join('');
+  $('recentBox').hidden = !state.recent.length;
+  $('godotNow').innerHTML = state.godot ? '<span class="ok-text">' + esc(t('godotFound', state.godot)) + '</span>' : '<span class="bad-text">' + t('godotMissing') + '</span>';
+  $('embeddedBox').hidden = !(p && p.adapterErrors && p.adapterErrors.length);
+  $('embeddedList').innerHTML = p && p.adapterErrors ? p.adapterErrors.map((e) => '<li><code>' + esc(e) + '</code></li>').join('') : '';
+  $('gameModal').classList.add('open');
+}
+$('gameBtn').onclick = showGameModal;
+$('recentList').onclick = (e) => { const b = e.target.closest('button'); if (b) openGame(b.dataset.path); };
+$('openGame').onclick = () => openGame($('gamePath').value.trim());
+$('gamePath').addEventListener('keydown', (e) => { if (e.key === 'Enter') openGame($('gamePath').value.trim()); });
+$('pickGame').onclick = async () => {
+  const answer = await api('/sheet/api/pick?kind=game', {method: 'POST'}).catch(() => ({path: ''}));
+  if (answer.path) openGame(answer.path); else status(t('pickCancelled'));
+};
+$('pickGodot').onclick = async () => {
+  const answer = await api('/sheet/api/pick?kind=godot', {method: 'POST'}).catch(() => ({path: ''}));
+  if (!answer.path) return;
+  try { const r = await api('/sheet/api/godot?' + q({path: answer.path}), {method: 'POST'}); state.godot = r.godot; showGameModal(); }
+  catch (error) { status(t('error', error.message), 'bad'); }
+};
+for (const b of document.querySelectorAll('.closeModal')) b.onclick = () => b.closest('.modal').classList.remove('open');
+for (const m of document.querySelectorAll('.modal')) m.addEventListener('mousedown', (e) => { if (e.target === m) m.classList.remove('open'); });
+$('helpBtn').onclick = () => $('helpModal').classList.add('open');
+
+// ---------- выходы / outputs ----------
+const round4 = (v) => Math.round(v * 10000) / 10000;
+// Рост как у неподвижного рисунка персонажа из данных: первый кадр ролика —
+// тот же рисунок, так что (foot − top) · scale рисунка = рост фигуры в клетке
+// / шаг клетки · scale листа.
+function fittedScale(s, fit) { return round4((fit.sprite_foot - fit.sprite_top) * fit.sprite_scale * s.stepH / Math.max(1, s.figure * s.k)); }
+const hitFrame = () => Math.max(1, Math.min(state.sheet ? state.sheet.n : 1, Math.round(Number($('hitFrame').value) || 1)));
+// Всё, что сборщик может посчитать для персонажа из данных; игра берёт нужное.
+function dataValues() {
+  const s = state.sheet, c = currentChar();
+  const fps = Math.max(1, Number($('fps').value) || 12);
+  return {cols: s.cols, rows: s.rows, frames: s.n, fps, hit_frame: hitFrame(),
+    stride: c && c.speed > 0 ? round4(c.speed * s.n / fps) : 1,
+    sprite_scale: Math.max(0.01, Number($('walkScale').value) || 1), sprite_foot: round4(s.foot), sprite_top: round4(s.top)};
+}
+function updateOutputs() {
+  const s = state.sheet, p = state.project, c = currentChar();
+  const isNew = $('charSel').value === 'new';
+  const name = animName();
+  const a = charAnim(c, name);
+  const ready = !!s && !state.pending && !!p;
+  const unity = isUnity();
+  $('save').disabled = !ready;
+  $('installAnim').disabled = !ready || !name
+    || (!unity && !c && !isNew) || (!unity && isData(c) && !a);
+  $('walkScale').disabled = $('autoScale').checked;
+  // Подсказка: заменится или добавится, и что посчитано для игры.
+  let hint = '';
+  if (isData(c) && !a) hint = t('dataUnknownAnim', c.animations.map((x) => x.name).join(', '));
+  else if (name) hint = (a && (!isData(c) || a.installed)) ? t('animExists', name, a.frames) : t('animNew', name);
+  if (s && isData(c) && a) {
+    if (a.fit && $('autoScale').checked) $('walkScale').value = fittedScale(s, c.fit);
+    $('hitFrame').max = s.n;
+    if (Number($('hitFrame').value) > s.n) $('hitFrame').value = s.n;
+    const v = dataValues();
+    if (a.stride) hint += ' ' + t('strideHint', c.speed, v.fps, v.stride);
+    if (a.hit) {
+      const length = s.n / v.fps, interval = c.interval || 0;
+      hint += ' ' + t('attackHint', s.n, v.fps, length.toFixed(2), interval || '?', v.hit_frame) + (interval && length > interval ? t('attackHintFast', (length / interval).toFixed(2)) : '');
+    }
+  }
+  $('animHint').innerHTML = hint;
+  drawPlayer();
+}
+$('walkScale').oninput = updateOutputs;
+$('autoScale').onchange = () => { updateOutputs(); persist(); };
+$('hitFrame').oninput = updateOutputs;
+$('hitFromPlayer').onclick = () => { stop(); $('hitFrame').value = state.frame + 1; updateOutputs(); };
+$('fileName').oninput = updateOutputs;
+$('folder').onchange = () => { if (state.project) store.set('folder:' + state.project.root, $('folder').value); updateOutputs(); };
+$('setDir').onchange = () => { if (state.project) store.set('setDir:' + state.project.root, $('setDir').value); };
+
+// ---------- запись / writing ----------
+const png = () => new Promise((r) => state.sheet.canvas.toBlob(r, 'image/png'));
+async function sheetExists() {
+  return (await api('/sheet/api/exists?' + q({dir: $('folder').value, name: sheetName()})).catch(() => ({exists: false}))).exists;
+}
+function lock(on) { for (const id of ['installAnim', 'removeAnim', 'save', 'undo']) $(id).disabled = on || $(id).disabled; }
+async function after(fn) {
+  lock(true);
+  try { await fn(); } catch (error) { status(t('error', error.message), 'bad'); }
+  try { await refreshProject(); } catch (error) { /* оставить как есть */ }
+}
+// Unity: существующие контроллеры/клипы проекта и события анимации.
+async function loadUnityAssets() {
+  if (!isUnity()) return;
+  try {
+    const data = await api('/sheet/api/unity/assets');
+    state.unity = {controllers: data.controllers || [], clips: data.clips || []};
+  } catch (error) {
+    state.unity = {controllers: [], clips: []};
+  }
+  fillUnitySelects();
+}
+
+function fillUnitySelects() {
+  const list = state.unity || {controllers: [], clips: []};
+  const c = $('unityController'), p = $('unityClip');
+  const keepC = c.value, keepP = p.value;
+  c.innerHTML = '<option value="">' + esc(t('unityNewController')) + '</option>'
+    + list.controllers.map((v) => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+  const newClip = (animName() || 'anim') + '.anim';
+  p.innerHTML = '<option value="">' + esc(t('unityNewClip', newClip)) + '</option>'
+    + list.clips.map((v) => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+  if (list.controllers.includes(keepC)) c.value = keepC;
+  if (list.clips.includes(keepP)) p.value = keepP;
+}
+
+function addEventRow(frame = 1, fn = '', param = '') {
+  const row = document.createElement('div');
+  row.className = 'row evRow';
+  row.style.marginBottom = '4px';
+  row.innerHTML = '<input class="evFrame" type="number" min="1" value="' + (Number(frame) || 1) + '" style="width:64px">'
+    + '<input class="evFn grow" placeholder="' + esc(t('eventFuncPh')) + '" value="' + esc(fn) + '">'
+    + '<input class="evParam grow" placeholder="' + esc(t('eventParamPh')) + '" value="' + esc(param) + '">'
+    + '<button class="evDel" title="×">×</button>';
+  row.querySelector('.evDel').onclick = () => row.remove();
+  $('eventRows').appendChild(row);
+  return row;
+}
+
+function collectEvents() {
+  return [...document.querySelectorAll('#eventRows .evRow')].map((row) => ({
+    frame: Math.max(1, Math.round(Number(row.querySelector('.evFrame').value) || 1)),
+    function: row.querySelector('.evFn').value.trim(),
+    stringParam: row.querySelector('.evParam').value,
+  })).filter((item) => item.function);
+}
+
+$('eventAdd').onclick = () => addEventRow();
+$('unityAssets').onclick = () => loadUnityAssets();
+$('animName').addEventListener('input', () => { if (isUnity()) fillUnitySelects(); });
+
+// Unity: лист пишется в проект, нарезку и клип делает сам редактор Unity
+// при следующем импорте (Assets/Editor/SpriteAnimStudio.cs + файл-запрос).
+async function installUnitySheet() {
+  const s = state.sheet;
+  if (!s || state.pending) return;
+  if (!sheetName()) { status(t('nameEmpty'), 'bad'); return; }
+  const anim = animName();
+  if (!anim) { status(t('animEmpty'), 'bad'); return; }
+  return after(async () => {
+    const exists = await sheetExists().catch(() => false);
+    const fps = Math.max(1, Number($('fps').value) || 12);
+    const file = atPath($('folder').value, sheetName() + '.png');
+    const controllerPath = $('unityController').value || '';
+    const clipPath = $('unityClip').value || '';
+    const events = collectEvents();
+    const target = [controllerPath, clipPath].filter(Boolean).join(' → ');
+    const question = t('confirmInstallUnity', anim, file, exists ? t('replaceFile') : '', s.n, fps)
+      + (target ? '\n' + t('confirmUnityTarget', target) : '');
+    if (!confirm(question)) return;
+    status(t('installing'));
+    const params = {anim, fps, loop: $('animLoop').checked ? 1 : 0, dir: $('folder').value, name: sheetName(),
+      overwrite: exists ? 1 : 0, cols: s.cols, frames: s.n, stepW: s.stepW, stepH: s.stepH,
+      cellW: s.cellW, cellH: s.cellH, lead: s.lead, pixel: s.pixel ? 1 : 0, controller: 1,
+      controllerPath, clipPath, events: JSON.stringify(events)};
+    const answer = await api('/sheet/api/install?' + q(params), {method: 'POST', body: await png()});
+    status(t('installedUnity', anim, answer.target), 'ok');
+  });
+}
+$('installAnim').onclick = () => {
+  if (isUnity()) return installUnitySheet();
+  const s = state.sheet, c = currentChar(), isNew = $('charSel').value === 'new';
+  if (!s || state.pending || (!c && !isNew)) return;
+  if (!sheetName()) { status(t('nameEmpty'), 'bad'); return; }
+  return after(async () => {
+    const exists = await sheetExists();
+    const anim = animName();
+    const loop = $('animLoop').checked;
+    const fps = Math.max(1, Number($('fps').value) || 12);
+    const file = atPath($('folder').value, sheetName() + '.png');
+    const newSet = 'res://' + ($('setDir').value ? $('setDir').value + '/' : '') + $('setName').value.trim().replace(/\.tres$/i, '') + '.tres';
+    const where = isNew ? newSet : c.kind === 'scene' ? c.scene + ' → ' + c.node : c.kind === 'set' ? c.setRes : c.source + ' → ' + c.name;
+    if (!confirm(t('confirmInstall', anim, isNew ? newSet.split('/').pop() : c.name, where, file, exists ? t('replaceFile') : '', s.n, fps, t(loop ? 'loopYes' : 'loopNo')))) return;
+    status(t(isData(c) ? 'installingData' : 'installing'));
+    const params = {char: isNew ? 'new' : c.id, anim, fps, loop: loop ? 1 : 0, dir: $('folder').value, name: sheetName(), overwrite: exists ? 1 : 0,
+      import: $('doImport').checked ? 1 : 0, setDir: $('setDir').value, setName: $('setName').value.trim().replace(/\.tres$/i, ''),
+      cols: s.cols, frames: s.n, stepW: s.stepW, stepH: s.stepH, cellW: s.cellW, cellH: s.cellH, lead: s.lead,
+      values: isData(c) ? JSON.stringify(dataValues()) : ''};
+    const answer = await api('/sheet/api/install?' + q(params), {method: 'POST', body: await png()});
+    if (answer.select) state.selectAfter = answer.select;
+    status(t('installedAnim', anim, answer.target, answer.created ? t('newSetMade') : '') + (answer.imported === false ? t('importedNo') : ''), answer.imported === false ? 'bad' : 'ok');
+  });
+};
+$('removeAnim').onclick = () => {
+  const c = currentChar(), anim = animName();
+  if (!c || !confirm(t('confirmRemove', anim, c.name))) return;
+  return after(async () => { await api('/sheet/api/remove?' + q({char: c.id, anim}), {method: 'POST'}); status(t('removed', anim), 'ok'); });
+};
+$('save').onclick = () => {
+  if (!state.sheet || state.pending) return;
+  if (!sheetName()) { status(t('nameEmpty'), 'bad'); return; }
+  return after(async () => {
+    const exists = await sheetExists();
+    const file = atPath($('folder').value, sheetName() + '.png');
+    if (exists && !confirm(t('fileExists', file))) return;
+    const doImport = $('doImport').checked;
+    status(t(doImport ? 'savingImport' : 'saving'));
+    const answer = await api('/sheet/api/save?' + q({dir: $('folder').value, name: sheetName(), overwrite: exists ? 1 : 0, import: doImport ? 1 : 0}), {method: 'POST', body: await png()});
+    const kb = Math.round(answer.bytes / 1024);
+    status(answer.engine === 'unity' ? t('savedUnity', answer.file, kb)
+      : t('saved', answer.file, kb) + (doImport ? (answer.imported ? t('importedOk') : t('importedNo')) : ''), doImport && !answer.imported ? 'bad' : 'ok');
+  });
+};
+$('undo').onclick = () => {
+  if (!confirm(t('confirmUndo'))) return;
+  return after(async () => { const answer = await api('/sheet/api/undo', {method: 'POST'}); status(t('undone', answer.label), 'ok'); });
+};
+
+// ---------- запуск / start ----------
+function setLang(next) {
+  lang = next;
+  store.set('lang', lang);
+  fillTemplates();
+  applyLang();
+  showPlay();
+  showKeySeen();
+  refreshThumbs();
+  showProject();
+  drawSheet();
+  drawPlayer();
+}
+
+// Язык приложения меняет и редактор — без перезагрузки страницы.
+window.addEventListener('message', e => {
+  const d = e.data || {};
+  if (d.type === 'app-lang' && (d.lang === 'ru' || d.lang === 'en') && d.lang !== lang) setLang(d.lang);
+});
+fillTemplates();
+restore();
+applyTemplate();
+$('nearVal').textContent = $('near').value;
+$('template').onchange = () => { applyTemplate(); rebuild(); };
+for (const id of ['cols', 'rows', 'margin', 'gap', 'customScale']) $(id).oninput = () => { if (/^(cols|rows)$/.test(id)) $('template').value = 'custom'; applyTemplate(); rebuild(); };
+for (const id of ['scale', 'crop']) $(id).onchange = () => { scale(); rebuild(); };
+$('gridLines').onchange = () => { drawSheet(); persist(); };
+for (const id of ['keyOn', 'keyMode', 'pockets', 'clean']) $(id).onchange = () => rebuild();
+$('keyColor').oninput = () => { $('keyMode').value = 'pick'; rebuild(); };
+$('near').oninput = () => { $('nearVal').textContent = $('near').value; rebuild(); };
+$('every').onchange = persist; $('evenly').onchange = persist;
+scale();
+
+$('openFiles').onclick = () => $('fileInput').click();
+$('fileInput').onchange = (e) => { loadFiles([...e.target.files]); e.target.value = ''; };
+$('openDir').onclick = async () => {
+  const answer = await api('/sheet/api/pick?' + q({kind: 'frames', start: $('dirPath').value.trim().replace(/^"|"$/g, '')}), {method: 'POST'}).catch(() => ({path: ''}));
+  if (answer.path) loadPath(answer.path);
+};
+$('loadPath').onclick = () => loadPath();
+$('dirPath').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadPath(); });
+$('dirPath').value = store.get('dirPath', '');
+let dragDepth = 0;
+// Заставка «отпустите» — только для файлов снаружи, не для номеров в ленте.
+const carriesFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+window.addEventListener('dragenter', (e) => { if (!carriesFiles(e)) return; e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+window.addEventListener('dragleave', (e) => { if (!carriesFiles(e)) return; if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', async (e) => {
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+  if (!carriesFiles(e)) return;
+  const items = [...(e.dataTransfer.items || [])];
+  if (items.length && items[0].webkitGetAsEntry) { const {files, folder} = await entriesToFiles(items); loadFiles(files, folder); }
+  else loadFiles([...e.dataTransfer.files]);
+});
+
+applyLang();
+showPlay();
+// Пока страница открыта, сервер знает, что он нужен; закрыли — сам выключится.
+const ping = () => fetch('/sheet/api/ping', {method: 'POST'}).catch(() => {});
+ping();
+setInterval(ping, 10000);
+window.addEventListener('pagehide', () => navigator.sendBeacon('/sheet/api/bye'));
+api('/sheet/api/state').then((st) => {
+  if (st.api !== API) status(t('oldServer'), 'bad');
+  state.project = st.project; state.recent = st.recent || []; state.godot = st.godot;
+  showProject();
+  if (!state.project) showGameModal();
+}).catch(() => status(t('noServer'), 'bad'));
+updateOutputs();
+drawPlayer();
+// Открытие из SpriteAnim Studio: ?dir=<папка с кадрами>, ?name=<имя файла>,
+// ?anim=<имя анимации> — чтобы лист и клип назывались как движение в студии.
+try {
+  const __params = new URLSearchParams(location.search);
+  const __startDir = __params.get('dir');
+  const __startName = __params.get('name');
+  const __startAnim = __params.get('anim');
+  if (__startName) $('fileName').value = __startName;
+  if (__startAnim) $('animName').value = __startAnim;
+  if (__startDir) setTimeout(async () => {
+    await loadPath(__startDir);
+    // loadFiles переименовывает лист по папке — возвращаем имя, заданное студией.
+    if (__startName) { $('fileName').value = __startName; updateOutputs(); }
+  }, 150);
+} catch {}
+</script>
+</body>
+</html>

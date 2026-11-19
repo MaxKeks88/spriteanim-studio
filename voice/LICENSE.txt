@@ -1,0 +1,22 @@
+Голосовой ввод SpriteAnim Studio
+================================
+
+Здесь лежат компоненты распознавания речи. Они скачиваются из настроек
+приложения («Голосовой ввод (GigaAM v3)») и работают локально: звук
+никуда не отправляется.
+
+1. Модель GigaAM v3 (e2e RNNT, Q8_0)
+   Автор: Sber / ai-sage — https://huggingface.co/ai-sage/GigaAM-v3
+   GGUF-конвертация: https://huggingface.co/handy-computer/gigaam-v3-e2e-rnnt-gguf
+   Лицензия: MIT
+
+2. Движок transcribe.cpp
+   https://github.com/handy-computer/transcribe.cpp
+   Лицензия: MIT (файл лицензии — в voice/py/transcribe_cpp/LICENSE)
+
+3. Python-обвязка transcribe_cpp (папка voice/py/transcribe_cpp)
+   Из пакета transcribe_cpp 0.4.2 того же проекта, лицензия MIT.
+
+Файлы модели и движка не входят в поставку: их скачивает пользователь
+по желанию. Тексты лицензий MIT допускают использование и распространение
+при сохранении уведомления об авторских правах.
