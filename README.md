@@ -140,6 +140,34 @@ attached. The app reads `/releases/latest`.
 
 ---
 
+## Ноды ComfyUI / ComfyUI nodes
+
+Воркфлоу анимации использует две собственные ноды — они лежат в
+`comfy_nodes/sprite_anim_nodes/`:
+
+- **SpriteChromaKey** — убирает ровный цветной фон и чистит кайму, отдаёт
+  прозрачный RGBA;
+- **SpriteLoopTrim** — оставляет ровно один цикл или одно действие из клипа,
+  убирает кадры-дубли.
+
+Скопируйте папку в `<ComfyUI>\custom_nodes\sprite_anim_nodes` и перезапустите
+ComfyUI. Подробности и параметры — в
+[comfy_nodes/sprite_anim_nodes/README.md](comfy_nodes/sprite_anim_nodes/README.md).
+
+The animation workflow needs two custom nodes, shipped in
+`comfy_nodes/sprite_anim_nodes/`:
+
+- **SpriteChromaKey** — removes a flat colored background and cleans the edge,
+  outputs transparent RGBA;
+- **SpriteLoopTrim** — keeps exactly one loop or one action, drops duplicate
+  frames.
+
+Copy the folder to `<ComfyUI>\custom_nodes\sprite_anim_nodes` and restart
+ComfyUI. Details are in
+[comfy_nodes/sprite_anim_nodes/README.md](comfy_nodes/sprite_anim_nodes/README.md).
+
+---
+
 ## MCP для агентов / MCP for agents
 
 `mcp/studio_mcp.py` — stdio-сервер, который проксирует вызовы в запущенное
@@ -165,6 +193,7 @@ desktop/           настольное окно (pywebview + WebView2), сбо�
 mcp/               MCP-сервер и инструкции
 voice/             обвязка голосового ввода (движок и модель скачиваются)
 assets/ prompts/ workflows/ skills/   данные для генерации и агента
+comfy_nodes/       кастомные ноды ComfyUI (SpriteChromaKey, SpriteLoopTrim)
 docs/              проектная документация
 Install/           готовый установщик
 ```
