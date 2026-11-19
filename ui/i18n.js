@@ -127,6 +127,8 @@
     "Тип клипа": "Clip type",
     "Выбрать вариант…": "Choose a variant…",
     "Свой вариант — впишу сам": "Custom — I'll write it myself",
+    "Показать по-русски": "Show in Russian",
+    "Вернуть английский": "Back to English",
     "Стойка (idle)": "Idle stance (idle)",
     "Атака (attack)": "Attack (attack)",
     "Ульта / каст (cast)": "Ultimate / cast (cast)",
@@ -292,7 +294,11 @@
     "⤓ Скачать и установить": "⤓ Download and install",
     "Что нового": "What's new",
     "Доступно обновление": "Update available",
+    "⤓ Сохранить в папку": "⤓ Save to folder",
+    "сохраняю…": "saving…",
     "скачиваю…": "downloading…",
+    "Лист сохранён:": "Sheet saved:",
+    "Лист:": "Sheet:",
     "устанавливаю…": "installing…",
     "нет связи с GitHub": "no connection to GitHub",
     "Обновление:": "Update:",
@@ -452,6 +458,8 @@
 
   // Правила для строк с числами и составных строк.
   const SUBS = [
+    [/^Лист сохранён: /, "Sheet saved: "],
+    [/^Лист: /, "Sheet: "],
     [/^Доступно обновление (.+)$/, "Update $1 available"],
     [/^версия (.+) · установлена последняя$/, "version $1 · up to date"],
     [/^версия (.+) · доступна (.+)$/, "version $1 · $2 available"],

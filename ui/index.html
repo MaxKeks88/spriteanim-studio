@@ -267,6 +267,8 @@ body.tab-img .wrap,body.tab-bg .wrap,body.tab-gen .wrap{display:flex;flex-direct
   padding:10px 12px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;
   display:block;text-align:center;text-decoration:none}
 .side-btn:hover{border-color:var(--acc)}
+.side-btn.mini{padding:5px 8px;font-size:11px;font-weight:700;letter-spacing:.4px;border-radius:9px}
+.side-btn.mini.on{border-color:var(--acc);color:var(--acc-text);background:rgba(var(--acc-rgb),.14)}
 .side-btn:disabled{opacity:.45;cursor:default}
 /* агент думает: кнопка сама становится «стопом» */
 .side-btn.busy{position:relative;border-color:rgba(var(--acc-rgb),.55);background:rgba(var(--acc-rgb),.12);color:var(--on-soft)}
@@ -574,6 +576,7 @@ body.sheet-on #sheetView{display:flex}
               <div class="imgComposerSide">
                 <button class="side-btn" id="imgAgent" type="button">✨ Промпт агентом</button>
                 <button class="side-btn primary" id="imgGo" type="button">Сгенерировать</button>
+                <button class="side-btn mini" id="imgTr" type="button" hidden title="Показать по-русски">RU</button>
                 <button class="side-btn danger" id="imgStop" type="button" hidden>■ Стоп</button>
               </div>
             </div>
@@ -774,6 +777,7 @@ body.sheet-on #sheetView{display:flex}
                 <button class="chip" id="sheetBuild" type="button">Собрать</button>
                 <a class="chip" id="sheetDl" download hidden>⬇ PNG</a>
                 <a class="chip" id="sheetJson" download hidden>⬇ JSON</a>
+                <button class="chip" id="sheetSave" type="button" hidden>⤓ Сохранить в папку</button>
               </div>
               <canvas id="sheetCv" hidden></canvas>
               <div class="hint" id="sheetHint">Лист собирается в браузере из кадров с прозрачностью — по одному кадру в ячейке.</div>
@@ -822,6 +826,7 @@ body.sheet-on #sheetView{display:flex}
               <div class="imgComposerSide">
                 <button class="side-btn" id="agentGen" type="button">✨ Промпт агентом</button>
                 <button class="side-btn primary" id="go" type="button">Сгенерировать</button>
+                <button class="side-btn mini" id="genTr" type="button" hidden title="Показать по-русски">RU</button>
                 <button class="side-btn danger" id="stop" type="button" hidden>■ Стоп</button>
               </div>
             </div>
@@ -1310,7 +1315,7 @@ function applyRun(r) {
   if (!r) return;
   closeRuns();
   if (r.kind === 'img') {
-    $('#imgPrompt').value = r.prompt || '';
+    $('#imgPrompt').value = r.prompt || ''; trReset('img');
     if (r.model && ((S.image && S.image.models) || []).some(m => m.id === r.model)) I.model = r.model;
     if (IMG_ASPECTS.some(a => a[0] === r.aspect)) I.aspect = r.aspect;
     if ([768, 1024, 1536].includes(+r.base)) I.base = +r.base;
@@ -1328,6 +1333,7 @@ function applyRun(r) {
     if (r.mode && S.byRepeat[r.mode]) applyRepeat(r.mode);
     if (r.prompt) {
       $('#prompt').value = r.prompt;
+      trReset('gen');
       colorizePrompt(); countPrompt(); checkPrompt();
     }
     if (r.name) { $('#clipName').value = r.name; syncClipPreset(r.name); }
@@ -1385,7 +1391,7 @@ function jobsDone(id) {
 
 function jobParamsImg(j) {
   if (j.model && ((S.image && S.image.models) || []).some(m => m.id === j.model)) I.model = j.model;
-  if (j.prompt) $('#imgPrompt').value = j.prompt;
+  if (j.prompt) { $('#imgPrompt').value = j.prompt; trReset('img'); }
   if ([768, 1024, 1536].includes(+j.base)) I.base = +j.base;
   if (IMG_ASPECTS.some(a => a[0] === j.aspect)) I.aspect = j.aspect;
   if (j.steps) I.steps = +j.steps;
@@ -1408,6 +1414,7 @@ function jobParamsAnim(j) {
   if (j.mode && S.byRepeat[j.mode]) applyRepeat(j.mode);
   if (j.prompt) {
     $('#prompt').value = j.prompt;
+    trReset('gen');
     colorizePrompt(); countPrompt(); checkPrompt();
   }
   if (j.name) { $('#clipName').value = j.name; syncClipPreset(j.name); }
@@ -1578,6 +1585,110 @@ function applyLang(name, save = true, notifySheet = true) {
 
 $('#langRu').onclick = () => applyLang('ru', true);
 $('#langEn').onclick = () => applyLang('en', true);
+
+/* ---------- показ промпта по-русски (локальный перевод агентом) ---------- */
+const TR = {
+  img: { en: '', ru: '', mode: 'en', field: '#imgPrompt', btn: '#imgTr' },
+  gen: { en: '', ru: '', mode: 'en', field: '#prompt', btn: '#genTr' },
+};
+
+function trLooksEnglish(text) {
+  const t = String(text || '');
+  const latin = (t.match(/[A-Za-z]/g) || []).length;
+  const cyr = (t.match(/[А-Яа-яЁё]/g) || []).length;
+  return latin >= 12 && latin > cyr * 2;
+}
+
+function trPaint(tab) {
+  const st = TR[tab], el = $(st.btn);
+  if (!el) return;
+  const text = $(st.field).value.trim();
+  el.hidden = !(st.mode === 'ru' || (text && trLooksEnglish(text)));
+  el.disabled = false;
+  el.textContent = st.mode === 'ru' ? 'EN' : 'RU';
+  el.title = st.mode === 'ru' ? 'Вернуть английский' : 'Показать по-русски';
+  el.classList.toggle('on', st.mode === 'ru');
+}
+
+function trReset(tab) {
+  const st = TR[tab];
+  st.en = ''; st.ru = ''; st.mode = 'en';
+  const box = $(st.field);
+  if (box) box.readOnly = false;
+  trPaint(tab);
+}
+
+function trRefreshText(tab) {
+  if (tab === 'img') { imgCount(); }
+  else { countPrompt(); checkPrompt(); }
+}
+
+async function trToggle(tab) {
+  const st = TR[tab], box = $(st.field), el = $(st.btn);
+  if (st.mode === 'ru') {
+    box.value = st.en;
+    box.readOnly = false;
+    st.mode = 'en';
+    trRefreshText(tab);
+    trPaint(tab);
+    return;
+  }
+  const text = box.value.trim();
+  if (!text) return;
+  if (st.en !== text) { st.en = text; st.ru = ''; }
+  if (st.ru) {
+    box.value = st.ru;
+    box.readOnly = true;
+    st.mode = 'ru';
+    trPaint(tab);
+    return;
+  }
+  el.disabled = true;
+  el.textContent = '…';
+  try {
+    const r = await fetch('/api/translate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось перевести');
+    st.en = text;
+    st.ru = String(j.text || '').trim();
+    st.mode = 'ru';
+    box.value = st.ru;
+    box.readOnly = true;
+  } catch (e) {
+    toast('Перевод: ' + e.message, 'bad');
+  }
+  el.disabled = false;
+  trPaint(tab);
+}
+
+/* Перед генерацией показываем модели оригинал, а не перевод. */
+function trEnsureEn(tab) {
+  const st = TR[tab];
+  if (st.mode !== 'ru') return;
+  const box = $(st.field);
+  box.value = st.en;
+  box.readOnly = false;
+  st.mode = 'en';
+  trRefreshText(tab);
+  trPaint(tab);
+}
+
+$('#imgTr').onclick = () => trToggle('img');
+$('#genTr').onclick = () => trToggle('gen');
+for (const tab of ['img', 'gen']) {
+  const box = $(TR[tab].field);
+  if (!box) continue;
+  box.addEventListener('input', () => {
+    const st = TR[tab];
+    if (!box.value.trim()) { trReset(tab); return; }
+    if (st.mode === 'en') st.ru = '';
+    trPaint(tab);
+  });
+}
+
 
 /* ---------- обновления ---------- */
 const UPD = { current: '0.2.0', latest: null, available: false, asset: null, page: '', notes: '', error: '', checking: false };
@@ -2269,6 +2380,7 @@ function applyRepeat(rep) {
   checkPrompt();
   renderSizes();
   paintParams();
+  trReset('gen');
 }
 
 /* ---------- персонаж ---------- */
@@ -2369,6 +2481,7 @@ async function runGenAgent(brief) {
       onDelta: t => { live += t; box.value = live; countPrompt(); },
       onDone: j => {
         box.value = j.prompt;
+        trReset('gen');
         countPrompt();
         checkPrompt();
         progDone(1500);
@@ -2389,6 +2502,7 @@ async function runGenAgent(brief) {
 }
 $('#agentGen').onclick = () => {
   if (genAgentBusy) { genAgentCtrl?.abort(); return; }
+  trEnsureEn('gen');
   const brief = $('#prompt').value.trim();
   if (!brief) { toast('Опишите движение словами', 'bad'); return; }
   runGenAgent(brief);
@@ -2472,6 +2586,7 @@ function applyClipPreset(id) {
   countPrompt();
   checkPrompt();
   paintParams();
+  trReset('gen');
 }
 
 function syncClipPreset(name) {
@@ -2574,6 +2689,7 @@ function paintParams() {
 
 /* ---------- генерация ---------- */
 $('#go').onclick = async () => {
+  trEnsureEn('gen');
   if (!S.img) { toast('Сначала загрузите картинку персонажа', 'bad'); return; }
   if (!S.repeat) { toast('Не выбран тип повтора', 'bad'); return; }
   if (!$('#prompt').value.trim()) { toast('Промпт пустой', 'bad'); return; }
@@ -2718,6 +2834,7 @@ async function buildSheet() {
   S.sheetUrls = [];
   $('#sheetDl').hidden = true;
   $('#sheetJson').hidden = true;
+  $('#sheetSave').hidden = true;
   hint.textContent = `читаю кадры: 0 из ${frames.length}…`;
   let imgs;
   try {
@@ -2745,6 +2862,7 @@ async function buildSheet() {
     cv.hidden = true;
     $('#sheetDl').hidden = true;
     $('#sheetJson').hidden = true;
+    $('#sheetSave').hidden = true;
     return;
   }
   cv.width = cols * cw;
@@ -2773,6 +2891,9 @@ async function buildSheet() {
     S.sheetUrls.push(jurl);
     const j = $('#sheetJson');
     j.href = jurl; j.download = `${name}-sheet.json`; j.hidden = false;
+    S.sheetName = name;
+    S.sheetAtlas = atlas;
+    $('#sheetSave').hidden = false;
   }, 'image/png');
   hint.textContent = `${cols}×${rows}, ячейка ${cw}×${ch}, лист ${cv.width}×${cv.height} px.`;
   $('#sheetInfo').textContent = `${frameLabel(frames.length)} → ${cols}×${rows}`;
@@ -2781,6 +2902,35 @@ async function buildSheet() {
 $('#sheetBuild').onclick = () => buildSheet();
 $('#sheetCols').onchange = () => S.framesList.length && buildSheet();
 $('#sheetScale').onchange = () => S.framesList.length && buildSheet();
+
+$('#sheetSave').onclick = () => {
+  const cv = $('#sheetCv');
+  const a = S.sheetAtlas;
+  if (!a || cv.hidden) return;
+  const btn = $('#sheetSave');
+  const was = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'сохраняю…';
+  const qs = new URLSearchParams({
+    name: S.sheetName || 'sprite',
+    cols: a.columns, rows: a.rows, cw: a.frame.w, ch: a.frame.h, count: a.count,
+  });
+  cv.toBlob(async blob => {
+    try {
+      if (!blob) throw new Error('пустой лист');
+      const r = await fetch('/api/sheet/save?' + qs.toString(), {
+        method: 'POST', headers: { 'Content-Type': 'image/png' }, body: blob,
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'не удалось сохранить');
+      toast('Лист сохранён: ' + j.dir, 'ok');
+    } catch (e) {
+      toast('Лист: ' + e.message, 'bad');
+    }
+    btn.disabled = false;
+    btn.textContent = was;
+  }, 'image/png');
+};
 
 /* Открыть готовый прогон по ссылке ?job=<id> — результат переживает перезагрузку. */
 async function openJob(id) {
@@ -3456,6 +3606,7 @@ $('#imgSeedNew').onclick = () => { I.seed = String(Math.floor(Math.random() * 1e
 $('#imgPrompt').oninput = () => { imgGrow(); paintImg(); };
 
 $('#imgGo').onclick = async () => {
+  trEnsureEn('img');
   const prompt = $('#imgPrompt').value.trim();
   if (!prompt) { toast('Напишите, что нарисовать', 'bad'); return; }
   I.job = { state: 'queued' };
@@ -3656,6 +3807,7 @@ $('#imgRefList').onclick = e => {
 
 $('#imgAgent').onclick = async () => {
   if (I.agentBusy) { I.agentCtrl?.abort(); return; }
+  trEnsureEn('img');
   const brief = $('#imgPrompt').value.trim();
   if (!brief) { toast('Опишите в двух словах, что нужно', 'bad'); return; }
   await runAgent(brief);
@@ -3725,6 +3877,7 @@ async function runAgent(brief) {
         onDelta: t => { live += t; box.value = live; imgCount(); imgGrow(); },
         onDone: j => {
           box.value = j.prompt;
+          trReset('img');
           I.agentPrompt = j.prompt;
           imgCount();
           imgGrow();

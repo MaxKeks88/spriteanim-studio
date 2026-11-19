@@ -30,6 +30,8 @@ available in **Russian and English**.
 | **Убрать фон** — прозрачный PNG одной кнопкой | **Remove background** — transparent PNG in one click |
 | **Анимация** — спрайтовый цикл или одно действие, выбор цвета подложки, обрезка кадра, видео и кадры PNG | **Animation** — sprite loop or one-shot, backdrop color, frame trimming, video and PNG frames |
 | **Пресеты клипов** — 12 готовых вариантов (стойка, атака, ульта, удар, оглушение, победа, две смерти, радость, три бытовых действия) подставляют промпт, имя и длительность; есть «Свой вариант» | **Clip presets** — 12 ready variants (idle, attack, ultimate, hit, stun, victory, two deaths, joy, three fidgets) fill in the prompt, name and duration; a “Custom” option is included |
+| **Промпт по-русски** — кнопка RU/EN у «Сгенерировать» показывает английский промпт по-русски и возвращает обратно | **Prompt in Russian** — an RU/EN button near Generate shows the English prompt in Russian and switches back |
+| **Готовый спрайт-лист** — лист сохраняется в `output/sheets` вместе с JSON | **Finished sprite sheet** — the sheet is saved to `output/sheets` with its JSON |
 | **Спрайт-лист** — встроенный редактор: сетка, поля, выравнивание, установка в Godot 4 и Unity | **Sprite sheet** — built-in editor: grid, padding, alignment, install into Godot 4 or Unity |
 | **Промпт агентом** — локальная модель пишет промпт по вашему описанию и видит исходную картинку | **Prompt with agent** — a local model writes the prompt from your brief and can see the source image |
 | **Голосовой ввод** — русская модель GigaAM v3, работает локально (скачивается из настроек) | **Voice input** — Russian GigaAM v3 model, runs locally (downloaded from Settings) |
@@ -71,7 +73,7 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.2.1.exe
+Install\SpriteAnimStudio-Setup-0.2.2.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
@@ -82,7 +84,7 @@ Install\SpriteAnimStudio-Setup-0.2.1.exe
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.2.1.exe
+Install\SpriteAnimStudio-Setup-0.2.2.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
@@ -110,9 +112,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.2.1.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.2.2.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.2.1.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.2.2.exe`.
 
 ---
 
@@ -139,6 +141,23 @@ create a release tagged `vX.Y.Z` with `SpriteAnimStudio-Setup-X.Y.Z.exe`
 attached. The app reads `/releases/latest`.
 
 ---
+
+## Куда сохраняются результаты / Where results are saved
+
+Всё копируется в папку из **Настройки → Куда сохранять**:
+
+```
+output/
+  images/<прогон>/          картинки PNG
+  background/<прогон>/      PNG с прозрачностью
+  animation/<имя>/<прогон>/ видео и кадры
+  sheets/<имя>-<время>/     готовый спрайт-лист PNG + JSON
+```
+
+Кнопка **«⤓ Сохранить в папку»** под собранным листом кладёт его в `sheets/`.
+
+Everything is copied to the folder chosen in **Settings → Save folder**. The
+**“Save to folder”** button under the assembled sheet stores it under `sheets/`.
 
 ## Ноды ComfyUI / ComfyUI nodes
 

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SpriteAnim Studio — локальная надстройка над ComfyUI для спрайтовых анимаций.
 
 Без внешних зависимостей: только стандартная библиотека Python 3.11+.
@@ -75,6 +75,38 @@ def output_dir() -> Path:
     return Path(_settings.get("output_dir") or OUTPUT_DIR)
 
 
+def sheets_dir() -> Path:
+    return output_dir() / "sheets"
+
+
+def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
+               cw: int = 0, ch: int = 0, count: int = 0) -> dict:
+    """Сохраняет готовый спрайт-лист и его JSON в output/sheets/<имя>-<время>."""
+    if not blob or len(blob) < 100:
+        raise ValueError("пустой лист")
+    slug = slugify(name, "sprite")
+    run = time.strftime("%Y%m%d-%H%M%S")
+    dest = sheets_dir() / f"{slug}-{run}"
+    dest.mkdir(parents=True, exist_ok=True)
+    png = dest / f"{slug}-sheet.png"
+    png.write_bytes(blob)
+    columns = max(0, int(columns or 0))
+    rows = max(0, int(rows or 0))
+    cw = max(0, int(cw or 0))
+    ch = max(0, int(ch or 0))
+    count = max(0, int(count or 0))
+    cells = []
+    if columns and cw:
+        for i in range(count):
+            cells.append({"i": i, "x": (i % columns) * cw,
+                          "y": (i // columns) * ch, "w": cw, "h": ch})
+    atlas = {"image": png.name, "columns": columns, "rows": rows,
+             "count": count, "frame": {"w": cw, "h": ch}, "frames": cells}
+    js = dest / f"{slug}-sheet.json"
+    js.write_text(json.dumps(atlas, ensure_ascii=False, indent=1), "utf-8")
+    return {"dir": str(dest), "png": str(png), "json": str(js), "size": len(blob)}
+
+
 def default_models_dir() -> str:
     """Папка моделей ComfyUI, которую он сам показывает."""
     roots = comfy_folder_paths(force=True).get("diffusion_models") or []
@@ -106,7 +138,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.2.1"
+APP_VERSION = "0.2.2"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -2480,6 +2512,37 @@ def _agent_chat(port: int, messages: list, max_tokens: int = 900,
     return ((res.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
 
 
+def translate_text(text: str) -> str:
+    """Перевод промпта на русский локальным агентом (без интернета)."""
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("пустой текст")
+    if len(text) > 4000:
+        text = text[:4000]
+    info = agent_start()
+    if not info.get("running"):
+        raise RuntimeError(info.get("error") or "агент не запущен")
+    port = info["port"]
+    system = (
+        "You are a precise translator for game-art and video prompts. "
+        "Translate the user's text into Russian. Keep the meaning exact, keep "
+        "technical terms, numbers, field names, labels and the original structure. "
+        "Do not add, remove, explain or comment on anything. "
+        "Output only the translation, without quotation marks."
+    )
+    out = _agent_chat(port, [
+        {"role": "system", "content": system},
+        {"role": "user", "content": text},
+    ], max_tokens=1400, think=False)
+    out = (out or "").strip()
+    for a, b in (('"', '"'), ("«", "»"), ("“", "”")):
+        if out.startswith(a) and out.endswith(b):
+            out = out[1:-1].strip()
+    if not out:
+        raise RuntimeError("агент не вернул перевод")
+    return out
+
+
 def _looks_like_prompt(text: str) -> bool:
     """Грубая проверка: это английский промпт, а не рассуждение и не русский текст."""
     if len(text) < 40:
@@ -2747,6 +2810,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(agent_start(wait=False))
             if u.path == "/api/agent/stop":
                 return self._json(agent_stop())
+            if u.path == "/api/translate":
+                body = self._body()
+                try:
+                    return self._json({"text": translate_text(str(body.get("text") or ""))})
+                except ValueError as exc:
+                    return self._bad(str(exc), 422)
+                except RuntimeError as exc:
+                    return self._bad(str(exc), 422)
             if u.path == "/api/quit":
                 threading.Timer(0.6, shutdown_app).start()
                 return self._json({"ok": True})
@@ -2773,6 +2844,22 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(update_install())
                 except RuntimeError as exc:
                     return self._bad(str(exc), 422)
+            if u.path == "/api/sheet/save":
+                try:
+                    blob = self._raw_body(limit=120 * 1024 * 1024)
+                    return self._json(save_sheet(
+                        urllib.parse.unquote((q.get("name") or [""])[0]),
+                        blob,
+                        int((q.get("cols") or ["0"])[0] or 0),
+                        int((q.get("rows") or ["0"])[0] or 0),
+                        int((q.get("cw") or ["0"])[0] or 0),
+                        int((q.get("ch") or ["0"])[0] or 0),
+                        int((q.get("count") or ["0"])[0] or 0),
+                    ))
+                except ValueError as exc:
+                    return self._bad(str(exc), 422)
+                except Exception as exc:  # noqa: BLE001
+                    return self._bad("не удалось сохранить лист: " + str(exc), 500)
             if u.path == "/api/fs/dirs":
                 raw = (q.get("path") or [""])[0]
                 return self._json(list_dirs(urllib.parse.unquote(raw)))
