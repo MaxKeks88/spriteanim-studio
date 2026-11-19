@@ -252,6 +252,10 @@ body.tab-img .wrap,body.tab-bg .wrap,body.tab-gen .wrap{display:flex;flex-direct
 .imgComposer.no-mic{grid-template-columns:minmax(0,1fr) 148px}
 .imgComposer.no-mic .micCol{display:none}
 .imgComposerField{display:flex;flex-direction:column;min-width:0}
+.presetRow{margin-bottom:8px}
+.presetSel{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--line2);
+  background:var(--card2);color:var(--text);font:inherit;font-size:13px;cursor:pointer}
+.presetSel:focus{outline:none;border-color:var(--acc)}
 #imgPrompt{min-height:96px;max-height:160px;padding:12px 14px;border-radius:14px;
   font-size:14px;line-height:1.55;resize:none;overflow:auto}
 .tab-bg .drop img{max-height:200px}
@@ -788,6 +792,24 @@ body.sheet-on #sheetView{display:flex}
           <div class="card imgPromptCard">
             <div class="imgComposer">
               <div class="imgComposerField">
+                <div class="presetRow">
+                  <select id="clipPreset" class="presetSel" aria-label="Тип клипа">
+                    <option value="" disabled selected>Выбрать вариант…</option>
+                    <option value="custom">Свой вариант — впишу сам</option>
+                    <option value="idle">Стойка (idle)</option>
+                    <option value="attack">Атака (attack)</option>
+                    <option value="cast">Ульта / каст (cast)</option>
+                    <option value="hit">Получает удар (hit)</option>
+                    <option value="stun">Оглушение (stun)</option>
+                    <option value="victory">Победа (victory)</option>
+                    <option value="death">Смерть (death)</option>
+                    <option value="death_comic">Комичная смерть (death_comic)</option>
+                    <option value="idle_happy">Радость (idle_happy)</option>
+                    <option value="fidget_look">Осматривается (fidget_look)</option>
+                    <option value="fidget_stretch">Разминается (fidget_stretch)</option>
+                    <option value="fidget_gear">Поправляет снаряжение (fidget_gear)</option>
+                  </select>
+                </div>
                 <div class="promptWrap">
                   <textarea id="prompt" spellcheck="false" rows="3"
                     placeholder="Что делает персонаж: движение, ракурс, темп. Можно по-русски."></textarea>
@@ -1308,7 +1330,7 @@ function applyRun(r) {
       $('#prompt').value = r.prompt;
       colorizePrompt(); countPrompt(); checkPrompt();
     }
-    if (r.name) $('#clipName').value = r.name;
+    if (r.name) { $('#clipName').value = r.name; syncClipPreset(r.name); }
     if (r.width && r.height) {
       S.size = { w: +r.width, h: +r.height };
       S.custom = { w: +r.width, h: +r.height };
@@ -1388,7 +1410,7 @@ function jobParamsAnim(j) {
     $('#prompt').value = j.prompt;
     colorizePrompt(); countPrompt(); checkPrompt();
   }
-  if (j.name) $('#clipName').value = j.name;
+  if (j.name) { $('#clipName').value = j.name; syncClipPreset(j.name); }
   if (j.width && j.height) {
     S.size = { w: +j.width, h: +j.height };
     S.custom = { w: +j.width, h: +j.height };
@@ -1545,6 +1567,7 @@ function applyLang(name, save = true, notifySheet = true) {
     try { f && f.contentWindow && f.contentWindow.postMessage({ type: 'app-lang', lang }, '*'); } catch { }
   }
   // Пересобираем открытые окна, где есть числа и даты.
+  try { paintParams(); } catch { }
   if (!$('#runsView').hidden) renderRuns();
   if (!$('#setView').hidden) {
     paintSettings(setInfo || {});
@@ -2371,6 +2394,95 @@ $('#agentGen').onclick = () => {
   runGenAgent(brief);
 };
 const COLOR_NAMES = { magenta: 'пурпурный', green: 'зелёный', blue: 'синий' };
+
+/* ---------- пресеты клипов (набор из hero-animator) ---------- */
+const CLIP_PRESETS = {
+  idle: {
+    name: 'idle', repeat: 'cycle', seconds: 4,
+    prompt: 'The character stands still in a relaxed idle pose and is almost motionless: only very subtle, slow, calm breathing, the shoulders rise and fall by a few pixels, and there is one quick natural blink. Seamless loop: the last frame is exactly like the first frame. No gestures, no steps, no change of expression.',
+  },
+  attack: {
+    name: 'attack', repeat: 'once', seconds: 4,
+    prompt: 'A snappy attack like in a mobile fighting game: a short anticipation, then one very fast strike forward, a brief hold, and a return to the calm idle pose. Both feet stay planted on the same spot.',
+  },
+  cast: {
+    name: 'cast', repeat: 'once', seconds: 6,
+    prompt: 'Gathers power, leaps up and spins once high above the ground while a bright glow builds up, lands with the feet wide apart, thrusts forward and releases a bright spell, holds the heroic pose, then returns to the calm idle pose.',
+  },
+  hit: {
+    name: 'hit', repeat: 'once', seconds: 4,
+    prompt: 'At about 0.4 seconds a strong blow hits from the right: the character recoils backward with eyes squeezed shut and a pained grimace, the body squashes, then quickly recovers to the calm idle pose.',
+  },
+  stun: {
+    name: 'stun', repeat: 'cycle', seconds: 6,
+    prompt: 'Wobbles and sways in small circles in place, dizzy, knees wobbly, then shakes the head and returns to the calm idle pose.',
+  },
+  victory: {
+    name: 'victory', repeat: 'once', seconds: 6,
+    prompt: 'Jumps up happily two times raising the arms high, laughs with eyes closed, does a little happy dance, then returns to the calm idle pose.',
+  },
+  death: {
+    name: 'death', repeat: 'once', seconds: 6,
+    prompt: 'There is no blow and nothing hits: the character staggers backward, exhausted, the knees buckle, falls flat on the back and lies still. Nothing flies in: no projectile, no enemy weapon, no impact flash.',
+  },
+  death_comic: {
+    name: 'death_comic', repeat: 'once', seconds: 6,
+    prompt: 'A cartoon comic death with no blood: the character freezes, wobbles, rolls the eyes and flops down flat like a log, then lies still.',
+  },
+  idle_happy: {
+    name: 'idle_happy', repeat: 'cycle', seconds: 6,
+    prompt: 'The character is happy and delighted: laughs with eyes closed and nods in place, stays happy for most of the clip, then calms down and returns to the calm idle pose exactly like in the first frame. Both feet stay planted.',
+  },
+  fidget_look: {
+    name: 'fidget_look', repeat: 'once', seconds: 6,
+    prompt: 'Stands in a relaxed idle pose; after a calm moment looks around left and right, then returns to the calm idle pose exactly like in the first frame. Both feet stay planted, no steps.',
+  },
+  fidget_stretch: {
+    name: 'fidget_stretch', repeat: 'once', seconds: 6,
+    prompt: 'Stands in a relaxed idle pose; stretches the neck and shoulders, rolls the shoulders, then returns to the calm idle pose exactly like in the first frame. Both feet stay planted.',
+  },
+  fidget_gear: {
+    name: 'fidget_gear', repeat: 'once', seconds: 6,
+    prompt: 'Stands in a relaxed idle pose; checks and adjusts the gear or weapon at the belt, then returns to the calm idle pose exactly like in the first frame. Both feet stay planted.',
+  },
+};
+
+function applyClipPreset(id) {
+  if (!id) return;
+  if (id === 'custom') {
+    $('#prompt').value = '';
+    $('#clipName').value = '';
+    S.prompts[S.repeat] = '';
+    S.names[S.repeat] = '';
+    countPrompt();
+    checkPrompt();
+    $('#prompt').focus();
+    return;
+  }
+  const p = CLIP_PRESETS[id];
+  if (!p) return;
+  if (S.byRepeat[p.repeat] && S.repeat !== p.repeat) applyRepeat(p.repeat);
+  S.frames = framesFor(p.seconds);
+  $('#dur').value = nearestIdx(S.frames);
+  $('#prompt').value = p.prompt;
+  $('#clipName').value = p.name;
+  S.prompts[S.repeat] = p.prompt;
+  S.names[S.repeat] = p.name;
+  colorizePrompt();
+  countPrompt();
+  checkPrompt();
+  paintParams();
+}
+
+function syncClipPreset(name) {
+  const sel = $('#clipPreset');
+  if (!sel) return;
+  const id = Object.keys(CLIP_PRESETS).find(k => CLIP_PRESETS[k].name === name);
+  sel.value = id || (name ? 'custom' : '');
+}
+
+$('#clipPreset').onchange = e => applyClipPreset(e.target.value);
+
 
 // Цвет и промпт — один контракт: если в тексте назван фон, слово меняется вместе с кнопкой.
 function colorizePrompt() {

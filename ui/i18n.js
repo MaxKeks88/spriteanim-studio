@@ -124,6 +124,21 @@
     "PNG / JPG, вид сбоку, всё тело в кадре": "PNG / JPG, side view, whole body in frame",
     "Прозрачный фон не нужен: генерация идёт на ровной пурпурной подложке.": "A transparent background is not needed: generation runs on a flat magenta backdrop.",
     "Что происходит": "What is happening",
+    "Тип клипа": "Clip type",
+    "Выбрать вариант…": "Choose a variant…",
+    "Свой вариант — впишу сам": "Custom — I'll write it myself",
+    "Стойка (idle)": "Idle stance (idle)",
+    "Атака (attack)": "Attack (attack)",
+    "Ульта / каст (cast)": "Ultimate / cast (cast)",
+    "Получает удар (hit)": "Takes a hit (hit)",
+    "Оглушение (stun)": "Stun (stun)",
+    "Победа (victory)": "Victory (victory)",
+    "Смерть (death)": "Death (death)",
+    "Комичная смерть (death_comic)": "Comic death (death_comic)",
+    "Радость (idle_happy)": "Joy (idle_happy)",
+    "Осматривается (fidget_look)": "Looks around (fidget_look)",
+    "Разминается (fidget_stretch)": "Stretches (fidget_stretch)",
+    "Поправляет снаряжение (fidget_gear)": "Adjusts gear (fidget_gear)",
     "Название движения": "Motion name",
     "для папки и файлов": "for the folder and files",
     "Можно по-русски — в имени папки станет латиницей.": "You can write in Russian — the folder name becomes Latin.",
@@ -491,7 +506,7 @@
   ];
 
   const SKIP = [
-    "textarea", "input", "select", "option", "script", "style", "code", "pre",
+    "textarea", "input", "script", "style", "code", "pre",
     "[data-no-i18n]", ".msg-text", ".run-prompt", ".dir-list", "#dirPath",
     "#comfyPath", ".set-path", ".setup-path"
   ].join(",");

@@ -10,7 +10,7 @@ desktop/
 ├── main.py               точка входа: сервер + окно
 ├── build.py              сборка PyInstaller → dist/SpriteAnimStudio/
 ├── SpriteAnimStudio.iss  установщик Inno Setup 6
-├── version_info.txt      свойства .exe (версия 0.2.0)
+├── version_info.txt      свойства .exe (версия 0.2.1)
 ├── icon.ico              иконка окна, .exe и установщика
 ├── requirements.txt      pywebview
 ├── run.bat               запуск из исходников без консоли
@@ -61,10 +61,10 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.2.0.exe` (≈13 МБ).
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.2.1.exe` (≈13 МБ).
 
 Готовый установщик лежит в `Install\` в корне проекта
-(`SpriteAnimStudio-Setup-0.2.0.exe`).
+(`SpriteAnimStudio-Setup-0.2.1.exe`).
 
 - ставится в `%LOCALAPPDATA%\Programs\SpriteAnimStudio` — без прав администратора,
   папка доступна на запись;
@@ -104,7 +104,7 @@ python desktop/build.py
 - разрешение микрофона подключается без ошибок (полный голосовой прогон
   в окне не повторялся);
 - установщик 0.2 собран и **проверен поверх установленной 0.1**: та же папка,
-  версия .exe 0.2.0, ярлык в «Пуск», приложение открывается и работает;
+  версия .exe 0.2.1, ярлык в «Пуск», приложение открывается и работает;
 - в установщик не попадают `.profile`, `.cache` и `output` из папки сборки
   (`Excludes` в `.iss`) — иначе вместе с программой уезжал бы профиль WebView2
   с машины разработчика весом ~11 МБ;
