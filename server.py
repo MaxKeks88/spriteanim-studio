@@ -132,6 +132,7 @@ def update_check(force: bool = False) -> dict:
     if fake:
         latest = fake.strip().lstrip("vV")
         page = f"https://github.com/{GITHUB_REPO}/releases"
+        asset = os.environ.get("SPRITE_FAKE_ASSET") or None
     else:
         url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
         req = urllib.request.Request(url, headers={
