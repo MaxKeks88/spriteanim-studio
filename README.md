@@ -24,6 +24,7 @@ available in **Russian and English**.
 | **Голосовой ввод** — русская модель GigaAM v3, работает локально (скачивается из настроек) | **Voice input** — Russian GigaAM v3 model, runs locally (downloaded from Settings) |
 | **История** — все прогоны с параметрами и кнопкой «Повторить» | **History** — every run with parameters and a Repeat button |
 | **MCP-сервер** — Claude Code, Codex, VS Code и другие агенты могут управлять приложением | **MCP server** — Claude Code, Codex, VS Code and other agents can drive the app |
+| **Обновления** — приложение проверяет новые версии на GitHub; жёлтая кнопка у «Настройки» и установка в один клик | **Updates** — checks GitHub for new versions; a yellow button next to Settings and one-click install |
 | **Три темы** — тёмная фиолетовая, палитра Sprite Sheet Maker, светлая бордовая | **Three themes** — dark violet, Sprite Sheet Maker palette, light burgundy |
 
 Интерфейс: переключатель **RU / EN** в шапке рядом с «Настройки». Язык
@@ -101,6 +102,30 @@ python desktop/build.py
 Результат — `desktop/dist/SpriteAnimStudio-Setup-0.2.0.exe`.
 
 Output: `desktop/dist/SpriteAnimStudio-Setup-0.2.0.exe`.
+
+---
+
+## Обновления / Updates
+
+Приложение при запуске проверяет последний релиз на GitHub. Если версия новее,
+рядом с «Настройки» появляется **круглая жёлтая кнопка со стрелкой**; она
+открывает **Настройки → 5. Обновление**. Там же кнопки «Проверить обновление»
+и «Скачать и установить»: приложение скачивает установщик из релиза, запускает
+его и перезапускается.
+
+Чтобы выпустить обновление: поднимите `APP_VERSION` в `server.py`, соберите
+установщик и создайте релиз с тегом `vX.Y.Z`, приложив
+`SpriteAnimStudio-Setup-X.Y.Z.exe`. Приложение читает `/releases/latest`.
+
+On startup the app checks the latest GitHub release. If a newer version exists,
+a **round yellow arrow button** appears next to Settings; it opens
+**Settings → 5. Update**. The same section has “Check for updates” and
+“Download and install”: the app downloads the installer from the release, runs
+it and restarts.
+
+To publish an update: bump `APP_VERSION` in `server.py`, build the installer and
+create a release tagged `vX.Y.Z` with `SpriteAnimStudio-Setup-X.Y.Z.exe`
+attached. The app reads `/releases/latest`.
 
 ---
 

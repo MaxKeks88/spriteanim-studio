@@ -105,6 +105,106 @@ def settings_info() -> dict:
     }
 
 
+# ------------------------------------------------------- обновления
+APP_VERSION = "0.2.0"
+GITHUB_REPO = "MaxKeks88/spriteanim-studio"
+UPDATE_CACHE_TTL = 600
+UPDATE_DIR = ROOT / ".cache" / "update"
+_update_cache: dict = {"ts": 0.0, "data": None}
+_update_lock = threading.Lock()
+
+
+def _ver_tuple(text: str) -> tuple:
+    parts = re.findall(r"\d+", str(text or ""))
+    return tuple(int(p) for p in parts[:4]) or (0,)
+
+
+def update_check(force: bool = False) -> dict:
+    """Сравнивает текущую версию с последним релизом на GitHub."""
+    now = time.time()
+    with _update_lock:
+        cached = _update_cache["data"]
+        if not force and cached and now - _update_cache["ts"] < UPDATE_CACHE_TTL:
+            return cached
+
+    latest, asset, page, notes, error = None, None, None, "", ""
+    fake = os.environ.get("SPRITE_FAKE_LATEST")
+    if fake:
+        latest = fake.strip().lstrip("vV")
+        page = f"https://github.com/{GITHUB_REPO}/releases"
+    else:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": f"SpriteAnimStudio/{APP_VERSION}",
+            "Accept": "application/vnd.github+json",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8", "replace"))
+            latest = str(data.get("tag_name") or "").strip().lstrip("vV") or None
+            page = data.get("html_url") or f"https://github.com/{GITHUB_REPO}/releases"
+            notes = (data.get("body") or "").strip()
+            for item in data.get("assets") or []:
+                name = str(item.get("name") or "").lower()
+                if name.endswith(".exe") and "setup" in name:
+                    asset = item.get("browser_download_url")
+                    break
+        except Exception as exc:  # noqa: BLE001
+            error = str(exc)
+
+    available = bool(latest and _ver_tuple(latest) > _ver_tuple(APP_VERSION))
+    result = {
+        "current": APP_VERSION,
+        "latest": latest,
+        "available": available,
+        "asset": asset,
+        "page": page or f"https://github.com/{GITHUB_REPO}/releases",
+        "notes": notes[:4000],
+        "error": error,
+    }
+    with _update_lock:
+        _update_cache["ts"] = now
+        _update_cache["data"] = result
+    return result
+
+
+def update_install() -> dict:
+    """Скачивает установщик последней версии и запускает его."""
+    info = update_check()
+    if not info.get("available"):
+        raise RuntimeError("обновление не найдено")
+    asset = info.get("asset")
+    if not asset:
+        raise RuntimeError("в релизе нет установщика")
+    UPDATE_DIR.mkdir(parents=True, exist_ok=True)
+    dest = UPDATE_DIR / f"SpriteAnimStudio-Setup-{info['latest']}.exe"
+    tmp = dest.with_suffix(".part")
+    req = urllib.request.Request(asset, headers={
+        "User-Agent": f"SpriteAnimStudio/{APP_VERSION}",
+    })
+    with urllib.request.urlopen(req, timeout=180) as resp, tmp.open("wb") as fh:
+        shutil.copyfileobj(resp, fh, 1024 * 256)
+    if tmp.stat().st_size < 1_000_000:
+        tmp.unlink(missing_ok=True)
+        raise RuntimeError("установщик скачался не полностью")
+    tmp.replace(dest)
+
+    def run() -> None:
+        time.sleep(1.2)
+        try:
+            subprocess.Popen(
+                [str(dest), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"],
+                close_fds=True,
+            )
+        except OSError:
+            return
+        time.sleep(2.0)
+        shutdown_app()
+
+    threading.Thread(target=run, daemon=True, name="studio-update").start()
+    return {"ok": True, "version": info["latest"], "file": str(dest)}
+
+
 def _check_dir(raw: str, label: str, subs: tuple = ()) -> Path:
     raw = str(raw or "").strip().strip('"').strip("'")
     if not raw:
@@ -2604,6 +2704,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"jobs": jobs_active()})
             if u.path == "/api/settings":
                 return self._json(settings_info())
+            if u.path == "/api/version":
+                return self._json({"version": APP_VERSION, "repo": GITHUB_REPO})
+            if u.path == "/api/update":
+                return self._json(update_check(force=bool(q.get("force"))))
             if u.path == "/api/setup":
                 return self._json(setup_status())
             if u.path == "/api/setup/progress":
@@ -2663,6 +2767,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._bad(str(exc), 422)
                 except RuntimeError as exc:
                     return self._bad(str(exc), 500)
+            if u.path == "/api/update/install":
+                try:
+                    return self._json(update_install())
+                except RuntimeError as exc:
+                    return self._bad(str(exc), 422)
             if u.path == "/api/fs/dirs":
                 raw = (q.get("path") or [""])[0]
                 return self._json(list_dirs(urllib.parse.unquote(raw)))
