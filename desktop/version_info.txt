@@ -14,12 +14,12 @@
       StringTable('041904B0', [
         StringStruct('CompanyName', 'SpriteAnim Studio'),
         StringStruct('FileDescription', 'SpriteAnim Studio'),
-        StringStruct('FileVersion', '0.3.2'),
+        StringStruct('FileVersion', '0.3.3'),
         StringStruct('InternalName', 'SpriteAnimStudio'),
         StringStruct('LegalCopyright', ''),
         StringStruct('OriginalFilename', 'SpriteAnimStudio.exe'),
         StringStruct('ProductName', 'SpriteAnim Studio'),
-        StringStruct('ProductVersion', '0.3.2')
+        StringStruct('ProductVersion', '0.3.3')
       ])
     ]),
     VarFileInfo([VarStruct('Translation', [1049, 1200])])

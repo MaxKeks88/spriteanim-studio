@@ -456,6 +456,16 @@
 
     // ---------- вкладка «Апскейл» ----------
     "Кадры для увеличения": "Frames to upscale",
+    "Прогоны": "Runs",
+    "Готовые листы": "Saved sheets",
+    "до": "before",
+    "после": "after",
+    "Тяните мышкой по картинке: слева исходный кадр, справа увеличенный.": "Drag across the image: the source frame is on the left, the upscaled one on the right.",
+    "Выберите прогон слева. Если он уже увеличен — результат откроется сразу, без повторного счёта на видеокарте.": "Pick a run on the left. If it is already upscaled, the result opens right away without recomputing on the GPU.",
+    "Прогонов с прозрачными кадрами пока нет.": "No runs with transparent frames yet.",
+    "Сохранённых листов пока нет.": "No saved sheets yet.",
+    "Посмотреть": "View",
+    "лист из увеличенных кадров": "sheet from upscaled frames",
     "Прогон": "Run",
     "Сначала сделайте анимацию — кадры последнего прогона появятся здесь.": "Make an animation first — the frames of the last run will appear here.",
     "В апскейл попадают кадры с прозрачностью из последней анимации.": "Upscale uses the transparent frames of the last animation.",

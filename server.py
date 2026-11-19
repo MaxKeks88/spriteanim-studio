@@ -81,7 +81,7 @@ def sheets_dir() -> Path:
 
 def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
                cw: int = 0, ch: int = 0, count: int = 0,
-               crop: str = "", src: str = "") -> dict:
+               crop: str = "", src: str = "", origin: str = "") -> dict:
     """Сохраняет готовый спрайт-лист и его JSON в output/sheets/<имя>-<время>."""
     if not blob or len(blob) < 100:
         raise ValueError("пустой лист")
@@ -119,6 +119,13 @@ def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
     box = nums(crop, ("x", "y", "w", "h"))
     if box:
         atlas["crop"] = box
+    if origin:
+        try:
+            extra = json.loads(origin)
+        except Exception:  # noqa: BLE001
+            extra = None
+        if isinstance(extra, dict) and extra:
+            atlas["origin"] = extra
     js = dest / f"{slug}-sheet.json"
     js.write_text(json.dumps(atlas, ensure_ascii=False, indent=1), "utf-8")
     return {"dir": str(dest), "png": str(png), "json": str(js), "size": len(blob)}
@@ -155,7 +162,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.3.2"
+APP_VERSION = "0.3.3"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -1254,6 +1261,18 @@ def upscale_recover() -> int:
     return count
 
 
+def _png_size(path: Path) -> tuple[int, int]:
+    """Ширина и высота PNG из заголовка IHDR."""
+    try:
+        with path.open("rb") as f:
+            head = f.read(24)
+    except OSError:
+        return 0, 0
+    if head[:8] != b"\x89PNG\r\n\x1a\n" or len(head) < 24:
+        return 0, 0
+    return int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+
+
 def _upscale_graph(uploaded: str, model: str, factor: int, run: str) -> dict:
     # LoadImage в этой версии ComfyUI отдаёт RGB и отдельную маску прозрачности,
     # поэтому альфу возвращаем узлом JoinImageWithAlpha (он же её растягивает).
@@ -1292,9 +1311,16 @@ def upscale_start(body: dict) -> dict:
         base = folder.parent.parent
     else:
         base = folder.parent
+    if folder.name == "rgba":
+        base = folder.parent.parent
+        src_run = folder.parent.name
+    else:
+        base = folder.parent
+        src_run = folder.name
     name = base.name or folder.name
     run = _run_id()
     job_id = "up-" + uuid.uuid4().hex[:12]
+    src = {"dir": str(folder), "rel": _output_rel(folder), "name": name, "run": src_run}
     jobs_add({"id": job_id, "kind": "upscale", "state": "queued", "done": 0,
               "total": len(files), "ts": time.time(), "name": name, "factor": factor,
               "run": run, "src": str(folder), "outputs": [],
@@ -1303,17 +1329,19 @@ def upscale_start(body: dict) -> dict:
     with _UPSCALE_LOCK:
         _UPSCALE_CANCEL[job_id] = event
     threading.Thread(target=_upscale_worker,
-                     args=(job_id, files, factor, model, run, event),
+                     args=(job_id, files, factor, model, run, event, src),
                      daemon=True).start()
     return {"id": job_id, "total": len(files), "factor": factor, "run": run, "name": name}
 
 
 def _upscale_worker(job_id: str, files: list[Path], factor: int,
-                    model: str, run: str, event: threading.Event) -> None:
+                    model: str, run: str, event: threading.Event, src: dict) -> None:
     outs: list[dict] = []
 
     def stop(state: str, error: str = "") -> None:
         local = collect_outputs({"outputs": outs}) if outs else {"dirs": [], "files": 0}
+        if state == "done" and local.get("dirs"):
+            _upscale_meta(Path(local["dirs"][0]), run, factor, outs, src)
         _upscale_set(job_id, state=state, error=error, done=len(outs),
                      outputs=outs, local=local)
 
@@ -1367,6 +1395,97 @@ def _upscale_worker(job_id: str, files: list[Path], factor: int,
     finally:
         with _UPSCALE_LOCK:
             _UPSCALE_CANCEL.pop(job_id, None)
+
+
+def _upscale_meta(folder: Path, run: str, factor: int, outs: list[dict], src: dict) -> None:
+    """meta.json рядом с увеличенными кадрами: связь «анимация → апскейл»."""
+    files = [o["filename"] for o in outs if o.get("filename")]
+    width = height = 0
+    if files:
+        width, height = _png_size(folder / files[0])
+    meta = {"run": run, "factor": factor, "count": len(files),
+            "width": width, "height": height, "files": files,
+            "source": src, "ts": time.time()}
+    try:
+        (folder.parent / "meta.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=1), "utf-8")
+    except OSError:
+        pass
+
+
+def upscale_results(limit: int = 40) -> list[dict]:
+    """Готовые апскейлы: свежие сверху, с привязкой к исходному прогону."""
+    root = output_dir() / "upscaled"
+    if not root.is_dir():
+        return []
+    out = []
+    for meta in root.glob("*/meta.json"):
+        try:
+            data = json.loads(meta.read_text("utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        run_dir = meta.parent
+        files = [str(n) for n in (data.get("files") or [])]
+        if not files:
+            continue
+        frames = run_dir / "rgba" if (run_dir / "rgba").is_dir() else run_dir
+        out.append({**data, "dir": str(run_dir.resolve()),
+                    "rel": _output_rel(frames), "files": files})
+    out.sort(key=lambda r: float(r.get("ts") or 0), reverse=True)
+    return out[:limit]
+
+
+def sheets_list(limit: int = 20) -> list[dict]:
+    """Сохранённые листы из output/sheets: свежие сверху."""
+    root = sheets_dir()
+    if not root.is_dir():
+        return []
+    out = []
+    for js in root.glob("*/*-sheet.json"):
+        try:
+            data = json.loads(js.read_text("utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        dest = js.parent
+        png = dest / str(data.get("image") or "")
+        if not png.is_file():
+            found = sorted(dest.glob("*.png"))
+            png = found[0] if found else None
+        preview = dest / "preview.png"
+        out.append({
+            "dir": str(dest.resolve()), "name": dest.name,
+            "rel_dir": _output_rel(dest),
+            "image": png.name if png else "",
+            "rel": _output_rel(png) if png else "",
+            "preview": _output_rel(preview) if preview.is_file() else "",
+            "columns": data.get("columns") or 0,
+            "rows": data.get("rows") or 0,
+            "count": data.get("count") or 0,
+            "frame": data.get("frame") or {},
+            "origin": data.get("origin") or {},
+            "ts": dest.stat().st_mtime,
+        })
+    out.sort(key=lambda s: s["ts"], reverse=True)
+    return out[:limit]
+
+
+def save_sheet_preview(dir_raw: str, blob: bytes) -> dict:
+    """Кладёт маленькое превью к уже сохранённому листу."""
+    base = sheets_dir().resolve()
+    p = Path(str(dir_raw or ""))
+    if not p.is_absolute():
+        p = base / p
+    p = p.resolve()
+    try:
+        p.relative_to(base)
+    except ValueError as exc:
+        raise ValueError("папка листа должна лежать в output/sheets") from exc
+    if not p.is_dir():
+        raise ValueError("папка листа не найдена")
+    if not blob or len(blob) < 100:
+        raise ValueError("пустое превью")
+    (p / "preview.png").write_bytes(blob)
+    return {"ok": True, "file": str(p / "preview.png")}
 
 
 # ---------------------------------------------- установка ComfyUI и моделей
@@ -3081,6 +3200,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._proxy_view(q)
             if u.path == "/api/upscale/sources":
                 return self._json({"sources": upscale_sources()})
+            if u.path == "/api/upscale/results":
+                return self._json({"results": upscale_results()})
+            if u.path == "/api/sheets":
+                return self._json({"sheets": sheets_list()})
             if u.path == "/api/output/file":
                 raw = urllib.parse.unquote((q.get("path") or [""])[0])
                 try:
@@ -3165,11 +3288,19 @@ class Handler(BaseHTTPRequestHandler):
                         int((q.get("count") or ["0"])[0] or 0),
                         (q.get("crop") or [""])[0],
                         (q.get("src") or [""])[0],
+                        (q.get("origin") or [""])[0],
                     ))
                 except ValueError as exc:
                     return self._bad(str(exc), 422)
                 except Exception as exc:  # noqa: BLE001
                     return self._bad("не удалось сохранить лист: " + str(exc), 500)
+            if u.path == "/api/sheet/preview":
+                try:
+                    blob = self._raw_body(limit=20 * 1024 * 1024)
+                    return self._json(save_sheet_preview(
+                        urllib.parse.unquote((q.get("dir") or [""])[0]), blob))
+                except ValueError as exc:
+                    return self._bad(str(exc), 422)
             if u.path == "/api/fs/dirs":
                 raw = (q.get("path") or [""])[0]
                 return self._json(list_dirs(urllib.parse.unquote(raw)))
@@ -3209,8 +3340,18 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/settings/open":
                 if not hasattr(os, "startfile"):
                     return self._bad("открыть папку можно только в Windows", 422)
+                raw = urllib.parse.unquote((q.get("path") or [""])[0])
+                target = output_dir()
+                if raw:
+                    try:
+                        target = (output_dir().resolve() / raw).resolve()
+                        target.relative_to(output_dir().resolve())
+                    except (ValueError, OSError):
+                        return self._bad("папка должна лежать внутри output", 422)
+                    if not target.is_dir():
+                        return self._bad("папка не найдена", 404)
                 try:
-                    os.startfile(str(output_dir()))
+                    os.startfile(str(target))
                     return self._json({"ok": True})
                 except Exception as exc:  # noqa: BLE001
                     return self._bad(str(exc), 500)

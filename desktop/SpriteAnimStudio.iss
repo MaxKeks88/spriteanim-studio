@@ -5,7 +5,7 @@
 ; поэтому не требует прав администратора и может писать .cache/output/voice рядом.
 
 #define AppName "SpriteAnim Studio"
-#define AppVersion "0.3.2"
+#define AppVersion "0.3.3"
 #define AppExe "SpriteAnimStudio.exe"
 
 [Setup]

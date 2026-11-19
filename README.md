@@ -34,6 +34,8 @@ available in **Russian and English**.
 | **Готовый спрайт-лист** — лист сохраняется в `output/sheets` вместе с JSON | **Finished sprite sheet** — the sheet is saved to `output/sheets` with its JSON |
 | **Поле вокруг персонажа** — 0–35% пустого места, чтобы меч и прыжок не обрезались краем кадра | **Character margin** — 0–35% of empty space so a sword or a jump never hits the frame edge |
 | **Апскейл** — отдельная вкладка между анимацией и листом: кадры увеличиваются в 2–4 раза (Real-ESRGAN), альфа сохраняется | **Upscale** — its own tab between animation and sheet: frames are scaled ×2–×4 (Real-ESRGAN) with alpha preserved |
+| **Сравнение до/после** — ползунок по первому кадру показывает, что дал апскейл | **Before/after compare** — a slider over the first frame shows what the upscale actually did |
+| **Память прогонов** — у прогонов видна пометка «×2», готовый апскейл открывается без повторного счёта, сохранённые листы — отдельным списком | **Run memory** — runs show a “×2” badge, a finished upscale opens without recomputing, and saved sheets are listed separately |
 | **Спрайт-лист** — встроенный редактор: сетка, поля, выравнивание, установка в Godot 4 и Unity | **Sprite sheet** — built-in editor: grid, padding, alignment, install into Godot 4 or Unity |
 | **Промпт агентом** — локальная модель пишет промпт по вашему описанию и видит исходную картинку | **Prompt with agent** — a local model writes the prompt from your brief and can see the source image |
 | **Голосовой ввод** — русская модель GigaAM v3, работает локально (скачивается из настроек) | **Voice input** — Russian GigaAM v3 model, runs locally (downloaded from Settings) |
@@ -75,7 +77,7 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.2.exe
+Install\SpriteAnimStudio-Setup-0.3.3.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
@@ -86,7 +88,7 @@ Install\SpriteAnimStudio-Setup-0.3.2.exe
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.2.exe
+Install\SpriteAnimStudio-Setup-0.3.3.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
@@ -114,9 +116,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.2.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.3.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.2.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.3.exe`.
 
 ---
 
