@@ -10,7 +10,7 @@ desktop/
 ├── main.py               точка входа: сервер + окно
 ├── build.py              сборка PyInstaller → dist/SpriteAnimStudio/
 ├── SpriteAnimStudio.iss  установщик Inno Setup 6
-├── version_info.txt      свойства .exe (версия 0.2.2)
+├── version_info.txt      свойства .exe (версия 0.3.0)
 ├── icon.ico              иконка окна, .exe и установщика
 ├── requirements.txt      pywebview
 ├── run.bat               запуск из исходников без консоли
@@ -61,10 +61,10 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.2.2.exe` (≈13 МБ).
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.0.exe` (≈13 МБ).
 
 Готовый установщик лежит в `Install\` в корне проекта
-(`SpriteAnimStudio-Setup-0.2.2.exe`).
+(`SpriteAnimStudio-Setup-0.3.0.exe`).
 
 - ставится в `%LOCALAPPDATA%\Programs\SpriteAnimStudio` — без прав администратора,
   папка доступна на запись;

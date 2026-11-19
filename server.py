@@ -138,7 +138,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.2.2"
+APP_VERSION = "0.3.0"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -453,6 +453,9 @@ def jobs_active() -> list:
     for pid, j in data.items():
         age = now - float(j.get("ts") or 0)
         if age > 24 * 3600:
+            continue
+        if j.get("kind") == "upscale":
+            out.append({**j, "state": j.get("state") or "queued"})
             continue
         state = "lost"
         try:
@@ -1072,6 +1075,8 @@ def output_location(subfolder: str) -> tuple[str, str]:
             return "images", run
         if kind == "bg":
             return "background", run
+        if kind == "up":
+            return "upscaled", run
         return f"animation/{kind}", run
     return "other", time.strftime("%Y%m%d-%H%M%S")
 
@@ -1105,6 +1110,229 @@ def collect_outputs(st: dict) -> dict:
             except Exception:  # noqa: BLE001
                 continue
     return {"dirs": list(dirs.keys()), "files": sum(dirs.values())}
+
+
+# ------------------------------------------------------------------- апскейл
+# Кадры анимации увеличиваются по одному промпту: так видеопамять занята
+# ровно одним кадром, а прогресс виден на каждом шаге.
+UPSCALE_MODEL = "RealESRGAN_x4plus_anime_6B.pth"
+_UPSCALE_CANCEL: dict[str, threading.Event] = {}
+_UPSCALE_LOCK = threading.Lock()
+
+
+def upscale_model_available() -> str:
+    """Имя загружаемой модели апскейла или ''."""
+    for force in (False, True):
+        try:
+            opts = _choices(object_info(force=force), "UpscaleModelLoader", "model_name")
+        except Exception:  # noqa: BLE001
+            return ""
+        if UPSCALE_MODEL in opts:
+            return UPSCALE_MODEL
+        found = next((o for o in opts if "esrgan" in o.lower()), "")
+        if found:
+            return found
+    return ""
+
+
+def upscale_frames(src: str) -> tuple[Path, list[Path]]:
+    """Папка с кадрами внутри output/ и список frame_*.png."""
+    base = output_dir().resolve()
+    p = Path(src)
+    if not p.is_absolute():
+        p = base / src
+    try:
+        p = p.resolve()
+        p.relative_to(base)
+    except (OSError, ValueError) as exc:
+        raise ValueError("папка с кадрами должна лежать внутри output") from exc
+    if not p.is_dir():
+        raise ValueError("папка с кадрами не найдена")
+    folder = p / "rgba" if (p / "rgba").is_dir() else p
+    files = sorted(folder.glob("frame_*.png"))
+    if not files:
+        raise ValueError("в папке нет кадров frame_*.png")
+    return folder, files
+
+
+def _output_rel(path: Path) -> str:
+    """Путь файла/папки относительно output/ в виде слэшей."""
+    return path.resolve().relative_to(output_dir().resolve()).as_posix()
+
+
+def upscale_sources(limit: int = 12) -> list[dict]:
+    """Готовые прогоны анимации с кадрами: свежие сверху."""
+    root = output_dir() / "animation"
+    if not root.is_dir():
+        return []
+    out = []
+    for run in root.glob("*/*"):
+        if not run.is_dir():
+            continue
+        folder = run / "rgba" if (run / "rgba").is_dir() else run
+        files = sorted(p.name for p in folder.glob("frame_*.png"))
+        if not files:
+            continue
+        out.append({"dir": str(folder.resolve()), "rel": _output_rel(folder),
+                    "name": run.parent.name, "run": run.name,
+                    "count": len(files), "files": files[:400],
+                    "ts": folder.stat().st_mtime})
+    out.sort(key=lambda s: s["ts"], reverse=True)
+    return out[:limit]
+
+
+def output_file(rel: str) -> tuple[bytes, str]:
+    """Файл из output/ для превью во вкладке «Апскейл»."""
+    base = output_dir().resolve()
+    p = (base / (rel or "")).resolve()
+    try:
+        p.relative_to(base)
+    except ValueError as exc:
+        raise ValueError("файл должен лежать внутри output") from exc
+    if not p.is_file():
+        raise ValueError("файл не найден")
+    ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+    return p.read_bytes(), ctype
+
+
+def _upscale_set(job_id: str, **kw) -> None:
+    with _jobs_lock:
+        data = jobs_load()
+        entry = data.get(job_id)
+        if not entry:
+            return
+        entry.update(kw)
+        jobs_save(data)
+
+
+def upscale_recover() -> int:
+    """Незавершённый апскейл после перезапуска продолжить нельзя — помечаем ошибкой."""
+    count = 0
+    with _jobs_lock:
+        data = jobs_load()
+        for entry in data.values():
+            if entry.get("kind") == "upscale" and entry.get("state") in ("queued", "running"):
+                entry["state"] = "error"
+                entry["error"] = "прервано перезапуском приложения"
+                count += 1
+        if count:
+            jobs_save(data)
+    return count
+
+
+def _upscale_graph(uploaded: str, model: str, factor: int, run: str) -> dict:
+    # LoadImage в этой версии ComfyUI отдаёт RGB и отдельную маску прозрачности,
+    # поэтому альфу возвращаем узлом JoinImageWithAlpha (он же её растягивает).
+    graph = {
+        "1": {"class_type": "LoadImage", "inputs": {"image": uploaded, "upload": "image"}},
+        "2": {"class_type": "UpscaleModelLoader", "inputs": {"model_name": model}},
+        "3": {"class_type": "ImageUpscaleWithModel",
+              "inputs": {"upscale_model": ["2", 0], "image": ["1", 0]}},
+    }
+    last = "3"
+    if factor < 4:
+        graph["4"] = {"class_type": "ImageScaleBy",
+                      "inputs": {"image": ["3", 0], "upscale_method": "lanczos",
+                                 "scale_by": factor / 4.0}}
+        last = "4"
+    graph["5"] = {"class_type": "JoinImageWithAlpha",
+                  "inputs": {"image": [last, 0], "alpha": ["1", 1]}}
+    graph["6"] = {"class_type": "SaveImage",
+                  "inputs": {"images": ["5", 0],
+                             "filename_prefix": f"SpriteAnim/up/{run}/rgba/frame"}}
+    return graph
+
+
+def upscale_start(body: dict) -> dict:
+    stop_agent_for_memory()
+    folder, files = upscale_frames(str(body.get("dir") or ""))
+    try:
+        factor = int(body.get("factor") or 2)
+    except (TypeError, ValueError):
+        factor = 2
+    factor = max(2, min(4, factor))
+    model = upscale_model_available()
+    if not model:
+        raise RuntimeError("модель апскейла не установлена — скачайте её в настройках")
+    if folder.name == "rgba":
+        base = folder.parent.parent
+    else:
+        base = folder.parent
+    name = base.name or folder.name
+    run = _run_id()
+    job_id = "up-" + uuid.uuid4().hex[:12]
+    jobs_add({"id": job_id, "kind": "upscale", "state": "queued", "done": 0,
+              "total": len(files), "ts": time.time(), "name": name, "factor": factor,
+              "run": run, "src": str(folder), "outputs": [],
+              "local": {"dirs": [], "files": 0}})
+    event = threading.Event()
+    with _UPSCALE_LOCK:
+        _UPSCALE_CANCEL[job_id] = event
+    threading.Thread(target=_upscale_worker,
+                     args=(job_id, files, factor, model, run, event),
+                     daemon=True).start()
+    return {"id": job_id, "total": len(files), "factor": factor, "run": run, "name": name}
+
+
+def _upscale_worker(job_id: str, files: list[Path], factor: int,
+                    model: str, run: str, event: threading.Event) -> None:
+    outs: list[dict] = []
+
+    def stop(state: str, error: str = "") -> None:
+        local = collect_outputs({"outputs": outs}) if outs else {"dirs": [], "files": 0}
+        _upscale_set(job_id, state=state, error=error, done=len(outs),
+                     outputs=outs, local=local)
+
+    try:
+        for i, path in enumerate(files, 1):
+            if event.is_set():
+                return stop("error", "остановлено")
+            blob = path.read_bytes()
+            uploaded = upload_image(f"up_{run}_{i:05d}.png", blob)
+            graph = _upscale_graph(uploaded, model, factor, run)
+            res = comfy_json("/prompt", {"prompt": graph, "client_id": uuid.uuid4().hex,
+                                         "extra_data": {"preview_method": "latent2rgb"}},
+                             timeout=60)
+            pid = str(res.get("prompt_id") or "")
+            if res.get("error") or not pid:
+                raise RuntimeError(str(res.get("error") or "ComfyUI не принял задание"))
+            deadline = time.time() + 300
+            entry = None
+            while time.time() < deadline:
+                if event.is_set():
+                    try:
+                        comfy_json("/interrupt", {}, timeout=10)
+                    except Exception:  # noqa: BLE001
+                        pass
+                    return stop("error", "остановлено")
+                hist = comfy_json(f"/history/{pid}", timeout=10)
+                if isinstance(hist, dict) and pid in hist:
+                    entry = hist[pid]
+                    break
+                time.sleep(1.0)
+            if entry is None:
+                raise RuntimeError(f"кадр {i} не обработался за 5 минут")
+            status = entry.get("status") or {}
+            if status.get("status_str", "success") != "success" or status.get("error"):
+                err = ""
+                for m in status.get("messages") or []:
+                    if isinstance(m, list) and m and m[0] in ("execution_error", "execution_interrupted"):
+                        err = str((m[1] or {}).get("exception_message") or m[0])
+                raise RuntimeError(err or "ошибка апскейла")
+            for node_out in (entry.get("outputs") or {}).values():
+                for item in node_out.get("images") or []:
+                    if isinstance(item, dict) and item.get("filename"):
+                        outs.append({"kind": "image", "filename": item["filename"],
+                                     "subfolder": item.get("subfolder", ""),
+                                     "type": item.get("type", "output")})
+            _upscale_set(job_id, state="running", done=len(outs),
+                         outputs=list(outs), total=len(files))
+        stop("done")
+    except Exception as exc:  # noqa: BLE001
+        stop("error", f"{type(exc).__name__}: {exc}")
+    finally:
+        with _UPSCALE_LOCK:
+            _UPSCALE_CANCEL.pop(job_id, None)
 
 
 # ---------------------------------------------- установка ComfyUI и моделей
@@ -1173,6 +1401,21 @@ MODEL_GROUPS = [
             {"target": "agent", "name": "mmproj-F16.gguf",
              "path": "mmproj-F16.gguf", "repo": "unsloth/gemma-4-12b-it-GGUF",
              "size": 175115840, "what": "визуальный проектор — агент видит картинки"},
+        ],
+    },
+    {
+        "id": "upscale",
+        "title": "Апскейл (Real-ESRGAN anime)",
+        "what": "Увеличение кадров перед спрайт-листом",
+        "note": "Модель для вкладки «Апскейл»: увеличивает кадры с прозрачностью в 2–4 раза "
+                "перед сборкой листа. 17 МБ, считает на видеокарте.",
+        "repo": "ximso/RealESRGAN_x4plus_anime_6B",
+        "enabled": True,
+        "files": [
+            {"target": "comfy", "folder": "upscale_models",
+             "name": "RealESRGAN_x4plus_anime_6B.pth",
+             "path": "RealESRGAN_x4plus_anime_6B.pth",
+             "size": 17938799, "what": "модель апскейла, 4×"},
         ],
     },
 ]
@@ -1836,6 +2079,17 @@ def comfy_run_portable() -> dict:
 
 def job_status(prompt_id: str) -> dict:
     """Свести /history и /queue в одно понятное состояние."""
+    tracked = jobs_load().get(str(prompt_id)) or {}
+    if tracked.get("kind") == "upscale":
+        return {
+            "state": tracked.get("state") or "queued",
+            "error": tracked.get("error") or "",
+            "outputs": tracked.get("outputs") or [],
+            "local": tracked.get("local") or {},
+            "done": tracked.get("done") or 0,
+            "total": tracked.get("total") or 0,
+            "meta": {k: tracked[k] for k in ("name", "factor", "run", "src") if tracked.get(k)},
+        }
     try:
         hist = comfy_json(f"/history/{prompt_id}", timeout=15)
     except Exception as exc:  # noqa: BLE001
@@ -1900,8 +2154,12 @@ def _choices(info: dict, node: str, field: str) -> list[str]:
     if not spec:
         return []
     first = spec[0]
-    if isinstance(first, list):
+    if isinstance(first, list):          # старый формат: ["a.safetensors", ...]
         return [str(x) for x in first]
+    if isinstance(first, str) and first.upper() == "COMBO" and len(spec) > 1:
+        # новый формат io.Combo: ["COMBO", {"options": [...]}]
+        meta = spec[1] if isinstance(spec[1], dict) else {}
+        return [str(x) for x in (meta.get("options") or [])]
     return []
 
 
@@ -2787,6 +3045,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(list_dirs(urllib.parse.unquote(raw)))
             if u.path == "/api/file":
                 return self._proxy_view(q)
+            if u.path == "/api/upscale/sources":
+                return self._json({"sources": upscale_sources()})
+            if u.path == "/api/output/file":
+                raw = urllib.parse.unquote((q.get("path") or [""])[0])
+                try:
+                    data, ctype = output_file(raw)
+                except ValueError as exc:
+                    return self._bad(str(exc), 404)
+                return self._send(200, data, ctype)
             if u.path == "/api/zip":
                 return self._zip(q)
             return self._bad("неизвестный адрес", 404)
@@ -2842,6 +3109,13 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/update/install":
                 try:
                     return self._json(update_install())
+                except RuntimeError as exc:
+                    return self._bad(str(exc), 422)
+            if u.path == "/api/upscale":
+                try:
+                    return self._json(upscale_start(self._body()))
+                except ValueError as exc:
+                    return self._bad(str(exc), 422)
                 except RuntimeError as exc:
                     return self._bad(str(exc), 422)
             if u.path == "/api/sheet/save":
@@ -2938,6 +3212,11 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/stop":
                 body = self._body()
                 pid = body.get("id") or ""
+                with _UPSCALE_LOCK:
+                    event = _UPSCALE_CANCEL.get(str(pid))
+                if event is not None:
+                    event.set()
+                    return self._json({"ok": True})
                 try:
                     comfy_json("/interrupt", {"prompt_id": pid}, timeout=10)
                 except Exception:
@@ -2972,6 +3251,7 @@ class Handler(BaseHTTPRequestHandler):
             },
             "modes": modes,
             "bg": bg,
+            "upscale": {"model": upscale_model_available() if online else ""},
             "image": {"models": image_models(object_info())} if online else {"models": []},
         })
 
@@ -3435,11 +3715,14 @@ def serve():
     if not (UI_DIR / "index.html").is_file():
         print("!! нет ui/index.html")
         raise SystemExit(1)
-    for sub in ("images", "background", "animation"):
+    for sub in ("images", "background", "animation", "upscaled", "sheets"):
         try:
             (output_dir() / sub).mkdir(parents=True, exist_ok=True)
         except OSError:
             pass
+    stale = upscale_recover()
+    if stale:
+        print(f"[upscale] помечено прерванных заданий: {stale}")
     import atexit
     atexit.register(_agent_quit)
     url = f"http://{HOST}:{PORT}"

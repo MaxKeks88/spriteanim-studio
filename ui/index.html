@@ -481,6 +481,20 @@ body.sheet-on #sheetView{display:flex}
 .set-row{display:flex;gap:8px;align-items:center;margin-top:10px}
 .set-row input{flex:1;min-width:0;font-size:13px}
 .set-row .chip{flex:none}
+
+/* ---------- вкладка «Апскейл» ---------- */
+.upWrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.upWrap .card{margin:0}
+.upSrc{font-size:13px;color:var(--muted);line-height:1.5}
+.upSrc b{color:var(--text);font-weight:600}
+.upStrip{display:flex;gap:6px;overflow-x:auto;padding:10px 2px 4px}
+.upStrip img{height:84px;border-radius:8px;border:1px solid var(--line);
+  background:var(--checker) repeating-conic-gradient(var(--checker-a) 0 25%,var(--checker-b) 0 50%) 0 0/16px 16px}
+.upModel{font-size:12.5px;color:var(--muted);margin:12px 0 10px}
+.upModel.bad{color:var(--warn)}
+.upDone{margin-top:12px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:13px;line-height:1.5}
+.upDone b{color:var(--text)}
+@media (max-width: 900px){ .upWrap{grid-template-columns:minmax(0,1fr)} }
 </style>
 </head>
 <body class="tab-img">
@@ -511,6 +525,7 @@ body.sheet-on #sheetView{display:flex}
       <button class="tab on" data-tab="img" type="button">Изображения</button>
       <button class="tab" data-tab="bg" type="button">Убрать фон</button>
       <button class="tab" data-tab="gen" type="button">Анимация</button>
+      <button class="tab" data-tab="up" type="button">Апскейл</button>
       <button class="tab" data-tab="sheet" type="button">Спрайт-лист</button>
     </div>
   </div>
@@ -870,6 +885,12 @@ body.sheet-on #sheetView{display:flex}
           </div>
 
           <div class="row">
+            <div class="row-l"><span>Поле вокруг персонажа</span><b id="padV"></b></div>
+            <div class="chips" id="pads"></div>
+            <div class="hint">Больше поля — больше места для оружия и прыжков, но персонаж мельче в кадре.</div>
+          </div>
+
+          <div class="row">
             <div class="row-l"><span>Длительность</span><b id="durV"></b></div>
             <input type="range" id="dur" min="0" max="12" step="1" value="6">
             <div class="ticks"><span>0,9 с</span><span>2,3</span><span>4,0</span><span>5,2</span><span>9,4 с</span></div>
@@ -939,6 +960,52 @@ body.sheet-on #sheetView{display:flex}
     </div>
   </div>
 
+</div>
+
+<div id="upPage" hidden>
+  <div class="upWrap">
+    <div class="card">
+      <h2><span class="n">1</span>Кадры для увеличения</h2>
+      <div class="upSrc" id="upSrc">Сначала сделайте анимацию — кадры последнего прогона появятся здесь.</div>
+      <div class="inline" style="margin-top:8px">
+        <select id="upPick" style="width:auto;max-width:100%;padding:6px 8px" hidden></select>
+        <button class="chip" id="upRefresh" type="button">↻ Обновить список</button>
+      </div>
+      <div class="upStrip" id="upStrip"></div>
+      <div class="hint" id="upSizeHint">В апскейл попадают кадры с прозрачностью из последней анимации.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">2</span>Увеличение</h2>
+      <div class="row">
+        <div class="row-l"><span>Во сколько раз</span><b id="upFactorV">×2</b></div>
+        <div class="chips" id="upFactors">
+          <button class="chip on" data-f="2" type="button">×2</button>
+          <button class="chip" data-f="3" type="button">×3</button>
+          <button class="chip" data-f="4" type="button">×4</button>
+        </div>
+        <div class="hint">×2 обычно достаточно для листа: 512 → 1024. ×4 даёт самый крупный спрайт, но лист тяжелее.</div>
+      </div>
+
+      <div class="upModel" id="upModel">проверяю модель…</div>
+      <button class="side-btn primary" id="upGo" type="button" style="width:100%" disabled>Увеличить кадры</button>
+      <button class="side-btn danger" id="upStop" type="button" hidden style="width:100%;margin-top:8px">■ Стоп</button>
+
+      <div class="prog" id="upProg">
+        <div class="bar" id="upBar"><i></i></div>
+        <div class="st"><span id="upStage"></span><span id="upTime"></span></div>
+      </div>
+
+      <div class="upDone" id="upDone" hidden>
+        <div id="upDoneText"></div>
+        <div class="upStrip" id="upDoneStrip"></div>
+        <div class="inline" style="margin-top:8px">
+          <button class="chip" id="upToSheet" type="button">→ Собрать лист</button>
+          <a class="chip" id="upOpen" href="#" hidden>↗ Открыть папку</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="runsView" hidden>
@@ -1097,7 +1164,9 @@ body.sheet-on #sheetView{display:flex}
 const S = {
   modes: [], byRepeat: {}, repeat: '', img: null, frames: 124, steps: 20,
   seedFixed: false, seed: '', size: null, custom: null, job: null, tick: null,
-  prompts: {}, names: {}, framesList: [], voiceReady: false,
+  prompts: {}, names: {}, framesList: [], voiceReady: false, pad: 0.15,
+  upFactor: 2, upSource: '', upModel: '', upJob: null, upSize: null, upDir: '',
+  upSources: [], upCount: 0, upName: '',
 };
 const FRAMES = [22, 39, 56, 73, 90, 107, 124, 141, 158, 175, 192, 209, 226];
 const framesFor = sec => {
@@ -1471,10 +1540,32 @@ async function restoreJobs() {
       progStart('gen', j.id, j.state === 'running' ? 'работаю' : 'в очереди');
       poll();
       active++;
+    } else if (j.kind === 'upscale') {
+      S.upSource = j.src || S.upSource;
+      if (j.state === 'error') {
+        jobsDone(j.id);
+        S.upJob = null;
+        upFail(j.error || 'прервано');
+        continue;
+      }
+      S.upJob = { id: j.id, total: +j.total || 0, factor: +j.factor || 2,
+                  t0: performance.now() };
+      if (j.state === 'done') {
+        const st = await (await fetch('/api/job?id=' + encodeURIComponent(j.id))).json();
+        if (st.state === 'done') { await upFinish(st); continue; }
+      }
+      $('#upProg').classList.add('on');
+      upBusy(true);
+      upStage(j.done || 0, j.total || 0);
+      pollUp();
+      active++;
     }
   }
   const newest = jobs.filter(j => j.state !== 'lost').pop();
-  if (newest) setTab(newest.kind === 'anim' ? 'gen' : newest.kind);
+  if (newest) {
+    const tabOf = { anim: 'gen', img: 'img', bg: 'bg', upscale: 'up' };
+    setTab(tabOf[newest.kind] || 'gen');
+  }
   if (active) toast('Незавершённые задания восстановлены', 'ok');
   if (gone && !active) toast('Прошлый прогон не найден в очереди ComfyUI', 'bad');
 }
@@ -2379,6 +2470,7 @@ function applyRepeat(rep) {
   countPrompt();
   checkPrompt();
   renderSizes();
+  renderPads();
   paintParams();
   trReset('gen');
 }
@@ -2431,6 +2523,24 @@ $('#cwApply').onclick = () => {
   $('#cw').value = w; $('#ch').value = h;
   renderSizes(); paintParams();
 };
+
+/* Поле вокруг персонажа: больше места для оружия и прыжков. */
+const PADS = [[0, '0%'], [0.15, '15%'], [0.25, '25%'], [0.35, '35%']];
+function renderPads() {
+  const box = $('#pads');
+  if (!box) return;
+  box.innerHTML = PADS.map(([p, label]) =>
+    `<button class="chip${Math.abs((S.pad || 0) - p) < 0.001 ? ' on' : ''}" data-p="${p}">${label}</button>`).join('');
+  box.onclick = e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    S.pad = +b.dataset.p;
+    renderPads();
+    paintParams();
+  };
+  const v = $('#padV');
+  if (v) v.textContent = Math.round((S.pad || 0) * 100) + '%';
+}
 $('#dur').oninput = e => { S.frames = FRAMES[+e.target.value] || 124; paintParams(); };
 $('#steps').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -2688,6 +2798,99 @@ function paintParams() {
 }
 
 /* ---------- генерация ---------- */
+function padImage(img, targetW, targetH, pad, keyHex) {
+  return new Promise((resolve, reject) => {
+    const src = new Image();
+    src.onload = () => {
+      const ratio = targetW / targetH;
+      let cw = 1024, ch = Math.round(1024 / ratio);
+      if (ch > 1024) { ch = 1024; cw = Math.round(1024 * ratio); }
+      cw = Math.max(64, Math.round(cw / 32) * 32);
+      ch = Math.max(64, Math.round(ch / 32) * 32);
+
+      // 1. Берём фактический цвет фона из угла исходника.
+      let bgR = 255, bgG = 0, bgB = 255;
+      try {
+        const probe = document.createElement('canvas');
+        probe.width = 8; probe.height = 8;
+        const pctx = probe.getContext('2d', { willReadFrequently: true });
+        pctx.drawImage(src, 0, 0, 8, 8, 0, 0, 8, 8);
+        const d = pctx.getImageData(0, 0, 8, 8).data;
+        let rr = 0, gg = 0, bb = 0, nn = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] < 8) continue;
+          rr += d[i]; gg += d[i + 1]; bb += d[i + 2]; nn++;
+        }
+        if (nn) { bgR = rr / nn; bgG = gg / nn; bgB = bb / nn; }
+      } catch { /* остаётся чистый ключевой цвет */ }
+
+      // 2. Вырезаем фон в исходном разрешении, чтобы найти фактический контур персонажа.
+      const temp = document.createElement('canvas');
+      temp.width = src.width; temp.height = src.height;
+      const tctx = temp.getContext('2d', { willReadFrequently: true });
+      tctx.drawImage(src, 0, 0);
+      try {
+        const im = tctx.getImageData(0, 0, src.width, src.height);
+        const d = im.data;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] < 8) continue;
+          const dr = d[i] - bgR, dg = d[i + 1] - bgG, db = d[i + 2] - bgB;
+          const dist = Math.sqrt(dr * dr + dg * dg + db * db) / 255;
+          const a = Math.max(0, Math.min(1, (dist - 0.10) / 0.18));
+          d[i + 3] = Math.round(d[i + 3] * a);
+        }
+        tctx.putImageData(im, 0, 0);
+      } catch { /* без вырезания — сработает обычный ключ */ }
+
+      // 3. Обрезка по контуру: поле считается от персонажа, а не от пустых краёв картинки.
+      let bx = 0, by = 0, bw = src.width, bh = src.height;
+      try {
+        const im = tctx.getImageData(0, 0, src.width, src.height);
+        const d = im.data, W = src.width, H = src.height;
+        let minX = W, minY = H, maxX = -1, maxY = -1;
+        for (let y = 0; y < H; y++) {
+          const row = y * W * 4;
+          for (let x = 0; x < W; x++) {
+            if (d[row + x * 4 + 3] > 8) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+        if (maxX >= minX && maxY >= minY) {
+          const m = Math.max(2, Math.round(Math.max(W, H) * 0.004));
+          bx = Math.max(0, minX - m);
+          by = Math.max(0, minY - m);
+          bw = Math.min(W, maxX + m + 1) - bx;
+          bh = Math.min(H, maxY + m + 1) - by;
+        }
+      } catch { /* обрезаем по всему кадру */ }
+
+      // 4. Вписываем вырезанного персонажа в кадр с заданным полем.
+      const innerW = cw * (1 - 2 * pad), innerH = ch * (1 - 2 * pad);
+      const s = Math.min(innerW / bw, innerH / bh);
+      const w = Math.max(1, Math.round(bw * s));
+      const h = Math.max(1, Math.round(bh * s));
+
+      // 5. Кладём на чистый ключевой цвет, который ждёт SpriteChromaKey.
+      const cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = keyHex;
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(temp, bx, by, bw, bh,
+        Math.round((cw - w) / 2), Math.round((ch - h) / 2), w, h);
+      resolve({ name: 'padded.png', data: cv.toDataURL('image/png') });
+    };
+    src.onerror = () => reject(new Error('не удалось прочитать картинку'));
+    src.src = img.data;
+  });
+}
+
 $('#go').onclick = async () => {
   trEnsureEn('gen');
   if (!S.img) { toast('Сначала загрузите картинку персонажа', 'bad'); return; }
@@ -2702,9 +2905,20 @@ $('#go').onclick = async () => {
     max_frames: +$('#maxFrames').value || 0,
     dedupe_twos: $('#dedupe').checked,
   };
+  const keyHex = { magenta: '#ff00ff', green: '#00ff00', blue: '#0000ff' }[$('#keyColor').value] || '#ff00ff';
+  let sendImg = S.img;
+  if (S.pad) {
+    try {
+      sendImg = await padImage(S.img, S.size.w, S.size.h, S.pad, keyHex);
+    } catch (e) {
+      toast('Не удалось подготовить поле: ' + e.message, 'bad');
+      return;
+    }
+  }
   const body = {
     mode: S.repeat, name: $('#clipName').value.trim(),
-    prompt: $('#prompt').value.trim(), image: S.img,
+    prompt: $('#prompt').value.trim(), image: sendImg,
+    pad: S.pad,
     width: S.size.w, height: S.size.h, length: S.frames,
     seed: S.seedFixed ? +S.seed : 0, steps: S.steps, advanced: adv,
   };
@@ -2814,7 +3028,17 @@ function finish(st, restored = false) {
   zip.style.display = frames.length ? '' : 'none';
   toast(`Готово: ${frameLabel(frames.length)}`, 'ok');
   S.lastPrompt = $('#prompt').value;
+  const localDirs = (st.local && st.local.dirs) || [];
+  if (localDirs[0]) {
+    S.upSource = localDirs[0];
+    S.upDir = '';
+    S.upSize = null;
+    S.upName = '';
+    const done = $('#upDone');
+    if (done) done.hidden = true;
+  }
   buildSheet();
+  loadUpSources();
 }
 
 /* ---------- спрайт-лист (собирается в браузере из кадров RGBA) ---------- */
@@ -2824,6 +3048,30 @@ const loadImg = src => new Promise((res, rej) => {
   im.onerror = () => rej(new Error('кадр не загрузился'));
   im.src = src;
 });
+
+function alphaBox(img, W, H, cv, ctx) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0, W, H);
+  try {
+    const d = ctx.getImageData(0, 0, W, H).data;
+    let minX = W, minY = H, maxX = -1, maxY = -1;
+    for (let y = 0; y < H; y++) {
+      const row = y * W * 4;
+      for (let x = 0; x < W; x++) {
+        if (d[row + x * 4 + 3] > 24) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX >= minX && maxY >= minY) {
+      return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+    }
+  } catch { /* без прозрачности — берём кадр целиком */ }
+  return { x: 0, y: 0, w: W, h: H };
+}
 
 async function buildSheet() {
   const frames = S.framesList || [];
@@ -2851,19 +3099,40 @@ async function buildSheet() {
   const h = imgs[0].naturalHeight || imgs[0].height;
   const LIMIT = 8192;
   const scale = Math.max(10, Math.min(100, +$('#sheetScale').value || 100)) / 100;
-  let cw = Math.max(1, Math.round(w * scale));
-  let ch = Math.max(1, Math.round(h * scale));
+
+  // Общая рамка по прозрачности: убирает пустые поля, но сохраняет смещение между кадрами.
+  const boxCv = document.createElement('canvas');
+  boxCv.width = w; boxCv.height = h;
+  const boxCtx = boxCv.getContext('2d', { willReadFrequently: true });
+  let ux0 = w, uy0 = h, ux1 = -1, uy1 = -1;
+  for (let i = 0; i < imgs.length; i++) {
+    const b = alphaBox(imgs[i], w, h, boxCv, boxCtx);
+    if (b.x < ux0) ux0 = b.x;
+    if (b.y < uy0) uy0 = b.y;
+    if (b.x + b.w > ux1) ux1 = b.x + b.w;
+    if (b.y + b.h > uy1) uy1 = b.y + b.h;
+    if (i % 12 === 0) hint.textContent = `ищу контур: ${i + 1} из ${imgs.length}…`;
+  }
+  const PADP = 2;
+  const crop = (ux1 > ux0 && uy1 > uy0)
+    ? { x: Math.max(0, ux0 - PADP), y: Math.max(0, uy0 - PADP),
+        w: Math.min(w, ux1 + PADP) - Math.max(0, ux0 - PADP),
+        h: Math.min(h, uy1 + PADP) - Math.max(0, uy0 - PADP) }
+    : { x: 0, y: 0, w, h };
+
+  let cw = Math.max(1, Math.round(crop.w * scale));
+  let ch = Math.max(1, Math.round(crop.h * scale));
   let cols = +$('#sheetCols').value || Math.ceil(Math.sqrt(frames.length));
   cols = Math.max(1, Math.min(cols, frames.length));
   while (cols > 1 && cols * cw > LIMIT) cols--;
   const rows = Math.ceil(frames.length / cols);
-  if (rows * ch > LIMIT) {
-    hint.textContent = `Лист получится ${cols * cw}×${rows * ch} — больше ${LIMIT} px по высоте. Выберите масштаб меньше.`;
-    cv.hidden = true;
-    $('#sheetDl').hidden = true;
-    $('#sheetJson').hidden = true;
-    $('#sheetSave').hidden = true;
-    return;
+  let eff = scale;
+  if (rows * ch > LIMIT || cols * cw > LIMIT) {
+    // Не влезает в предел — уменьшаем масштаб, а не отказываем.
+    eff = Math.min(LIMIT / (cols * crop.w), LIMIT / (rows * crop.h));
+    eff = Math.max(0.05, Math.min(1, eff));
+    cw = Math.max(1, Math.round(crop.w * eff));
+    ch = Math.max(1, Math.round(crop.h * eff));
   }
   cv.width = cols * cw;
   cv.height = rows * ch;
@@ -2874,11 +3143,11 @@ async function buildSheet() {
   const cells = [];
   imgs.forEach((im, i) => {
     const x = (i % cols) * cw, y = Math.floor(i / cols) * ch;
-    ctx.drawImage(im, x, y, cw, ch);
+    ctx.drawImage(im, crop.x, crop.y, crop.w, crop.h, x, y, cw, ch);
     cells.push({ i, x, y, w: cw, h: ch });
   });
   cv.hidden = false;
-  const name = ($('#resMeta').textContent.split('·')[0] || 'sprite').trim().replace(/[^\w\-]+/g, '-') || 'sprite';
+  const name = (S.upName || $('#resMeta').textContent.split('·')[0] || 'sprite').trim().replace(/[^\w\-]+/g, '-') || 'sprite';
   cv.toBlob(blob => {
     if (!blob) return;
     const url = URL.createObjectURL(blob);
@@ -2886,7 +3155,7 @@ async function buildSheet() {
     const a = $('#sheetDl');
     a.href = url; a.download = `${name}-sheet.png`; a.hidden = false;
     const atlas = { image: `${name}-sheet.png`, columns: cols, rows, count: frames.length,
-                    frame: { w: cw, h: ch }, frames: cells };
+                    frame: { w: cw, h: ch }, crop, frames: cells };
     const jurl = URL.createObjectURL(new Blob([JSON.stringify(atlas, null, 1)], { type: 'application/json' }));
     S.sheetUrls.push(jurl);
     const j = $('#sheetJson');
@@ -2895,7 +3164,8 @@ async function buildSheet() {
     S.sheetAtlas = atlas;
     $('#sheetSave').hidden = false;
   }, 'image/png');
-  hint.textContent = `${cols}×${rows}, ячейка ${cw}×${ch}, лист ${cv.width}×${cv.height} px.`;
+  hint.textContent = `${cols}×${rows}, ячейка ${cw}×${ch}, лист ${cv.width}×${cv.height} px. Поля обрезаны по контуру кадров.`
+    + (eff < scale - 0.001 ? ` Масштаб подгонён под предел ${LIMIT} px.` : '');
   $('#sheetInfo').textContent = `${frameLabel(frames.length)} → ${cols}×${rows}`;
 }
 
@@ -2932,6 +3202,245 @@ $('#sheetSave').onclick = () => {
   }, 'image/png');
 };
 
+/* ---------- вкладка «Апскейл» ---------- */
+function upBusy(on) {
+  const go = $('#upGo'), stop = $('#upStop');
+  if (go) { go.hidden = on; go.disabled = on || !S.upSource || !S.upModel; }
+  if (stop) stop.hidden = !on;
+}
+
+function upStage(done, total) {
+  const bar = $('#upBar');
+  if (bar) bar.firstElementChild.style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+  const st = $('#upStage');
+  if (st) st.textContent = total ? `Апскейл: ${done} из ${total} кадров` : 'Апскейл: подготовка…';
+}
+
+function upSizeText() {
+  const size = S.upSize;
+  const fv = S.upFactor || 2;
+  const n = S.upCount || 0;
+  const hint = $('#upSizeHint');
+  if (!hint || !n) return;
+  if (!size) { hint.textContent = frameLabel(n); return; }
+  hint.textContent = `${frameLabel(n)} · ${size.w}×${size.h} → ${size.w * fv}×${size.h * fv}`;
+}
+
+function upEntry() {
+  const list = S.upSources || [];
+  if (!list.length) return null;
+  const cur = String(S.upSource || '').replace(/\\/g, '/').toLowerCase();
+  return list.find(s => s.dir.replace(/\\/g, '/').toLowerCase() === cur) || list[0];
+}
+
+const upFileUrl = (s, name) =>
+  '/api/output/file?path=' + encodeURIComponent(s.rel + '/' + name);
+
+function paintUp() {
+  const strip = $('#upStrip'), src = $('#upSrc'), pick = $('#upPick');
+  if (!src || !strip) return;
+  const fv = S.upFactor || 2;
+  document.querySelectorAll('#upFactors button').forEach(b => b.classList.toggle('on', +b.dataset.f === fv));
+  const v = $('#upFactorV'); if (v) v.textContent = '×' + fv;
+
+  const list = S.upSources || [];
+  const entry = upEntry();
+  if (entry) S.upSource = entry.dir;
+  if (pick) {
+    pick.hidden = list.length < 2;
+    pick.innerHTML = list.map(s =>
+      `<option value="${esc(s.dir)}"${entry && s.dir === entry.dir ? ' selected' : ''}>`
+      + `${esc(s.name)} / ${esc(s.run)} · ${s.count}</option>`).join('');
+  }
+
+  if (!entry) {
+    src.textContent = 'Сначала сделайте анимацию — кадры последнего прогона появятся здесь.';
+    strip.innerHTML = '';
+    S.upCount = 0;
+    $('#upSizeHint').textContent = 'В апскейл попадают кадры с прозрачностью из последней анимации.';
+    upBusy(false);
+    return;
+  }
+
+  S.upCount = entry.count;
+  src.innerHTML = `Прогон <b>${esc(entry.name)} / ${esc(entry.run)}</b>`;
+  strip.innerHTML = entry.files.slice(0, 10).map(n =>
+    `<img src="${upFileUrl(entry, n)}" alt="" loading="lazy">`).join('');
+  const first = strip.querySelector('img');
+  const measure = () => {
+    if (!first || !first.naturalWidth) return;
+    S.upSize = { w: first.naturalWidth, h: first.naturalHeight };
+    upSizeText();
+  };
+  if (first) { if (first.complete) measure(); else first.onload = measure; }
+  upSizeText();
+  upBusy(!!S.upJob);
+}
+
+async function loadUpSources() {
+  try {
+    const r = await fetch('/api/upscale/sources');
+    const j = await r.json();
+    S.upSources = (j.sources || []).map(s => ({ ...s, dir: String(s.dir).replace(/\//g, '\\') }));
+  } catch { /* список останется прежним */ }
+  paintUp();
+}
+
+async function checkUpModel() {
+  const el = $('#upModel');
+  if (!el) return;
+  let model = S.upModel || '';
+  try {
+    const st = await (await fetch('/api/state')).json();
+    model = (st.upscale || {}).model || '';
+  } catch { /* ComfyUI недоступен */ }
+  S.upModel = model;
+  if (model) {
+    el.className = 'upModel';
+    el.innerHTML = `Модель: <b>${model}</b>`;
+  } else {
+    el.className = 'upModel bad';
+    el.innerHTML = 'Модель апскейла не скачана. Ей нужен интернет один раз, дальше всё локально. '
+      + '<button class="chip" id="upModelDl" type="button">⤓ Скачать 17 МБ</button>';
+    const dl = $('#upModelDl');
+    if (dl) dl.onclick = async () => {
+      dl.disabled = true;
+      dl.textContent = 'скачиваю…';
+      try { await startGroupDownload('upscale'); } catch (e) { toast(e.message, 'bad'); }
+      const until = Date.now() + 6 * 60 * 1000;
+      const tick = async () => {
+        try {
+          const st = await (await fetch('/api/state')).json();
+          if ((st.upscale || {}).model) { await checkUpModel(); paintUp(); toast('Модель апскейла готова', 'ok'); return; }
+        } catch { /* ждём */ }
+        if (Date.now() < until) setTimeout(tick, 4000);
+        else { dl.disabled = false; dl.textContent = '⤓ Скачать 17 МБ'; toast('Модель ещё не видна — перезапустите ComfyUI', 'bad'); }
+      };
+      setTimeout(tick, 3000);
+    };
+  }
+  paintUp();
+}
+
+document.querySelectorAll('#upFactors button').forEach(b => {
+  b.onclick = () => {
+    S.upFactor = +b.dataset.f || 2;
+    paintUp();
+  };
+});
+
+$('#upPick').onchange = e => {
+  S.upSource = e.target.value;
+  S.upSize = null;
+  paintUp();
+};
+$('#upRefresh').onclick = () => loadUpSources();
+
+function upFail(msg) {
+  clearTimeout(S.upTick);
+  $('#upProg').classList.remove('on');
+  upBusy(false);
+  toast('Апскейл: ' + msg, 'bad');
+  S.upJob = null;
+}
+
+function pollUp() {
+  clearTimeout(S.upTick);
+  if (!S.upJob) return;
+  const t = $('#upTime');
+  if (t) t.textContent = fmtT(performance.now() - S.upJob.t0);
+  fetch('/api/job?id=' + encodeURIComponent(S.upJob.id)).then(r => r.json()).then(st => {
+    if (st.state === 'done') return upFinish(st);
+    if (st.state === 'error') return upFail(st.error || 'остановлено');
+    upStage(st.done || 0, st.total || S.upJob.total || 0);
+    S.upTick = setTimeout(pollUp, 1500);
+  }).catch(() => { S.upTick = setTimeout(pollUp, 2500); });
+}
+
+async function upFinish(st) {
+  clearTimeout(S.upTick);
+  $('#upProg').classList.remove('on');
+  const outs = st.outputs || [];
+  const factor = (st.meta && +st.meta.factor) || (S.upJob && S.upJob.factor) || 2;
+  const local = (st.local && st.local.dirs) || [];
+  if (st.meta && st.meta.name) S.upName = String(st.meta.name);
+  if (outs.length) {
+    S.framesList = outs;
+    S.upFrames = outs;
+    if (local[0]) S.upDir = local[0];
+  }
+  upBusy(false);
+  jobsDone(S.upJob && S.upJob.id);
+  S.upJob = null;
+  const box = $('#upDone');
+  if (box) box.hidden = false;
+  const text = $('#upDoneText');
+  let size = '';
+  try {
+    const im = await loadImg(fileUrl(S.framesList[0]));
+    S.upSize = { w: Math.round((im.naturalWidth || im.width) / factor),
+                 h: Math.round((im.naturalHeight || im.height) / factor) };
+    size = `${im.naturalWidth || im.width}×${im.naturalHeight || im.height}`;
+  } catch { /* размер покажем после перезагрузки */ }
+  if (text) {
+    text.innerHTML = `<div>Готово: <b>${frameLabel(outs.length)}</b>${size ? ' · <b>' + size + '</b>' : ''} · ×${factor}</div>`
+      + '<div class="hint">Лист теперь собирается из увеличенных кадров.</div>';
+  }
+  const doneStrip = $('#upDoneStrip');
+  if (doneStrip) {
+    doneStrip.innerHTML = outs.slice(0, 10).map(o =>
+      `<img src="${fileUrl(o)}" alt="" loading="lazy">`).join('');
+  }
+  const toSheet = $('#upToSheet');
+  if (toSheet) toSheet.onclick = () => {
+    setTab('gen');
+    const res = $('#res');
+    if (res) res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => buildSheet(), 320);
+  };
+  const open = $('#upOpen');
+  if (open) {
+    open.hidden = false;
+    open.onclick = e => { e.preventDefault(); fetch('/api/settings/open', { method: 'POST' }).catch(() => {}); };
+  }
+  paintUp();
+  toast('Апскейл готов: ' + frameLabel(outs.length), 'ok');
+}
+
+$('#upGo').onclick = async () => {
+  const entry = upEntry();
+  if (!entry) { toast('Сначала сделайте анимацию', 'bad'); return; }
+  if (S.upJob) return;
+  if (!S.upModel) { toast('Скачайте модель апскейла', 'bad'); return; }
+  upBusy(true);
+  $('#upDone').hidden = true;
+  const ds = $('#upDoneStrip');
+  if (ds) ds.innerHTML = '';
+  $('#upProg').classList.add('on');
+  upStage(0, entry.count);
+  try {
+    const r = await fetch('/api/upscale', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dir: entry.dir, factor: S.upFactor || 2 }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось начать');
+    S.upJob = { id: j.id, total: j.total, factor: +j.factor || 2, t0: performance.now() };
+    pollUp();
+  } catch (e) {
+    upFail(e.message);
+  }
+};
+
+$('#upStop').onclick = async () => {
+  if (!S.upJob) return;
+  $('#upStage').textContent = 'Останавливаю…';
+  await fetch('/api/stop', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: S.upJob.id }),
+  }).catch(() => {});
+};
+
 /* Открыть готовый прогон по ссылке ?job=<id> — результат переживает перезагрузку. */
 async function openJob(id) {
   try {
@@ -2957,6 +3466,8 @@ function setTab(name) {
   $('#genPage').hidden = name !== 'gen';
   $('#bgPage').hidden = name !== 'bg';
   $('#imgPage').hidden = name !== 'img';
+  const upPage = $('#upPage');
+  if (upPage) upPage.hidden = name !== 'up';
   document.body.classList.toggle('tab-img', name === 'img');
   document.body.classList.toggle('tab-bg', name === 'bg');
   document.body.classList.toggle('tab-gen', name === 'gen');
@@ -2965,6 +3476,7 @@ function setTab(name) {
     history.replaceState(null, '', name === 'img' ? base : base + '#' + name);
   } catch {}
   if (sheet) { ensureSheet(); layoutSheet(); }
+  if (name === 'up') { loadUpSources(); checkUpModel(); }
   if (name === 'bg') paintBg();
   if (name === 'img') paintImg();
 }
