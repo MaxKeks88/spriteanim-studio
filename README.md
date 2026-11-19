@@ -75,7 +75,7 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.1.exe
+Install\SpriteAnimStudio-Setup-0.3.2.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
@@ -86,7 +86,7 @@ Install\SpriteAnimStudio-Setup-0.3.1.exe
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.1.exe
+Install\SpriteAnimStudio-Setup-0.3.2.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
@@ -114,9 +114,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.1.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.2.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.1.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.2.exe`.
 
 ---
 

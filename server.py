@@ -80,7 +80,8 @@ def sheets_dir() -> Path:
 
 
 def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
-               cw: int = 0, ch: int = 0, count: int = 0) -> dict:
+               cw: int = 0, ch: int = 0, count: int = 0,
+               crop: str = "", src: str = "") -> dict:
     """Сохраняет готовый спрайт-лист и его JSON в output/sheets/<имя>-<время>."""
     if not blob or len(blob) < 100:
         raise ValueError("пустой лист")
@@ -95,6 +96,16 @@ def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
     cw = max(0, int(cw or 0))
     ch = max(0, int(ch or 0))
     count = max(0, int(count or 0))
+
+    def nums(raw: str, keys: tuple[str, ...]) -> dict:
+        try:
+            values = [int(v) for v in str(raw or "").split(",")]
+        except ValueError:
+            return {}
+        if len(values) != len(keys):
+            return {}
+        return dict(zip(keys, values))
+
     cells = []
     if columns and cw:
         for i in range(count):
@@ -102,6 +113,12 @@ def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
                           "y": (i // columns) * ch, "w": cw, "h": ch})
     atlas = {"image": png.name, "columns": columns, "rows": rows,
              "count": count, "frame": {"w": cw, "h": ch}, "frames": cells}
+    source = nums(src, ("w", "h"))
+    if source:
+        atlas["source"] = source
+    box = nums(crop, ("x", "y", "w", "h"))
+    if box:
+        atlas["crop"] = box
     js = dest / f"{slug}-sheet.json"
     js.write_text(json.dumps(atlas, ensure_ascii=False, indent=1), "utf-8")
     return {"dir": str(dest), "png": str(png), "json": str(js), "size": len(blob)}
@@ -138,7 +155,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.3.1"
+APP_VERSION = "0.3.2"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -3146,6 +3163,8 @@ class Handler(BaseHTTPRequestHandler):
                         int((q.get("cw") or ["0"])[0] or 0),
                         int((q.get("ch") or ["0"])[0] or 0),
                         int((q.get("count") or ["0"])[0] or 0),
+                        (q.get("crop") or [""])[0],
+                        (q.get("src") or [""])[0],
                     ))
                 except ValueError as exc:
                     return self._bad(str(exc), 422)

@@ -3155,7 +3155,7 @@ async function buildSheet() {
     const a = $('#sheetDl');
     a.href = url; a.download = `${name}-sheet.png`; a.hidden = false;
     const atlas = { image: `${name}-sheet.png`, columns: cols, rows, count: frames.length,
-                    frame: { w: cw, h: ch }, crop, frames: cells };
+                    frame: { w: cw, h: ch }, source: { w, h }, crop, frames: cells };
     const jurl = URL.createObjectURL(new Blob([JSON.stringify(atlas, null, 1)], { type: 'application/json' }));
     S.sheetUrls.push(jurl);
     const j = $('#sheetJson');
@@ -3184,6 +3184,8 @@ $('#sheetSave').onclick = () => {
   const qs = new URLSearchParams({
     name: S.sheetName || 'sprite',
     cols: a.columns, rows: a.rows, cw: a.frame.w, ch: a.frame.h, count: a.count,
+    crop: [a.crop.x, a.crop.y, a.crop.w, a.crop.h].join(','),
+    src: [a.source.w, a.source.h].join(','),
   });
   cv.toBlob(async blob => {
     try {
