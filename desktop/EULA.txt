@@ -1,0 +1,32 @@
+﻿SpriteAnim Studio — лицензионное соглашение (бесплатная версия)
+SpriteAnim Studio — license agreement (free version)
+
+1. ПРОГРАММА БЕСПЛАТНА / FREE OF CHARGE
+   Программа распространяется бесплатно. Платить за неё, за модели или за
+   обновления не нужно. The app is distributed free of charge: no payment is
+   required for the app, the models or the updates.
+
+2. ИСХОДНЫЙ КОД / SOURCE CODE
+   Исходный код доступен под лицензией MIT (файл LICENSE в репозитории):
+   используйте, меняйте и распространяйте с сохранением уведомления об
+   авторстве. The source code is available under the MIT License (see LICENSE
+   in the repository): use, modify and redistribute it keeping the copyright
+   notice.
+
+3. СТОРОННИЕ КОМПОНЕНТЫ / THIRD-PARTY COMPONENTS
+   ComfyUI, модели, движок распознавания речи и другие сторонние компоненты
+   не входят в эту лицензию и работают по своим условиям. Подробности — в
+   файле THIRD-PARTY.md. ComfyUI, the models, the speech engine and other
+   third-party components are not covered by this license and keep their own
+   terms. See THIRD-PARTY.md.
+
+4. ГАРАНТИЙ НЕТ / NO WARRANTY
+   Программа предоставляется «как есть», без гарантий. Автор не отвечает за
+   потерю данных, результаты генерации и последствия использования.
+   The software is provided "as is", without warranty of any kind. The author
+   is not liable for data loss, generated results or any consequences of use.
+
+5. НАЗВАНИЕ / NAME
+   Изменённые сборки нельзя выдавать за официальные релизы SpriteAnim Studio
+   или MaxKeks88. Modified builds must not be presented as official
+   SpriteAnim Studio or MaxKeks88 releases.

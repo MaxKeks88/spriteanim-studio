@@ -410,6 +410,24 @@ body.sheet-on #sheetView{display:flex}
 .dir-row:hover{background:rgba(var(--acc-rgb),.14)}
 .dir-empty{padding:16px;color:var(--muted);font-size:12.5px;text-align:center}
 .dir-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--line2)}
+
+/* окно «ComfyUI не запущен» */
+#comfyModal{position:fixed;inset:0;z-index:97;background:rgba(6,7,11,.72);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center}
+#comfyModal[hidden]{display:none}
+.comfy-box{width:min(680px,92vw);background:var(--bg2);border:1px solid var(--line2);border-radius:14px;
+  overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.comfy-body{padding:16px 16px 8px;display:flex;flex-direction:column;gap:10px}
+.comfy-text{margin:0;font-size:13px;line-height:1.55;color:var(--muted)}
+.comfy-text b{color:var(--text)}
+.comfy-cmd{font-size:12px;color:var(--dim);word-break:break-all;min-height:16px}
+.comfy-note{font-size:12.5px;color:var(--warn);border:1px solid rgba(var(--warn-rgb),.35);
+  background:rgba(var(--warn-rgb),.08);border-radius:10px;padding:8px 10px}
+.comfy-check{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);cursor:pointer;margin-top:10px}
+.comfy-check input{width:auto;margin:0}
+.comfy-check small{color:var(--dim);font-size:11px}
+.comfy-check-side{margin-top:2px;padding-top:6px;border-top:1px dashed var(--line2)}
+.comfy-body .prog{margin-top:4px}
 /* ---------- голосовой ввод ---------- */
 .promptWrap{position:relative;display:block;min-width:0}
 .promptWrap textarea{padding-right:34px}
@@ -1123,6 +1141,21 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
         <button class="chip" id="comfyRun" type="button" hidden>▶ Запустить ComfyUI</button>
         <button class="chip" id="setupRefresh" type="button">↻ Проверить снова</button>
       </div>
+
+      <label class="comfy-check">
+        <input type="checkbox" id="comfyAutoSet">
+        <span>Запускать ComfyUI при старте приложения</span>
+        <small>в фоне, свёрнутым</small>
+      </label>
+
+      <div class="set-sublabel" style="margin-top:12px">Чем запускать</div>
+      <div class="set-row">
+        <input type="text" id="comfyCmdIn" spellcheck="false" placeholder="Comfy Desktop.exe, ComfyUI.exe или .bat">
+        <button class="chip" id="comfyCmdPick" type="button">📁 Выбрать</button>
+      </div>
+      <div class="hint">Если не указано — приложение ищет portable-сборку в своей папке, ярлык
+        «Comfy Desktop» в меню «Пуск» и типовые места установки.</div>
+
       <div class="setup-note" id="comfyNote" hidden></div>
     </div>
 
@@ -1170,6 +1203,36 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
 </div>
 
 <div id="toasts"></div>
+
+<div id="comfyModal" hidden>
+  <div class="comfy-box">
+    <div class="dir-head">
+      <b id="comfyTitle">ComfyUI не запущен</b>
+      <span class="spacer"></span>
+      <button class="chip" id="comfyClose" type="button">✕</button>
+    </div>
+    <div class="comfy-body">
+      <p class="comfy-text" id="comfyText">Приложение работает поверх ComfyUI: он считает картинки,
+        фон и анимацию. Запустите его — и рабочее пространство оживёт само, перезапускать
+        приложение не нужно.</p>
+      <div class="comfy-cmd" id="comfyCmdPath"></div>
+      <div class="prog" id="comfyProg">
+        <div class="bar"><i></i></div>
+        <div class="st"><span id="comfyStage"></span><span id="comfyTime"></span></div>
+      </div>
+      <div class="comfy-note" id="comfyErr" hidden></div>
+      <label class="comfy-check comfy-check-side">
+        <input type="checkbox" id="comfyAutoBox">
+        <span>Запускать в фоне при старте приложения</span>
+      </label>
+    </div>
+    <div class="dir-foot">
+      <button class="chip dir-ok" id="comfyStart" type="button">▶ Запустить ComfyUI</button>
+      <button class="chip" id="comfyPickBtn" type="button">📁 Указать программу…</button>
+      <button class="chip" id="comfySkip" type="button">Продолжить без него</button>
+    </div>
+  </div>
+</div>
 
 <div id="dirModal" hidden>
   <div class="dir-box">
@@ -1224,6 +1287,7 @@ const S = {
   prompts: {}, names: {}, framesList: [], voiceReady: false, pad: 0.15,
   upFactor: 2, upSource: '', upModel: '', upJob: null, upSize: null, upDir: '',
   upSources: [], upCount: 0, upName: '', upResults: [], upSheets: [], upResult: null,
+  comfyOnline: null, comfyAuto: false, comfyCmd: '', comfyRemembered: false,
 };
 const FRAMES = [22, 39, 56, 73, 90, 107, 124, 141, 158, 175, 192, 209, 226];
 const framesFor = sec => {
@@ -2076,7 +2140,15 @@ function renderSetup() {
   $('#comfyPath').textContent = d.comfy.online
     ? (d.comfy.version ? 'версия ' + d.comfy.version : '')
     : 'установите ComfyUI, чтобы работали все вкладки';
-  $('#comfyRun').hidden = d.comfy.online || !d.comfy.portable;
+  $('#comfyRun').hidden = d.comfy.online;
+  $('#comfyRun').textContent = (d.comfy.cmd || d.comfy.remembered)
+    ? '▶ Запустить ComfyUI' : '📁 Указать программу…';
+  const comfyAuto = $('#comfyAutoSet');
+  if (comfyAuto) comfyAuto.checked = !!d.comfy.auto;
+  const comfyCmdIn = $('#comfyCmdIn');
+  if (comfyCmdIn && document.activeElement !== comfyCmdIn) comfyCmdIn.value = d.comfy.cmd || '';
+  S.comfyCmd = d.comfy.cmd || S.comfyCmd;
+  S.comfyAuto = !!d.comfy.auto;
   $('#setupTotal').innerHTML = 'Всего моделей: <b>' + fmtBytes(d.total_size) + '</b>'
     + (d.models_root ? ' · папка моделей: ' + esc(d.models_root) : '')
     + ' · агент: ' + esc(d.agent_dir);
@@ -2206,13 +2278,7 @@ $('#comfyInstall').onclick = async () => {
 };
 $('#setupRefresh').onclick = loadSetup;
 $('#comfyRun').onclick = async () => {
-  try {
-    const r = await fetch('/api/setup/comfy/run', { method: 'POST' });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || 'не удалось запустить');
-    toast('ComfyUI запускается — это займёт несколько секунд', 'ok');
-    setTimeout(loadSetup, 5000);
-  } catch (e) { toast(e.message, 'bad'); }
+  await comfyStartFlow();
 };
 
 async function checkSetupReady() {
@@ -2225,10 +2291,8 @@ async function checkSetupReady() {
     const missing = (d.groups || []).filter(g => g.enabled && g.id !== 'voice' && g.state !== 'ok');
     const bad = !d.comfy.online || missing.length > 0;
     $('#setBtn').classList.toggle('attention', bad);
-    if (bad) {
-      const names = [];
-      if (!d.comfy.online) names.push('ComfyUI не запущен');
-      for (const g of missing) names.push(g.title);
+    if (missing.length) {
+      const names = missing.map(g => g.title);
       toast('Не хватает: ' + names.join(', ') + ' — откройте «Настройки»', 'bad');
     }
   } catch { }
@@ -2449,27 +2513,54 @@ document.addEventListener('click', e => {
   if (ta) micToggle(btn, ta);
 });
 
+function applyState(st, opts = {}) {
+  if (!st) return;
+  S.modes = st.modes || S.modes || [];
+  S.bgInfo = st.bg || S.bgInfo || {};
+  S.image = st.image || S.image || { models: [] };
+  if (st.comfy) {
+    S.comfyOnline = !!st.comfy.online;
+    if (st.comfy.cmd !== undefined && st.comfy.cmd !== null) S.comfyCmd = String(st.comfy.cmd || '');
+    if (st.comfy.auto !== undefined) S.comfyAuto = !!st.comfy.auto;
+    if (st.comfy.remembered !== undefined) S.comfyRemembered = !!st.comfy.remembered;
+  }
+  paintComfy(st.comfy);
+  $('#queuePill').hidden = !(st.comfy && (st.comfy.running + st.comfy.pending));
+  if (st.comfy && st.comfy.running + st.comfy.pending) {
+    $('#queueN').textContent = st.comfy.running + st.comfy.pending;
+  }
+  const first = !Object.keys(S.byRepeat || {}).length;
+  S.byRepeat = {};
+  S.modes.forEach(m => { if (!S.byRepeat[m.repeat]) S.byRepeat[m.repeat] = m; });
+  if (first && S.modes.length) {
+    renderRepeat();
+    applyRepeat(S.byRepeat.cycle ? 'cycle' : Object.keys(S.byRepeat)[0]);
+  }
+  renderSizes();
+  paintParams();
+  paintBg();
+  paintImg();
+}
+
 async function boot() {
   try {
+    let cfg = {};
     try {
-      const cfg = await (await fetch('/api/settings')).json();
+      cfg = await (await fetch('/api/settings')).json();
       applyTheme(cfg.theme || 'studio', false);
       applyLang(cfg.lang || defaultLang(), false);
       checkUpdate();
     } catch { }
+    S.comfyAuto = !!cfg.comfy_auto;
+    S.comfyCmd = cfg.comfy_launcher || cfg.comfy_cmd || '';
+    S.comfyRemembered = !!cfg.comfy_remembered;
     const st = await (await fetch('/api/state')).json();
-    S.modes = st.modes || [];
-    S.bgInfo = st.bg || {};
-    S.image = st.image || { models: [] };
-    paintComfy(st.comfy);
-    $('#queuePill').hidden = !(st.comfy && (st.comfy.running + st.comfy.pending));
-    if (st.comfy && st.comfy.running + st.comfy.pending) $('#queueN').textContent = st.comfy.running + st.comfy.pending;
+    applyState(st);
     if (!S.modes.length) throw new Error('нет воркфлоу в папке workflows');
-    S.byRepeat = {};
-    S.modes.forEach(m => { if (!S.byRepeat[m.repeat]) S.byRepeat[m.repeat] = m; });
-    renderRepeat();
-    applyRepeat(S.byRepeat.cycle ? 'cycle' : Object.keys(S.byRepeat)[0]);
-    if (!st.comfy || !st.comfy.online) toast('ComfyUI не отвечает — запустите его и обновите страницу', 'bad');
+    if (!st.comfy || !st.comfy.online) {
+      if (S.comfyAuto) comfyStartFlow();
+      else comfyShow();
+    }
     const jid = new URLSearchParams(location.search).get('job');
     if (jid) openJob(jid);
     else restoreJobs();
@@ -4626,18 +4717,183 @@ async function runAgent(brief) {
   }
 }
 
+/* ---------- ComfyUI: окно «не запущен», запуск и автоподхват ---------- */
+let comfyTimer = null;
+let comfyAnnounced = 0;
+
+function comfySetAuto(on) {
+  const a = $('#comfyAutoSet'), b = $('#comfyAutoBox');
+  if (a) a.checked = !!on;
+  if (b) b.checked = !!on;
+}
+
+async function comfySaveAuto(on) {
+  try {
+    const r = await fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comfy_auto: !!on }),
+    });
+    if (!r.ok) throw new Error('не удалось сохранить настройку');
+    S.comfyAuto = !!on;
+    comfySetAuto(on);
+    toast(on ? 'ComfyUI будет запускаться при старте' : 'Автозапуск выключен', 'ok');
+  } catch (e) {
+    toast(e.message, 'bad');
+    comfySetAuto(S.comfyAuto);
+  }
+}
+
+function comfyShow(opts = {}) {
+  const starting = !!opts.starting;
+  const m = $('#comfyModal');
+  if (!m) return;
+  m.hidden = false;
+  $('#comfyErr').hidden = true;
+  $('#comfyTitle').textContent = starting ? 'ComfyUI запускается…' : 'ComfyUI не запущен';
+  $('#comfyText').textContent = starting
+    ? 'Запускаю ComfyUI в фоне. Обычно это занимает 10–40 секунд — рабочее пространство оживёт само.'
+    : 'Приложение работает поверх ComfyUI: он считает картинки, фон и анимацию. Запустите его — и рабочее пространство оживёт само, перезапускать приложение не нужно.';
+  const what = S.comfyCmd || (S.comfyRemembered ? 'запомненная команда запуска ComfyUI' : '');
+  $('#comfyCmdPath').textContent = what
+    ? 'Программа: ' + what
+    : 'Программа запуска не найдена — укажите её кнопкой ниже.';
+  $('#comfyProg').classList.toggle('on', starting);
+  $('#comfyStart').hidden = starting;
+  $('#comfyPickBtn').hidden = starting;
+  $('#comfyStage').textContent = starting ? 'запускаю…' : '';
+  $('#comfyTime').textContent = '';
+  comfySetAuto(S.comfyAuto);
+  if (!starting) { clearTimeout(comfyTimer); comfyTimer = null; }
+}
+
+function comfyHide() {
+  clearTimeout(comfyTimer);
+  comfyTimer = null;
+  const m = $('#comfyModal');
+  if (m) m.hidden = true;
+}
+
+function comfyOnOnline(st) {
+  if (Date.now() - comfyAnnounced < 3000) return;
+  comfyAnnounced = Date.now();
+  comfyHide();
+  applyState(st);
+  toast('ComfyUI подключён', 'ok');
+  checkSetupReady();
+}
+
+function comfyFail(msg) {
+  clearTimeout(comfyTimer);
+  comfyTimer = null;
+  $('#comfyProg').classList.remove('on');
+  $('#comfyTitle').textContent = 'ComfyUI не запущен';
+  $('#comfyStage').textContent = '';
+  $('#comfyTime').textContent = '';
+  $('#comfyStart').hidden = false;
+  $('#comfyPickBtn').hidden = false;
+  const err = $('#comfyErr');
+  err.textContent = msg;
+  err.hidden = false;
+}
+
+function comfyTick(t0) {
+  clearTimeout(comfyTimer);
+  $('#comfyTime').textContent = fmtT(Date.now() - t0);
+  if (Date.now() - t0 > 180000) {
+    comfyFail('Не дождались ComfyUI. Запустите его вручную — окно закроется, как только он ответит.');
+    return;
+  }
+  comfyTimer = setTimeout(async () => {
+    try {
+      const st = await (await fetch('/api/state')).json();
+      if (st.comfy && st.comfy.online) { comfyOnOnline(st); return; }
+    } catch { /* ждём дальше */ }
+    comfyTick(t0);
+  }, 2000);
+}
+
+async function comfyStartFlow() {
+  if (!S.comfyCmd && !S.comfyRemembered) {
+    const ok = await comfyPick();
+    if (!ok) { comfyShow(); return; }
+  }
+  comfyShow({ starting: true });
+  try {
+    const r = await fetch('/api/comfy/start', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось запустить');
+    if (j.already) {
+      const st = await (await fetch('/api/state')).json();
+      comfyOnOnline(st);
+      return;
+    }
+    comfyTick(Date.now());
+  } catch (e) {
+    comfyFail(e.message);
+  }
+}
+
+async function comfyPick() {
+  try {
+    const r = await fetch('/api/comfy/pick', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось выбрать программу');
+    if (!j.ok) return false;
+    S.comfyCmd = j.path;
+    $('#comfyCmdIn').value = j.path;
+    $('#comfyCmdPath').textContent = 'Программа: ' + j.path;
+    toast('Программа запуска сохранена', 'ok');
+    return true;
+  } catch (e) {
+    toast(e.message, 'bad');
+    return false;
+  }
+}
+
+$('#comfyStart').onclick = () => comfyStartFlow();
+$('#comfyPickBtn').onclick = async () => { if (await comfyPick()) comfyShow(); };
+$('#comfySkip').onclick = comfyHide;
+$('#comfyClose').onclick = comfyHide;
+$('#comfyAutoBox').onchange = e => comfySaveAuto(e.target.checked);
+$('#comfyAutoSet').onchange = e => comfySaveAuto(e.target.checked);
+$('#comfyCmdPick').onclick = () => comfyPick();
+$('#comfyCmdIn').onchange = async e => {
+  const v = e.target.value.trim();
+  try {
+    const r = await fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comfy_cmd: v }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'путь не принят');
+    S.comfyCmd = j.comfy_launcher || '';
+    e.target.value = S.comfyCmd;
+    toast('Путь сохранён', 'ok');
+  } catch (err) { toast(err.message, 'bad'); }
+};
+$('#comfyModal').addEventListener('click', e => {
+  if (e.target.id === 'comfyModal') comfyHide();
+});
+
 boot();
 const startTab = (location.hash || '').slice(1);
-if (['img', 'bg', 'gen', 'sheet'].includes(startTab)) setTab(startTab);
+if (['img', 'bg', 'gen', 'up', 'sheet'].includes(startTab)) setTab(startTab);
 setInterval(async () => {
   try {
     const j = await (await fetch('/api/state')).json();
+    const was = S.comfyOnline;
+    const online = !!(j.comfy && j.comfy.online);
     paintComfy(j.comfy);
     const jobs = (await (await fetch('/api/jobs')).json()).jobs || [];
     const active = jobs.filter(x => x.state === 'running' || x.state === 'queued');
     $('#queuePill').hidden = !active.length;
     $('#queueN').textContent = active.length;
     if ($('#queuePop').hidden === false) renderQueue(active);
+    if (online !== was) {
+      S.comfyOnline = online;
+      if (online) comfyOnOnline(j);
+      else if (was) toast('ComfyUI перестал отвечать — запустите его снова', 'bad');
+    }
   } catch {}
 }, 5000);
 

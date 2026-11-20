@@ -36,6 +36,7 @@ available in **Russian and English**.
 | **Апскейл** — отдельная вкладка между анимацией и листом: кадры увеличиваются в 2–4 раза (Real-ESRGAN), альфа сохраняется | **Upscale** — its own tab between animation and sheet: frames are scaled ×2–×4 (Real-ESRGAN) with alpha preserved |
 | **Сравнение до/после** — ползунок по первому кадру показывает, что дал апскейл | **Before/after compare** — a slider over the first frame shows what the upscale actually did |
 | **Память прогонов** — у прогонов видна пометка «×2», готовый апскейл открывается без повторного счёта, сохранённые листы — отдельным списком | **Run memory** — runs show a “×2” badge, a finished upscale opens without recomputing, and saved sheets are listed separately |
+| **Запуск ComfyUI** — при старте приложение проверяет его и предлагает запустить в фоне; есть галочка автозапуска | **ComfyUI start** — checked at startup with a “start in background” dialog; auto-start is a checkbox |
 | **Спрайт-лист** — встроенный редактор: сетка, поля, выравнивание, установка в Godot 4 и Unity | **Sprite sheet** — built-in editor: grid, padding, alignment, install into Godot 4 or Unity |
 | **Промпт агентом** — локальная модель пишет промпт по вашему описанию и видит исходную картинку | **Prompt with agent** — a local model writes the prompt from your brief and can see the source image |
 | **Голосовой ввод** — русская модель GigaAM v3, работает локально (скачивается из настроек) | **Voice input** — Russian GigaAM v3 model, runs locally (downloaded from Settings) |
@@ -77,7 +78,7 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.3.exe
+Install\SpriteAnimStudio-Setup-0.3.4.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
@@ -88,7 +89,7 @@ Install\SpriteAnimStudio-Setup-0.3.3.exe
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.3.exe
+Install\SpriteAnimStudio-Setup-0.3.4.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
@@ -116,9 +117,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.3.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.4.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.3.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.4.exe`.
 
 ---
 
@@ -227,8 +228,13 @@ Install/           готовый установщик
 
 ## Лицензия / License
 
-Лицензия пока не выбрана. Если планируете использовать код в своих проектах,
-напишите в issue — добавим подходящую (например, MIT).
+Код — **MIT** (файл [`LICENSE`](LICENSE)): используйте, меняйте и распространяйте
+с сохранением уведомления об авторстве. Программа распространяется бесплатно;
+при установке показывается соглашение [`desktop/EULA.txt`](desktop/EULA.txt).
+ComfyUI, модели и другие сторонние компоненты работают по своим лицензиям —
+см. [`THIRD-PARTY.md`](THIRD-PARTY.md).
 
-No license has been chosen yet. If you want to reuse the code, open an issue and
-we will add a suitable license (for example MIT).
+The code is **MIT** (see [`LICENSE`](LICENSE)): use, modify and redistribute it
+with the copyright notice. The app is free; the installer shows the
+[`EULA`](desktop/EULA.txt). ComfyUI, the models and other third-party components
+keep their own licenses — see [`THIRD-PARTY.md`](THIRD-PARTY.md).

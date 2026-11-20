@@ -5,7 +5,7 @@
 ; поэтому не требует прав администратора и может писать .cache/output/voice рядом.
 
 #define AppName "SpriteAnim Studio"
-#define AppVersion "0.3.3"
+#define AppVersion "0.3.4"
 #define AppExe "SpriteAnimStudio.exe"
 
 [Setup]
@@ -13,7 +13,11 @@ AppId={{7E2C5A54-4B7E-4C2F-9E51-9A7D3B1C6F20}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
-AppPublisher=SpriteAnim Studio
+AppPublisher=MaxKeks88
+AppPublisherURL=https://github.com/MaxKeks88/spriteanim-studio
+AppSupportURL=https://github.com/MaxKeks88/spriteanim-studio/issues
+AppUpdatesURL=https://github.com/MaxKeks88/spriteanim-studio/releases
+LicenseFile=EULA.txt
 DefaultDirName={localappdata}\Programs\SpriteAnimStudio
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes

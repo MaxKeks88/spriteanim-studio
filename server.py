@@ -59,6 +59,14 @@ def _load_settings():
                 _settings["theme"] = str(data["theme"])
             if data.get("lang") in LANGS:
                 _settings["lang"] = str(data["lang"])
+            if data.get("comfy_auto"):
+                _settings["comfy_auto"] = True
+            if data.get("comfy_cmd"):
+                _settings["comfy_cmd"] = str(data["comfy_cmd"])
+            if data.get("comfy_cmdline"):
+                _settings["comfy_cmdline"] = str(data["comfy_cmdline"])
+            if data.get("comfy_cwd"):
+                _settings["comfy_cwd"] = str(data["comfy_cwd"])
     except Exception:  # noqa: BLE001
         pass
 
@@ -133,7 +141,7 @@ def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
 
 def default_models_dir() -> str:
     """Папка моделей ComfyUI, которую он сам показывает."""
-    roots = comfy_folder_paths(force=True).get("diffusion_models") or []
+    roots = comfy_folder_paths().get("diffusion_models") or []
     first = next((r for r in roots if r), "")
     return str(Path(first).parent) if first else ""
 
@@ -158,11 +166,15 @@ def settings_info() -> dict:
         "agent_dir": str(agent_home()), "agent_default": default_agent_dir(),
         "theme": _settings.get("theme") or "studio", "themes": list(THEMES),
         "lang": _settings.get("lang") or "", "langs": list(LANGS),
+        "comfy_auto": bool(_settings.get("comfy_auto")),
+        "comfy_cmd": str(_settings.get("comfy_cmd") or ""),
+        "comfy_launcher": comfy_launcher_path(),
+        "comfy_remembered": bool(_settings.get("comfy_cmdline")),
     }
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.3.3"
+APP_VERSION = "0.3.4"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -318,6 +330,20 @@ def apply_settings(payload: dict) -> dict:
                 _settings["agent_dir"] = str(_check_dir(raw, "агента", ("models", "llama.cpp")))
             _agent_home_cache.clear()
             changed = True
+        if "comfy_auto" in payload:
+            _settings["comfy_auto"] = bool(payload.get("comfy_auto"))
+            changed = True
+        if "comfy_cmd" in payload:
+            raw = str(payload.get("comfy_cmd") or "").strip()
+            if not raw:
+                _settings.pop("comfy_cmd", None)
+            else:
+                p = Path(raw).expanduser()
+                if not p.is_file():
+                    raise ValueError("файл запуска ComfyUI не найден")
+                _settings["comfy_cmd"] = str(p)
+            _launcher_cache["t"] = 0.0
+            changed = True
         if changed:
             _save_settings()
     return settings_info()
@@ -388,6 +414,7 @@ LINK_ONLY = {
 }
 
 _obj_cache: dict = {"t": 0.0, "data": None}
+_comfy_seen: dict = {"online": None}
 
 
 def _http_json(url: str, payload=None, timeout: float = 60.0):
@@ -414,10 +441,18 @@ def object_info(force: bool = False) -> dict:
 
 
 def comfy_online() -> bool:
+    global _folder_paths_t
     try:
         comfy_json("/system_stats", timeout=3)
+        if _comfy_seen["online"] is False:
+            # ComfyUI поднялся позже приложения — старый кэш моделей уже неверен.
+            _obj_cache.update(t=0.0, data={})
+            _folder_paths_cache.clear()
+            _folder_paths_t = 0.0
+        _comfy_seen["online"] = True
         return True
     except Exception:
+        _comfy_seen["online"] = False
         return False
 
 
@@ -427,6 +462,155 @@ def comfy_version() -> str:
         return str((st.get("system") or {}).get("comfyui_version") or "")
     except Exception:
         return ""
+
+
+# ------------------------------------------------------- запуск ComfyUI
+# Приложение умеет поднять ComfyUI само: portable-сборку из своей папки,
+# ярлык Comfy Desktop из меню «Пуск» или путь, выбранный в настройках.
+_launcher_cache: dict = {"t": 0.0, "path": None}
+_launcher_lock = threading.Lock()
+_capture_state: dict = {"tried": 0.0}
+
+
+def _start_menu_links() -> list[Path]:
+    out: list[Path] = []
+    for env in ("APPDATA", "ProgramData"):
+        base = os.environ.get(env)
+        if not base:
+            continue
+        root = Path(base) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+        if not root.is_dir():
+            continue
+        try:
+            out += [p for p in root.rglob("*.lnk") if "comfy" in p.name.lower()]
+        except OSError:
+            continue
+    return out
+
+
+def comfy_launcher() -> Path | None:
+    """Чем запускать ComfyUI: настройка, portable-сборка, ярлык или типовое место."""
+    now = time.time()
+    with _launcher_lock:
+        if now - float(_launcher_cache["t"] or 0) < 60:
+            return _launcher_cache["path"]      # «не нашли» тоже кэшируем
+        found: Path | None = None
+        custom = str(_settings.get("comfy_cmd") or "").strip()
+        if custom:
+            p = Path(custom).expanduser()
+            if p.is_file():
+                found = p
+        if found is None:
+            base = comfy_portable_dir()
+            if base.is_dir():
+                found = next((p for p in sorted(base.glob("run_*.bat")) if p.is_file()), None)
+        if found is None:
+            links = sorted(_start_menu_links(),
+                           key=lambda p: (0 if "desktop" in p.name.lower() else 1, p.name.lower()))
+            found = links[0] if links else None
+        if found is None:
+            local = os.environ.get("LOCALAPPDATA") or ""
+            for cand in (Path(local) / "Programs" / "ComfyUI" / "ComfyUI.exe",
+                         Path(local) / "Programs" / "@comfyorgcomfyui-electron" / "ComfyUI.exe",
+                         Path("C:/Program Files/ComfyUI/ComfyUI.exe")):
+                if cand.is_file():
+                    found = cand
+                    break
+        _launcher_cache.update(t=now, path=found)
+        return found
+
+
+def comfy_start() -> dict:
+    """Запускает ComfyUI в фоне; если он уже работает — ничего не делает."""
+    if comfy_online():
+        return {"ok": True, "already": True}
+    remembered = str(_settings.get("comfy_cmdline") or "").strip()
+    if remembered:
+        cwd = str(_settings.get("comfy_cwd") or "")
+        if not cwd or not Path(cwd).is_dir():
+            cwd = _cmdline_cwd(remembered)
+        try:
+            subprocess.Popen(remembered, cwd=cwd or None, shell=True,
+                             creationflags=0x08000000,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             stdin=subprocess.DEVNULL)
+        except OSError as exc:
+            raise RuntimeError(f"не удалось запустить ComfyUI: {exc}") from exc
+        return {"ok": True, "cmd": remembered, "cwd": cwd, "mode": "command"}
+    exe = comfy_launcher()
+    if exe is None:
+        raise RuntimeError("не нашёл программу ComfyUI — укажите её в настройках")
+    flags = 0x00000008 if os.name == "nt" else 0
+    try:
+        subprocess.Popen(["cmd", "/c", "start", "", "/MIN", str(exe)],
+                         cwd=str(exe.parent), creationflags=flags,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         stdin=subprocess.DEVNULL)
+    except OSError as exc:
+        raise RuntimeError(f"не удалось запустить ComfyUI: {exc}") from exc
+    return {"ok": True, "cmd": str(exe), "mode": "file"}
+
+
+def comfy_process_cmdline() -> str:
+    """Командная строка работающего сервера ComfyUI (Windows)."""
+    if os.name != "nt":
+        return ""
+    ps = ("Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
+          "Where-Object { $_.CommandLine -match 'ComfyUI\\\\main.py' } | "
+          "Select-Object -First 1 -ExpandProperty CommandLine")
+    try:
+        out = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
+                             capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", timeout=20, creationflags=0x08000000)
+    except Exception:  # noqa: BLE001
+        return ""
+    return (out.stdout or "").strip()
+
+
+def _cmdline_cwd(cmdline: str) -> str:
+    """Рабочая папка для сохранённой команды: там, где лежит ComfyUI\\main.py."""
+    raw = (cmdline or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith('"'):
+        end = raw.find('"', 1)
+        exe = raw[1:end] if end > 0 else raw.strip('"')
+    else:
+        exe = raw.split(" ", 1)[0]
+    p = Path(exe)
+    for cand in (p.parent, p.parent.parent, p.parent.parent.parent, p.parent.parent.parent.parent):
+        try:
+            if (cand / "ComfyUI" / "main.py").is_file():
+                return str(cand)
+        except OSError:
+            continue
+    return str(p.parent)
+
+
+def comfy_capture() -> bool:
+    """Запоминает команду запуска работающего ComfyUI — ею потом поднимаем его сами."""
+    now = time.time()
+    if now - float(_capture_state.get("tried") or 0) < 120:
+        return False
+    _capture_state["tried"] = now
+    cmdline = comfy_process_cmdline()
+    if not cmdline:
+        return False
+    cwd = _cmdline_cwd(cmdline)
+    with _settings_lock:
+        _settings["comfy_cmdline"] = cmdline
+        _settings["comfy_cwd"] = cwd
+        _save_settings()
+    return True
+
+
+def comfy_launcher_path() -> str:
+    """Путь к программе запуска (для поля настроек)."""
+    custom = str(_settings.get("comfy_cmd") or "").strip()
+    if custom:
+        return custom
+    p = comfy_launcher()
+    return str(p) if p else ""
 
 
 # ------------------------------------------------- активные задания (очередь)
@@ -1706,11 +1890,15 @@ def agent_server_path() -> Path | None:
 
 
 _folder_paths_cache: dict = {}
+_folder_paths_t: float = 0.0
 
 
 def comfy_folder_paths(force: bool = False) -> dict:
-    if _folder_paths_cache and not force:
-        return _folder_paths_cache
+    global _folder_paths_t
+    if not force and _folder_paths_t:
+        ttl = 300.0 if _folder_paths_cache else 10.0
+        if time.time() - _folder_paths_t < ttl:
+            return _folder_paths_cache
     try:
         data = comfy_json("/internal/folder_paths", timeout=10)
         if isinstance(data, dict):
@@ -1718,6 +1906,7 @@ def comfy_folder_paths(force: bool = False) -> dict:
             _folder_paths_cache.update(data)
     except Exception:  # noqa: BLE001
         pass
+    _folder_paths_t = time.time()
     return _folder_paths_cache
 
 
@@ -1823,7 +2012,7 @@ def setup_status() -> dict:
         version = str(((st or {}).get("system") or {}).get("comfyui_version") or "")
     except Exception:  # noqa: BLE001
         online = False
-    roots = comfy_folder_paths(force=True)
+    roots = comfy_folder_paths(force=online)
     first_root = next((r for r in (roots.get("diffusion_models") or []) if r), "")
     models_root = models_dir() or (str(Path(first_root).parent) if first_root else "")
     groups = [model_group_info(g) for g in MODEL_GROUPS]
@@ -1835,6 +2024,9 @@ def setup_status() -> dict:
             "site": COMFY_SITE,
             "dir": str(ROOT / "ComfyUI"),
             "portable": (ROOT / "ComfyUI" / "ComfyUI_windows_portable").is_dir(),
+            "cmd": comfy_launcher_path(),
+            "remembered": bool(_settings.get("comfy_cmdline")),
+            "auto": bool(_settings.get("comfy_auto")),
         },
         "models_root": models_root,
         "agent_dir": str(agent_home()),
@@ -2058,9 +2250,10 @@ def sheet_dialog(kind: str, start: str = "") -> str:
     """Системный диалог выбора папки/файла (тот же dialog.ps1, что в редакторе)."""
     script = ASSETS_DIR / "dialog.ps1"
     title = {"game": "Папка игры Godot (где лежит project.godot)",
-             "frames": "Папка с кадрами", "godot": "Godot.exe"}.get(kind, "")
+             "frames": "Папка с кадрами", "godot": "Godot.exe",
+             "comfy": "ComfyUI: Comfy Desktop.exe, ComfyUI.exe или run_nvidia_gpu.bat"}.get(kind, "")
     args = ["powershell", "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-File", str(script),
-            "-Kind", "exe" if kind == "godot" else "folder", "-Title", title]
+            "-Kind", "exe" if kind in ("godot", "comfy") else "folder", "-Title", title]
     if start:
         p = Path(start)
         if p.exists():
@@ -3337,6 +3530,23 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(comfy_run_portable())
                 except RuntimeError as exc:
                     return self._bad(str(exc), 422)
+            if u.path == "/api/comfy/start":
+                try:
+                    return self._json(comfy_start())
+                except RuntimeError as exc:
+                    return self._bad(str(exc), 422)
+            if u.path == "/api/comfy/pick":
+                path = sheet_dialog("comfy", "")
+                if not path:
+                    return self._json({"ok": False})
+                p = Path(path)
+                if not p.is_file():
+                    return self._bad("файл не найден", 422)
+                with _settings_lock:
+                    _settings["comfy_cmd"] = str(p)
+                    _save_settings()
+                _launcher_cache["t"] = 0.0
+                return self._json({"ok": True, "path": str(p), "settings": settings_info()})
             if u.path == "/api/settings/open":
                 if not hasattr(os, "startfile"):
                     return self._bad("открыть папку можно только в Windows", 422)
@@ -3419,12 +3629,17 @@ class Handler(BaseHTTPRequestHandler):
                 q = comfy_json("/queue", timeout=5)
             except Exception:
                 q = {}
+        if online and not _settings.get("comfy_cmdline"):
+            threading.Thread(target=comfy_capture, daemon=True).start()
         self._json({
             "comfy": {
                 "online": online,
                 "version": comfy_version() if online else "",
                 "running": len(q.get("queue_running") or []),
                 "pending": len(q.get("queue_pending") or []),
+                "cmd": comfy_launcher_path(),
+                "remembered": bool(_settings.get("comfy_cmdline")),
+                "auto": bool(_settings.get("comfy_auto")),
             },
             "modes": modes,
             "bg": bg,

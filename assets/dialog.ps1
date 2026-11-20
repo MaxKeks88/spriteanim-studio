@@ -75,7 +75,7 @@ $owner.Activate()
 $result = ''
 if ($Kind -eq 'exe') {
   $d = New-Object System.Windows.Forms.OpenFileDialog
-  $d.Filter = 'Godot (*.exe)|*.exe'
+  $d.Filter = 'Программа (*.exe;*.bat;*.lnk)|*.exe;*.bat;*.lnk|Все файлы (*.*)|*.*'
   $d.Title = $Title
   if ($Start -and (Test-Path -LiteralPath $Start)) { $d.InitialDirectory = $Start }
   if ($d.ShowDialog($owner) -eq 'OK') { $result = $d.FileName }
