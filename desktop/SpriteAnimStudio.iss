@@ -5,7 +5,7 @@
 ; поэтому не требует прав администратора и может писать .cache/output/voice рядом.
 
 #define AppName "SpriteAnim Studio"
-#define AppVersion "0.3.4"
+#define AppVersion "0.3.5"
 #define AppExe "SpriteAnimStudio.exe"
 
 [Setup]
@@ -44,6 +44,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "dist\SpriteAnimStudio\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".profile\*, .cache\*, output\*"
+Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\THIRD-PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "EULA.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"

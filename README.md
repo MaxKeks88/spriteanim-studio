@@ -36,7 +36,7 @@ available in **Russian and English**.
 | **Апскейл** — отдельная вкладка между анимацией и листом: кадры увеличиваются в 2–4 раза (Real-ESRGAN), альфа сохраняется | **Upscale** — its own tab between animation and sheet: frames are scaled ×2–×4 (Real-ESRGAN) with alpha preserved |
 | **Сравнение до/после** — ползунок по первому кадру показывает, что дал апскейл | **Before/after compare** — a slider over the first frame shows what the upscale actually did |
 | **Память прогонов** — у прогонов видна пометка «×2», готовый апскейл открывается без повторного счёта, сохранённые листы — отдельным списком | **Run memory** — runs show a “×2” badge, a finished upscale opens without recomputing, and saved sheets are listed separately |
-| **Запуск ComfyUI** — при старте приложение проверяет его и предлагает запустить в фоне; есть галочка автозапуска | **ComfyUI start** — checked at startup with a “start in background” dialog; auto-start is a checkbox |
+| **Запуск ComfyUI** — при старте приложение проверяет его и предлагает запустить в фоне; при выходе спрашивает, закрыть фоновый ComfyUI или оставить; есть галочка автозапуска | **ComfyUI start** — checked at startup with a “start in background” dialog; on exit it asks whether to stop the background ComfyUI or keep it; auto-start is a checkbox |
 | **Спрайт-лист** — встроенный редактор: сетка, поля, выравнивание, установка в Godot 4 и Unity | **Sprite sheet** — built-in editor: grid, padding, alignment, install into Godot 4 or Unity |
 | **Промпт агентом** — локальная модель пишет промпт по вашему описанию и видит исходную картинку | **Prompt with agent** — a local model writes the prompt from your brief and can see the source image |
 | **Голосовой ввод** — русская модель GigaAM v3, работает локально (скачивается из настроек) | **Voice input** — Russian GigaAM v3 model, runs locally (downloaded from Settings) |
@@ -56,16 +56,18 @@ remembered, and the sprite-sheet editor follows the app language.
 ## Требования / Requirements
 
 - **Windows 10/11 x64**. Окно приложения — WebView2 (в Windows 11 уже есть).
-- **ComfyUI должен быть запущен до приложения** — на `127.0.0.1:8188`.
-  Без него не работают ни вкладки, ни генерация.
+- **ComfyUI** — на `127.0.0.1:8188`. Запускать заранее не обязательно:
+  приложение проверит его при старте и предложит запустить в фоне
+  (галочка автозапуска — в настройках или в этом окне).
 - Модели скачиваются из **Настройки → Модели** (Qwen Image 2.1, MiniMax H3,
   агент Gemma 4 12B). Нужны свободные ~60 ГБ и видеопамять под модели.
 - Голосовой ввод необязателен: движок и модель (278 МБ) скачиваются из
   **Настройки → Голосовой ввод**.
 
 - **Windows 10/11 x64**. The app window uses WebView2 (included in Windows 11).
-- **ComfyUI must be running before you start the app** — on `127.0.0.1:8188`.
-  Without it neither the tabs nor generation work.
+- **ComfyUI** on `127.0.0.1:8188`. You do not have to start it beforehand:
+  the app checks it at startup and offers to start it in the background
+  (auto-start checkbox in Settings or in that dialog).
 - Models are downloaded from **Settings → Models** (Qwen Image 2.1, MiniMax H3,
   the Gemma 4 12B agent). Expect ~60 GB of disk and enough VRAM.
 - Voice input is optional: the engine and model (278 MB) are downloaded from
@@ -78,23 +80,25 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.4.exe
+Install\SpriteAnimStudio-Setup-0.3.5.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
 2. Установите (ярлык появится в меню «Пуск»).
-3. **Сначала запустите ComfyUI**, затем откройте **SpriteAnim Studio**.
+3. Откройте **SpriteAnim Studio** — ComfyUI можно не запускать заранее: приложение
+   предложит запустить его в фоне (или включите автозапуск галочкой).
 4. В настройках скачайте недостающие модели, при желании — голос.
 
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.4.exe
+Install\SpriteAnimStudio-Setup-0.3.5.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
 2. Finish the installation (a Start menu shortcut is created).
-3. **Start ComfyUI first**, then open **SpriteAnim Studio**.
+3. Open **SpriteAnim Studio** — ComfyUI does not have to be started beforehand:
+   the app offers to start it in the background (or set the auto-start checkbox).
 4. In Settings, download any missing models and optionally the voice model.
 
 ### Запуск из исходников / Run from source
@@ -117,9 +121,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.4.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.5.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.4.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.5.exe`.
 
 ---
 

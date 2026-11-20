@@ -67,6 +67,9 @@ def _load_settings():
                 _settings["comfy_cmdline"] = str(data["comfy_cmdline"])
             if data.get("comfy_cwd"):
                 _settings["comfy_cwd"] = str(data["comfy_cwd"])
+            owned = data.get("comfy_owned")
+            if isinstance(owned, dict) and owned.get("pid"):
+                _settings["comfy_owned"] = owned
     except Exception:  # noqa: BLE001
         pass
 
@@ -174,7 +177,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.3.4"
+APP_VERSION = "0.3.5"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -530,16 +533,20 @@ def comfy_start() -> dict:
         if not cwd or not Path(cwd).is_dir():
             cwd = _cmdline_cwd(remembered)
         try:
-            subprocess.Popen(remembered, cwd=cwd or None, shell=True,
-                             creationflags=0x08000000,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                             stdin=subprocess.DEVNULL)
+            proc = subprocess.Popen(remembered, cwd=cwd or None, shell=True,
+                                    creationflags=0x08000000,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                    stdin=subprocess.DEVNULL)
         except OSError as exc:
             raise RuntimeError(f"не удалось запустить ComfyUI: {exc}") from exc
-        return {"ok": True, "cmd": remembered, "cwd": cwd, "mode": "command"}
+        with _settings_lock:
+            _settings["comfy_owned"] = {"pid": proc.pid, "ts": time.time(), "cmd": remembered}
+            _save_settings()
+        return {"ok": True, "cmd": remembered, "cwd": cwd, "mode": "command", "owned": True}
     exe = comfy_launcher()
     if exe is None:
         raise RuntimeError("не нашёл программу ComfyUI — укажите её в настройках")
+    _clear_owned()
     flags = 0x00000008 if os.name == "nt" else 0
     try:
         subprocess.Popen(["cmd", "/c", "start", "", "/MIN", str(exe)],
@@ -611,6 +618,74 @@ def comfy_launcher_path() -> str:
         return custom
     p = comfy_launcher()
     return str(p) if p else ""
+
+
+def _proc_info(pid: int) -> dict:
+    """Живой ли процесс и что у него в командной строке (Windows)."""
+    if os.name != "nt" or not pid:
+        return {"alive": False}
+    ps = (f"$p = Get-CimInstance Win32_Process -Filter \"ProcessId={int(pid)}\"; "
+          "if ($p) { @{ cmd = [string]$p.CommandLine; "
+          "created = [double]([DateTimeOffset]$p.CreationDate).ToUnixTimeSeconds() } "
+          "| ConvertTo-Json -Compress }")
+    try:
+        out = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
+                             capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", timeout=15, creationflags=0x08000000)
+        raw = (out.stdout or "").strip()
+        data = json.loads(raw) if raw else {}
+        if not isinstance(data, dict) or not data:
+            return {"alive": False}
+        return {"alive": True, "cmd": str(data.get("cmd") or ""),
+                "created": float(data.get("created") or 0)}
+    except Exception:  # noqa: BLE001
+        return {"alive": False}
+
+
+def _clear_owned() -> None:
+    with _settings_lock:
+        if _settings.pop("comfy_owned", None) is not None:
+            _save_settings()
+
+
+def comfy_owned() -> dict:
+    """Сервер запущен именно приложением? Проверяем PID и время старта."""
+    rec = _settings.get("comfy_owned")
+    if not isinstance(rec, dict) or not rec.get("pid"):
+        return {"owned": False}
+    pid = int(rec.get("pid") or 0)
+    info = _proc_info(pid)
+    if not info.get("alive"):
+        _clear_owned()
+        return {"owned": False}
+    if "comfyui" not in str(info.get("cmd") or "").lower():
+        return {"owned": False}
+    created = float(info.get("created") or 0)
+    ts = float(rec.get("ts") or 0)
+    if created and ts and abs(created - ts) > 30:
+        return {"owned": False}          # PID успели переиспользовать
+    return {"owned": True, "pid": pid}
+
+
+def comfy_stop() -> dict:
+    """Останавливает ComfyUI, но только если его запустило приложение."""
+    info = comfy_owned()
+    if not info.get("owned"):
+        raise RuntimeError("ComfyUI запущен не приложением — закройте его вручную")
+    pid = int(info["pid"])
+    flags = 0x08000000 if os.name == "nt" else 0
+    try:
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"],
+                       capture_output=True, timeout=25, creationflags=flags)
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"не удалось остановить ComfyUI: {exc}") from exc
+    _clear_owned()
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if not comfy_online():
+            return {"ok": True}
+        time.sleep(0.5)
+    return {"ok": True, "warning": "процесс завершается"}
 
 
 # ------------------------------------------------- активные задания (очередь)
@@ -2026,6 +2101,7 @@ def setup_status() -> dict:
             "portable": (ROOT / "ComfyUI" / "ComfyUI_windows_portable").is_dir(),
             "cmd": comfy_launcher_path(),
             "remembered": bool(_settings.get("comfy_cmdline")),
+            "owned": comfy_owned()["owned"],
             "auto": bool(_settings.get("comfy_auto")),
         },
         "models_root": models_root,
@@ -3353,6 +3429,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._bad("нет файла", 404)
             if u.path == "/api/state":
                 return self._state()
+            if u.path == "/api/comfy/owned":
+                return self._json({**comfy_owned(), "running": comfy_online()})
             if u.path == "/api/agent":
                 port = AGENT_PORT if _agent_alive(AGENT_PORT) else 0
                 return self._json(agent_info(port, bool(_agent_state.get("proc") and port)))
@@ -3535,6 +3613,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(comfy_start())
                 except RuntimeError as exc:
                     return self._bad(str(exc), 422)
+            if u.path == "/api/comfy/stop":
+                try:
+                    return self._json(comfy_stop())
+                except RuntimeError as exc:
+                    return self._bad(str(exc), 409)
             if u.path == "/api/comfy/pick":
                 path = sheet_dialog("comfy", "")
                 if not path:
@@ -3639,6 +3722,7 @@ class Handler(BaseHTTPRequestHandler):
                 "pending": len(q.get("queue_pending") or []),
                 "cmd": comfy_launcher_path(),
                 "remembered": bool(_settings.get("comfy_cmdline")),
+                "owned": bool(_settings.get("comfy_owned")),
                 "auto": bool(_settings.get("comfy_auto")),
             },
             "modes": modes,

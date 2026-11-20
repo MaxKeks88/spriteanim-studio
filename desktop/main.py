@@ -13,12 +13,14 @@
 from __future__ import annotations
 
 import ctypes
+import json
 import os
 import socket
 import subprocess
 import sys
 import threading
 import time
+import urllib.request
 from pathlib import Path
 
 os.environ.setdefault("SPRITE_NO_BROWSER", "1")
@@ -245,6 +247,22 @@ def message(text: str) -> None:
         log(text)
 
 
+def _api(path: str, method: str = "GET", timeout: float = 3.0):
+    data = b"{}" if method.upper() != "GET" else None
+    headers = {"Content-Type": "application/json"} if data else {}
+    req = urllib.request.Request(URL + path, data=data, method=method, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def ui_lang() -> str:
+    try:
+        data = json.loads((CACHE / "settings.json").read_text("utf-8"))
+        return "en" if data.get("lang") == "en" else "ru"
+    except Exception:  # noqa: BLE001
+        return "ru"
+
+
 def main() -> None:
     already = port_open()
     if already:
@@ -280,7 +298,46 @@ def main() -> None:
         text_select=True,
         zoomable=True,
         hidden=SMOKE,
+        confirm_close=False,
     )
+
+    exit_state = {"done": False}
+
+    def on_closing():
+        """Спросить про фоновый ComfyUI: закрыть его или оставить."""
+        if exit_state["done"]:
+            return True
+        try:
+            info = _api("/api/comfy/owned", timeout=2.5)
+        except Exception:  # noqa: BLE001
+            return True
+        if not (info.get("owned") and info.get("running")):
+            return True
+        if ui_lang() == "ru":
+            title = "ComfyUI запущен в фоне"
+            text = ("Приложение запустило ComfyUI в фоновом режиме.\n\n"
+                    "«ОК» — закрыть ComfyUI и выйти.\n"
+                    "«Отмена» — оставить его работать и выйти.")
+        else:
+            title = "ComfyUI is running in the background"
+            text = ("The app started ComfyUI in the background.\n\n"
+                    "OK — stop ComfyUI and exit.\n"
+                    "Cancel — keep it running and exit.")
+        try:
+            stop_it = window.create_confirmation_dialog(title, text)
+        except Exception as exc:  # noqa: BLE001
+            log("окно вопроса не показалось:", exc)
+            stop_it = False
+        if stop_it:
+            try:
+                _api("/api/comfy/stop", method="POST", timeout=25)
+            except Exception as exc:  # noqa: BLE001
+                log("ComfyUI не остановился:", exc)
+        exit_state["done"] = True
+        return True
+
+    if not SMOKE:
+        window.events.closing += on_closing
 
     def boot() -> None:
         if not already and not wait_port():

@@ -1139,6 +1139,7 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
         <a class="chip" id="comfySite" href="https://www.comfy.org/download" target="_blank" rel="noopener">↗ Официальный сайт</a>
         <button class="chip" id="comfyInstall" type="button">⤓ Скачать и установить</button>
         <button class="chip" id="comfyRun" type="button" hidden>▶ Запустить ComfyUI</button>
+        <button class="chip" id="comfyStop" type="button" hidden>■ Остановить ComfyUI</button>
         <button class="chip" id="setupRefresh" type="button">↻ Проверить снова</button>
       </div>
 
@@ -2143,6 +2144,8 @@ function renderSetup() {
   $('#comfyRun').hidden = d.comfy.online;
   $('#comfyRun').textContent = (d.comfy.cmd || d.comfy.remembered)
     ? '▶ Запустить ComfyUI' : '📁 Указать программу…';
+  const comfyStop = $('#comfyStop');
+  if (comfyStop) comfyStop.hidden = !(d.comfy.owned && d.comfy.online);
   const comfyAuto = $('#comfyAutoSet');
   if (comfyAuto) comfyAuto.checked = !!d.comfy.auto;
   const comfyCmdIn = $('#comfyCmdIn');
@@ -2279,6 +2282,26 @@ $('#comfyInstall').onclick = async () => {
 $('#setupRefresh').onclick = loadSetup;
 $('#comfyRun').onclick = async () => {
   await comfyStartFlow();
+};
+
+$('#comfyStop').onclick = async () => {
+  const btn = $('#comfyStop');
+  const was = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'останавливаю…';
+  try {
+    const r = await fetch('/api/comfy/stop', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось остановить ComfyUI');
+    toast('ComfyUI остановлен', 'ok');
+    const st = await (await fetch('/api/state')).json();
+    applyState(st);
+    await loadSetup();
+  } catch (e) {
+    toast(e.message, 'bad');
+  }
+  btn.disabled = false;
+  btn.textContent = was;
 };
 
 async function checkSetupReady() {
