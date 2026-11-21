@@ -27,6 +27,7 @@ DATA = [
     ("prompts", "prompts"),
     ("voice/py", "voice/py"),
     ("mcp", "mcp"),
+    ("android-apk", "android-apk"),
     ("desktop/icon.ico", "desktop"),
 ]
 

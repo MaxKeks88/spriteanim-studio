@@ -70,6 +70,8 @@ def _load_settings():
             owned = data.get("comfy_owned")
             if isinstance(owned, dict) and owned.get("pid"):
                 _settings["comfy_owned"] = owned
+            if "lan" in data:
+                _settings["lan"] = bool(data.get("lan"))
     except Exception:  # noqa: BLE001
         pass
 
@@ -92,7 +94,8 @@ def sheets_dir() -> Path:
 
 def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
                cw: int = 0, ch: int = 0, count: int = 0,
-               crop: str = "", src: str = "", origin: str = "") -> dict:
+               crop: str = "", src: str = "", origin: str = "",
+               pad: str = "", pivot: str = "") -> dict:
     """Сохраняет готовый спрайт-лист и его JSON в output/sheets/<имя>-<время>."""
     if not blob or len(blob) < 100:
         raise ValueError("пустой лист")
@@ -130,6 +133,26 @@ def save_sheet(name: str, blob: bytes, columns: int = 0, rows: int = 0,
     box = nums(crop, ("x", "y", "w", "h"))
     if box:
         atlas["crop"] = box
+
+    def floats(raw: str, keys: tuple[str, ...]) -> dict:
+        try:
+            values = [float(v) for v in str(raw or "").split(",")]
+        except ValueError:
+            return {}
+        if len(values) != len(keys):
+            return {}
+        return dict(zip(keys, values))
+
+    try:
+        pad_px = max(0, min(64, int(str(pad or "0").strip() or 0)))
+    except ValueError:
+        pad_px = 0
+    atlas["pad"] = pad_px
+    pivot_xy = floats(pivot, ("x", "y"))
+    if pivot_xy:
+        atlas["pivot"] = pivot_xy
+        atlas["pivot_px"] = {"x": round(pivot_xy["x"] * cw),
+                             "y": round(pivot_xy["y"] * ch)}
     if origin:
         try:
             extra = json.loads(origin)
@@ -173,11 +196,12 @@ def settings_info() -> dict:
         "comfy_cmd": str(_settings.get("comfy_cmd") or ""),
         "comfy_launcher": comfy_launcher_path(),
         "comfy_remembered": bool(_settings.get("comfy_cmdline")),
+        "lan": lan_enabled(),
     }
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.3.5"
+APP_VERSION = "0.4.0"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -347,6 +371,9 @@ def apply_settings(payload: dict) -> dict:
                 _settings["comfy_cmd"] = str(p)
             _launcher_cache["t"] = 0.0
             changed = True
+        if "lan" in payload:
+            _settings["lan"] = bool(payload.get("lan"))
+            changed = True
         if changed:
             _save_settings()
     return settings_info()
@@ -405,6 +432,57 @@ CACHE_DIR = ROOT / ".cache"
 COMFY = os.environ.get("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
 HOST = os.environ.get("SPRITE_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SPRITE_PORT", "8189"))
+LAN_PORT = 8190
+APP_PACKAGE = "spriteanim-studio"
+
+
+def lan_enabled() -> bool:
+    """Доступ с телефона по локальной сети (по умолчанию включён)."""
+    value = _settings.get("lan")
+    return True if value is None else bool(value)
+
+
+def bind_host() -> str:
+    """Адрес, на котором слушает сервер: localhost или вся сеть."""
+    env = os.environ.get("SPRITE_HOST")
+    if env:
+        return env
+    return "0.0.0.0" if lan_enabled() else "127.0.0.1"
+
+
+def local_ips() -> list[str]:
+    """IPv4-адреса машины в локальной сети (без 127.*)."""
+    ips: list[str] = []
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = str(info[4][0])
+            if ip and not ip.startswith("127.") and ip not in ips:
+                ips.append(ip)
+    except OSError:
+        pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ip = str(s.getsockname()[0])
+            if ip and not ip.startswith("127.") and ip not in ips:
+                ips.insert(0, ip)
+    except OSError:
+        pass
+    return ips
+
+
+def net_info() -> dict:
+    ips = local_ips()
+    return {
+        "app": APP_PACKAGE,
+        "name": "SpriteAnim Studio",
+        "version": APP_VERSION,
+        "port": PORT,
+        "discovery": LAN_PORT,
+        "lan": lan_enabled(),
+        "host": ips[0] if ips else "",
+        "urls": [f"http://{ip}:{PORT}" for ip in ips],
+    }
 
 # ---------------------------------------------------------------- ComfyUI API
 
@@ -3429,6 +3507,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self._bad("нет файла", 404)
             if u.path == "/api/state":
                 return self._state()
+            if u.path == "/api/net":
+                return self._json(net_info())
+            if u.path == "/api/android/update":
+                return self._json(android_update())
+            if u.path == "/api/android/apk":
+                apk = android_apk_path()
+                if apk is None:
+                    return self._bad("APK не найден", 404)
+                return self._serve_path(apk, "application/vnd.android.package-archive", apk.name)
+            if u.path == "/api/firewall":
+                return self._json(firewall_status())
             if u.path == "/api/comfy/owned":
                 return self._json({**comfy_owned(), "running": comfy_online()})
             if u.path == "/api/agent":
@@ -3560,6 +3649,8 @@ class Handler(BaseHTTPRequestHandler):
                         (q.get("crop") or [""])[0],
                         (q.get("src") or [""])[0],
                         (q.get("origin") or [""])[0],
+                        (q.get("pad") or [""])[0],
+                        (q.get("pivot") or [""])[0],
                     ))
                 except ValueError as exc:
                     return self._bad(str(exc), 422)
@@ -3618,6 +3709,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(comfy_stop())
                 except RuntimeError as exc:
                     return self._bad(str(exc), 409)
+            if u.path == "/api/firewall/open":
+                try:
+                    return self._json(firewall_open())
+                except RuntimeError as exc:
+                    return self._bad(str(exc), 422)
             if u.path == "/api/comfy/pick":
                 path = sheet_dialog("comfy", "")
                 if not path:
@@ -4039,6 +4135,9 @@ class Handler(BaseHTTPRequestHandler):
         if not core.IMAGES.search(file.name) or not file.is_file():
             return self._bad("not found", 404)
         ctype = core.TYPES.get(file.suffix[1:].lower(), "application/octet-stream")
+        return self._serve_path(file, ctype)
+
+    def _serve_path(self, file: Path, ctype: str, download: str = ""):
         size = file.stat().st_size
         start, end, status = 0, size - 1, 200
         rng = self.headers.get("Range") or ""
@@ -4057,6 +4156,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(length))
         if status == 206:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        if download:
+            self.send_header("Content-Disposition",
+                             f'attachment; filename="{download}"')
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         with file.open("rb") as fh:
@@ -4068,6 +4170,7 @@ class Handler(BaseHTTPRequestHandler):
                     break
                 self.wfile.write(chunk)
                 left -= len(chunk)
+        return None
 
     def _sheet_get(self, action: str, q):
         core = sheet_core()
@@ -4187,7 +4290,139 @@ def port_busy() -> bool:
     import socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.6)
-        return s.connect_ex((HOST, PORT)) == 0
+        return s.connect_ex(("127.0.0.1", PORT)) == 0
+
+
+# ------------------------------------------------------------ телефон / APK
+DISCOVERY_MAGIC = b"SPRITEANIM-DISCOVER-1"
+
+
+def android_dir() -> Path:
+    """Папка с APK: рядом с исходниками или внутри сборки PyInstaller."""
+    candidates = [ROOT / "android-apk"]
+    meipass = getattr(sys, "_MEIPASS", "")
+    if meipass:
+        candidates.append(Path(meipass) / "android-apk")
+    try:
+        candidates.append(Path(sys.executable).resolve().parent / "android-apk")
+    except OSError:
+        pass
+    for path in candidates:
+        try:
+            if path.is_dir():
+                return path
+        except OSError:
+            continue
+    return candidates[0]
+
+
+def android_meta() -> dict:
+    path = android_dir() / "version.json"
+    try:
+        data = json.loads(path.read_text("utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def android_apk_path() -> Path | None:
+    root = android_dir()
+    meta = android_meta()
+    link = str(meta.get("apk") or "")
+    if link:
+        name = Path(urllib.parse.urlparse(link).path).name
+        cand = root / name
+        if cand.is_file():
+            return cand
+    found = sorted(root.glob("*.apk"))
+    return found[-1] if found else None
+
+
+def android_update() -> dict:
+    """Последняя версия телефона из android-apk/version.json."""
+    out = dict(android_meta())
+    apk = android_apk_path()
+    out.setdefault("versionCode", 0)
+    out.setdefault("versionName", "")
+    if apk is not None:
+        out["apk_local"] = "/api/android/apk"
+        out["apk_size"] = apk.stat().st_size
+        out["apk_name"] = apk.name
+    return out
+
+
+def firewall_rules() -> list[tuple[str, str]]:
+    return [("SpriteAnim Studio (TCP 8189)", "8189"),
+            ("SpriteAnim Studio (UDP 8190)", str(LAN_PORT))]
+
+
+def firewall_status() -> dict:
+    if os.name != "nt":
+        return {"available": False, "open": False}
+    opened = 0
+    for name, _ in firewall_rules():
+        try:
+            r = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", f"name={name}"],
+                               capture_output=True, text=True, encoding="utf-8",
+                               errors="replace", timeout=10, creationflags=0x08000000)
+            if r.returncode == 0:
+                opened += 1
+        except Exception:  # noqa: BLE001
+            pass
+    return {"available": True, "open": opened == len(firewall_rules()),
+            "rules": opened, "total": len(firewall_rules()), "lan": lan_enabled()}
+
+
+def firewall_open() -> dict:
+    """Добавляет правила брандмауэра для TCP 8189 и UDP 8190 (нужен UAC)."""
+    if os.name != "nt":
+        raise RuntimeError("брандмауэр доступен только в Windows")
+    script = Path(tempfile.gettempdir()) / "spriteanim-firewall.bat"
+    lines = ["@echo off"]
+    for name, port in firewall_rules():
+        proto = "UDP" if "UDP" in name else "TCP"
+        lines.append(f'netsh advfirewall firewall delete rule name="{name}" >nul 2>&1')
+        lines.append(f'netsh advfirewall firewall add rule name="{name}" dir=in action=allow '
+                     f'protocol={proto} localport={port} profile=any remoteip=localsubnet')
+    try:
+        script.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+        ps = f"Start-Process -FilePath '{script}' -Verb RunAs -Wait"
+        subprocess.Popen(["powershell", "-NoProfile", "-Command", ps],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         stdin=subprocess.DEVNULL, creationflags=0x08000000)
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"не удалось открыть брандмауэр: {exc}") from exc
+    return {"ok": True, "elevated": True}
+
+
+def discovery_loop(stop: threading.Event) -> None:
+    """UDP-поиск студии телефоном: ответ на SPRITEANIM-DISCOVER-1."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("0.0.0.0", LAN_PORT))
+        sock.settimeout(1.0)
+    except OSError as exc:
+        print(f"[discovery] UDP {LAN_PORT}: {exc}")
+        return
+    payload = json.dumps(net_info(), ensure_ascii=False).encode("utf-8")
+    print(f"[discovery] слушаю UDP {LAN_PORT}")
+    while not stop.is_set():
+        try:
+            data, addr = sock.recvfrom(2048)
+        except socket.timeout:
+            continue
+        except OSError:
+            break
+        if data.strip().startswith(DISCOVERY_MAGIC):
+            try:
+                sock.sendto(payload, addr)
+            except OSError:
+                pass
+    try:
+        sock.close()
+    except OSError:
+        pass
 
 
 def serve():
@@ -4204,7 +4439,7 @@ def serve():
         print(f"[upscale] помечено прерванных заданий: {stale}")
     import atexit
     atexit.register(_agent_quit)
-    url = f"http://{HOST}:{PORT}"
+    url = f"http://127.0.0.1:{PORT}"
     if port_busy():
         print(f"Уже запущено: {url}")
         if os.environ.get("SPRITE_NO_BROWSER") != "1":
@@ -4214,15 +4449,21 @@ def serve():
             except Exception:
                 pass
         return
+    bind = bind_host()
     try:
-        httpd = Server((HOST, PORT), Handler)
+        httpd = Server((bind, PORT), Handler)
     except OSError as exc:
         print(f"Не удалось занять порт {PORT}: {exc}")
         return
     print(f"SpriteAnim Studio -> {url}")
+    if lan_enabled():
+        for lan_url in net_info().get("urls") or []:
+            print(f"  телефон        -> {lan_url}")
+        stop_discovery = threading.Event()
+        threading.Thread(target=discovery_loop, args=(stop_discovery,),
+                         daemon=True, name="discovery").start()
     print(f"ComfyUI         -> {COMFY}  ({'online' if comfy_online() else 'OFFLINE'})")
     if os.environ.get("SPRITE_NO_BROWSER") != "1":
-        import threading
         import webbrowser
 
         def open_later():

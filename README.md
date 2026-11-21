@@ -32,10 +32,14 @@ available in **Russian and English**.
 | **Пресеты клипов** — 12 готовых вариантов (стойка, атака, ульта, удар, оглушение, победа, две смерти, радость, три бытовых действия) подставляют промпт, имя и длительность; есть «Свой вариант» | **Clip presets** — 12 ready variants (idle, attack, ultimate, hit, stun, victory, two deaths, joy, three fidgets) fill in the prompt, name and duration; a “Custom” option is included |
 | **Промпт по-русски** — кнопка RU/EN у «Сгенерировать» показывает английский промпт по-русски и возвращает обратно | **Prompt in Russian** — an RU/EN button near Generate shows the English prompt in Russian and switches back |
 | **Готовый спрайт-лист** — лист сохраняется в `output/sheets` вместе с JSON | **Finished sprite sheet** — the sheet is saved to `output/sheets` with its JSON |
+| **Проверка листа** — альфа, обрезанные края и пустые кадры до сохранения | **Sheet check** — alpha, clipped edges and empty frames before saving |
+| **Pivot и поля** — точка привязки снизу по центру и запас 0–2 px в ячейке, всё в JSON | **Pivot and padding** — bottom-centre pivot and 0–2 px cell padding, stored in JSON |
+| **Импорт-пресеты** — подсказки настроек для Unity 6 и Godot 4 прямо у листа | **Import presets** — Unity 6 and Godot 4 settings hints next to the sheet |
 | **Поле вокруг персонажа** — 0–35% пустого места, чтобы меч и прыжок не обрезались краем кадра | **Character margin** — 0–35% of empty space so a sword or a jump never hits the frame edge |
 | **Апскейл** — отдельная вкладка между анимацией и листом: кадры увеличиваются в 2–4 раза (Real-ESRGAN), альфа сохраняется | **Upscale** — its own tab between animation and sheet: frames are scaled ×2–×4 (Real-ESRGAN) with alpha preserved |
 | **Сравнение до/после** — ползунок по первому кадру показывает, что дал апскейл | **Before/after compare** — a slider over the first frame shows what the upscale actually did |
 | **Память прогонов** — у прогонов видна пометка «×2», готовый апскейл открывается без повторного счёта, сохранённые листы — отдельным списком | **Run memory** — runs show a “×2” badge, a finished upscale opens without recomputing, and saved sheets are listed separately |
+| **С телефона** — телефон находит студию по сети и открывает её интерфейс; LAN, брандмауэр и APK в настройках | **From phone** — the phone finds the studio on the network and opens its UI; LAN, firewall and APK live in Settings |
 | **Запуск ComfyUI** — при старте приложение проверяет его и предлагает запустить в фоне; при выходе спрашивает, закрыть фоновый ComfyUI или оставить; есть галочка автозапуска | **ComfyUI start** — checked at startup with a “start in background” dialog; on exit it asks whether to stop the background ComfyUI or keep it; auto-start is a checkbox |
 | **Спрайт-лист** — встроенный редактор: сетка, поля, выравнивание, установка в Godot 4 и Unity | **Sprite sheet** — built-in editor: grid, padding, alignment, install into Godot 4 or Unity |
 | **Промпт агентом** — локальная модель пишет промпт по вашему описанию и видит исходную картинку | **Prompt with agent** — a local model writes the prompt from your brief and can see the source image |
@@ -80,7 +84,7 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.5.exe
+Install\SpriteAnimStudio-Setup-0.4.0.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
@@ -92,7 +96,7 @@ Install\SpriteAnimStudio-Setup-0.3.5.exe
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.3.5.exe
+Install\SpriteAnimStudio-Setup-0.4.0.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
@@ -121,9 +125,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.3.5.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.4.0.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.3.5.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.4.0.exe`.
 
 ---
 

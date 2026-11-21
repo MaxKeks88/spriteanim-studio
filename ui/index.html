@@ -174,6 +174,52 @@ details[open] summary{margin-bottom:12px;color:var(--text)}
 .toast.ok{border-left-color:var(--ok)}
 @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .note{font-size:12.5px;color:var(--muted);border:1px solid var(--line);background:var(--bg2);border-radius:11px;padding:10px 12px}
+
+/* проверка листа и подсказки импорта */
+.sheetQa{margin-top:10px;font-size:12.5px;line-height:1.5;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg2);color:var(--muted)}
+.sheetQa b{color:var(--text)}
+.sheetQa.ok{border-color:rgba(var(--acc-rgb),.35);background:rgba(var(--acc-rgb),.07)}
+.sheetQa.bad{border-color:rgba(var(--warn-rgb),.4);background:rgba(var(--warn-rgb),.08);color:var(--warn)}
+.sheetQa ul{margin:4px 0 0 18px;padding:0}
+.importHelp{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);padding:8px 10px}
+.importHelp summary{cursor:pointer;font-size:12.5px;color:var(--text);font-weight:600}
+.impGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;font-size:12px;color:var(--muted)}
+.impGrid b{color:var(--text);font-size:12.5px}
+.impGrid ul{margin:6px 0 0 16px;padding:0}
+.impGrid li{margin-bottom:3px}
+@media (max-width: 900px){ .impGrid{grid-template-columns:1fr} }
+
+/* ---------- телефон: узкий экран ---------- */
+@media (max-width: 700px){
+  body.tab-img, body.tab-bg, body.tab-gen, body.tab-up{height:auto;overflow:auto}
+  body.tab-img .wrap, body.tab-bg .wrap, body.tab-gen .wrap, body.tab-up .wrap{
+    display:block;height:auto;max-width:none;padding:8px 8px 28px}
+  .top{gap:6px;padding:2px 0 8px}
+  .tabs{width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:7px 10px;font-size:12px}
+  .imgLayout{display:flex;flex-direction:column;height:auto;gap:10px;overflow:visible}
+  .imgCol{overflow:visible;padding-right:0;gap:10px}
+  .imgChat{display:block;height:auto;min-height:0;overflow:visible}
+  .imgFeed{flex:none;max-height:none;overflow:visible;padding-right:0}
+  .imgPromptWrap{position:static;margin-top:10px;max-width:none}
+  .card{padding:12px}
+  .card h2{font-size:14px}
+  .imgComposer{display:flex;flex-wrap:wrap;gap:8px}
+  .imgComposerField{width:100%}
+  .imgComposerSide{width:100%;flex-direction:row;flex-wrap:wrap;gap:6px}
+  .side-btn{width:auto;flex:1 1 140px}
+  .drop{min-height:150px}
+  .strip img{height:64px}
+  .impGrid{gap:10px}
+  .sheetQa,.importHelp{font-size:12px}
+  .dir-box,.comfy-box{width:96vw;max-height:88vh}
+  .set-body{padding:10px}
+  .runs-bar{padding:10px;font-size:14px}
+  #queuePop{max-width:calc(100vw - 20px)}
+  .upRuns{max-height:none}
+  .upSheets{max-height:none}
+}
 .note.warn{border-color:rgba(var(--warn-rgb),.35);background:rgba(var(--warn-rgb),.08);color:var(--warn)}
 .note b{color:inherit}
 #sheetCv{max-width:100%;margin-top:10px;border-radius:10px;border:1px solid var(--line2);
@@ -499,6 +545,11 @@ body.sheet-on #sheetView{display:flex}
 .set-row{display:flex;gap:8px;align-items:center;margin-top:10px}
 .set-row input{flex:1;min-width:0;font-size:13px}
 .set-row .chip{flex:none}
+.phoneBox{margin-top:14px;border-top:1px solid var(--line2);padding-top:12px}
+.phoneHead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.phoneAddr{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:var(--text);
+  background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;
+  margin:8px 0;user-select:text;word-break:break-all}
 
 /* ---------- вкладка «Апскейл» ---------- */
 body.tab-up{height:100vh;overflow:hidden;background:var(--bg)}
@@ -835,13 +886,48 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
                     <option value="25">25%</option>
                   </select>
                 </label>
+                <label class="hint" style="margin:0">поля
+                  <select id="sheetPad" style="width:auto;padding:6px 8px">
+                    <option value="0">0 px</option>
+                    <option value="1">1 px</option>
+                    <option value="2" selected>2 px</option>
+                  </select>
+                </label>
                 <button class="chip" id="sheetBuild" type="button">Собрать</button>
                 <a class="chip" id="sheetDl" download hidden>⬇ PNG</a>
                 <a class="chip" id="sheetJson" download hidden>⬇ JSON</a>
                 <button class="chip" id="sheetSave" type="button" hidden>⤓ Сохранить в папку</button>
               </div>
               <canvas id="sheetCv" hidden></canvas>
+              <div class="sheetQa" id="sheetQA" hidden></div>
               <div class="hint" id="sheetHint">Лист собирается в браузере из кадров с прозрачностью — по одному кадру в ячейке.</div>
+
+              <details class="importHelp" id="importHelp">
+                <summary>Импорт в Unity / Godot</summary>
+                <div class="impGrid">
+                  <div>
+                    <b>Unity 6</b>
+                    <ul>
+                      <li>Texture Type — <b>Sprite (2D and UI)</b>, Sprite Mode — Multiple.</li>
+                      <li>Pivot — <b>Bottom</b> (точка в JSON — низ по центру).</li>
+                      <li>Pixels Per Unit — одинаковый для всех клипов; начните с высоты ячейки.</li>
+                      <li>Filter Mode — Bilinear (Point для пиксель-арта), Mip Maps — off, Read/Write — off.</li>
+                      <li>Compression — None или High Quality; нарезка — сеткой из JSON.</li>
+                      <li>Sample Rate клипа — 24 fps; цикл — для idle/walk, один раз — для атаки/смерти.</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <b>Godot 4</b>
+                    <ul>
+                      <li>AnimatedSprite2D + SpriteFrames (или AnimationPlayer с кадрами).</li>
+                      <li>FPS — 24; Loop — для idle/walk, off — для атаки/смерти.</li>
+                      <li>Filter — Nearest для пиксель-арта (Project Settings → Rendering → Textures).</li>
+                      <li>Offset — по pivot из JSON; ноги на одной линии во всех клипах.</li>
+                      <li>Mipmaps — выключены; импорт листа как Texture2D, без atlas-сжатия.</li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
             </div>
 
             <div class="note" style="margin-top:12px">Кадры в zip — с прозрачностью (выход узла RGBA). В ComfyUI они лежат в <b>output\SpriteAnim\&lt;название&gt;\&lt;прогон&gt;</b>.</div>
@@ -1198,6 +1284,25 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
         <button class="chip" id="updCheck" type="button">↻ Проверить обновление</button>
         <button class="chip" id="updInstall" type="button" hidden>⤓ Скачать и установить</button>
         <a class="chip" id="updNotes" href="#" target="_blank" rel="noreferrer" hidden>Что нового</a>
+      </div>
+
+      <div class="phoneBox">
+        <div class="phoneHead">
+          <b>С телефона</b>
+          <span class="setup-chip" id="phoneChip">—</span>
+        </div>
+        <label class="comfy-check">
+          <input type="checkbox" id="lanSet">
+          <span>Доступ с телефона</span>
+          <small>без пароля — только своя сеть</small>
+        </label>
+        <div class="phoneAddr" id="phoneAddr">—</div>
+        <div class="inline">
+          <button class="chip" id="phoneCopy" type="button">⧉ Скопировать адрес</button>
+          <button class="chip" id="phoneFw" type="button">🛡 Брандмауэр</button>
+          <a class="chip" id="phoneApk" href="/api/android/apk" download hidden>⬇ Скачать APK</a>
+        </div>
+        <div class="hint" id="phoneHint">Проверяю сеть…</div>
       </div>
     </div>
   </div>
@@ -2212,7 +2317,69 @@ async function loadSetup() {
   } catch {
     toast('Не удалось получить состояние установки', 'bad');
   }
+  loadPhone();
 }
+
+async function loadPhone() {
+  const chip = $('#phoneChip'), addr = $('#phoneAddr'), apk = $('#phoneApk'), hint = $('#phoneHint');
+  if (!chip) return;
+  try {
+    const [n, fw, au, cfg] = await Promise.all([
+      fetch('/api/net').then(r => r.json()).catch(() => ({})),
+      fetch('/api/firewall').then(r => r.json()).catch(() => ({})),
+      fetch('/api/android/update').then(r => r.json()).catch(() => ({})),
+      fetch('/api/settings').then(r => r.json()).catch(() => ({})),
+    ]);
+    S.net = n || {};
+    const lan = cfg.lan !== false;
+    $('#lanSet').checked = lan;
+    const urls = (n && n.urls) || [];
+    const url = urls[0] || '';
+    addr.textContent = url || 'нет сетевого адреса — проверьте Wi-Fi';
+    addr.title = urls.join('\n');
+    $('#phoneCopy').disabled = !url;
+    chip.textContent = lan ? 'доступ включён' : 'доступ выключен';
+    chip.className = 'setup-chip ' + (lan ? 'ok' : 'bad');
+    if (au && au.versionName) {
+      apk.hidden = false;
+      apk.textContent = `⬇ APK ${au.versionName}`;
+    } else {
+      apk.hidden = true;
+    }
+    $('#phoneFw').hidden = !(fw && fw.available);
+    if (!fw || !fw.available) hint.textContent = 'Брандмауэр: проверка недоступна на этой системе.';
+    else if (fw.open) hint.textContent = 'Брандмауэр: порт открыт для локальной сети.';
+    else hint.textContent = 'Брандмауэр: порт закрыт. Нажмите «Брандмауэр» и подтвердите запрос Windows (один раз).';
+  } catch { /* сеть */ }
+}
+
+$('#lanSet').onchange = async e => {
+  try {
+    const r = await fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lan: e.target.checked }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось сохранить');
+    toast('Настройка сохранена — перезапустите приложение', 'ok');
+    loadPhone();
+  } catch (err) { toast(err.message, 'bad'); }
+};
+$('#phoneCopy').onclick = async () => {
+  const text = $('#phoneAddr').textContent.trim();
+  if (!text || text.startsWith('нет')) return;
+  try { await navigator.clipboard.writeText(text); toast('Адрес скопирован', 'ok'); }
+  catch { toast('Не удалось скопировать', 'bad'); }
+};
+$('#phoneFw').onclick = async () => {
+  try {
+    const r = await fetch('/api/firewall/open', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'не удалось открыть');
+    toast('Подтвердите запрос Windows (UAC)', 'ok');
+    setTimeout(loadPhone, 5000);
+  } catch (e) { toast(e.message, 'bad'); }
+};
 
 function setButtonsDisabled(off) {
   document.querySelectorAll('#setView .mg-btn, #comfyInstall, #setupRefresh')
@@ -3224,11 +3391,13 @@ function alphaBox(img, W, H, cv, ctx) {
   ctx.drawImage(img, 0, 0, W, H);
   try {
     const d = ctx.getImageData(0, 0, W, H).data;
-    let minX = W, minY = H, maxX = -1, maxY = -1;
+    let minX = W, minY = H, maxX = -1, maxY = -1, minA = 255;
     for (let y = 0; y < H; y++) {
       const row = y * W * 4;
       for (let x = 0; x < W; x++) {
-        if (d[row + x * 4 + 3] > 24) {
+        const a = d[row + x * 4 + 3];
+        if (a < minA) minA = a;
+        if (a > 24) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
@@ -3237,10 +3406,11 @@ function alphaBox(img, W, H, cv, ctx) {
       }
     }
     if (maxX >= minX && maxY >= minY) {
-      return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+      return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, minA };
     }
+    return { x: 0, y: 0, w: 0, h: 0, minA };
   } catch { /* без прозрачности — берём кадр целиком */ }
-  return { x: 0, y: 0, w: W, h: H };
+  return { x: 0, y: 0, w: W, h: H, minA: -1 };
 }
 
 async function buildSheet() {
@@ -3269,18 +3439,28 @@ async function buildSheet() {
   const h = imgs[0].naturalHeight || imgs[0].height;
   const LIMIT = 8192;
   const scale = Math.max(10, Math.min(100, +$('#sheetScale').value || 100)) / 100;
+  const padPx = Math.max(0, Math.min(8, +($('#sheetPad') ? $('#sheetPad').value : 0) || 0));
 
   // Общая рамка по прозрачности: убирает пустые поля, но сохраняет смещение между кадрами.
   const boxCv = document.createElement('canvas');
   boxCv.width = w; boxCv.height = h;
   const boxCtx = boxCv.getContext('2d', { willReadFrequently: true });
   let ux0 = w, uy0 = h, ux1 = -1, uy1 = -1;
+  const empty = [], opaque = [], cut = [], sizes = new Set();
   for (let i = 0; i < imgs.length; i++) {
-    const b = alphaBox(imgs[i], w, h, boxCv, boxCtx);
-    if (b.x < ux0) ux0 = b.x;
-    if (b.y < uy0) uy0 = b.y;
-    if (b.x + b.w > ux1) ux1 = b.x + b.w;
-    if (b.y + b.h > uy1) uy1 = b.y + b.h;
+    const im = imgs[i];
+    sizes.add(`${im.naturalWidth || im.width}x${im.naturalHeight || im.height}`);
+    const b = alphaBox(im, w, h, boxCv, boxCtx);
+    if (!b.w || !b.h) {
+      empty.push(i + 1);
+    } else {
+      if (b.x < ux0) ux0 = b.x;
+      if (b.y < uy0) uy0 = b.y;
+      if (b.x + b.w > ux1) ux1 = b.x + b.w;
+      if (b.y + b.h > uy1) uy1 = b.y + b.h;
+      if (b.minA >= 250) opaque.push(i + 1);
+      if (b.x <= 1 || b.y <= 1 || b.x + b.w >= w - 1 || b.y + b.h >= h - 1) cut.push(i + 1);
+    }
     if (i % 12 === 0) hint.textContent = `ищу контур: ${i + 1} из ${imgs.length}…`;
   }
   const PADP = 2;
@@ -3290,19 +3470,24 @@ async function buildSheet() {
         h: Math.min(h, uy1 + PADP) - Math.max(0, uy0 - PADP) }
     : { x: 0, y: 0, w, h };
 
-  let cw = Math.max(1, Math.round(crop.w * scale));
-  let ch = Math.max(1, Math.round(crop.h * scale));
+  const fitCell = eff => {
+    const cW = Math.max(1, Math.round(crop.w * eff));
+    const cH = Math.max(1, Math.round(crop.h * eff));
+    return { cW, cH, cw: cW + padPx * 2, ch: cH + padPx * 2 };
+  };
+  let box = fitCell(scale);
+  let cw = box.cw, ch = box.ch;
   let cols = +$('#sheetCols').value || Math.ceil(Math.sqrt(frames.length));
   cols = Math.max(1, Math.min(cols, frames.length));
   while (cols > 1 && cols * cw > LIMIT) cols--;
-  const rows = Math.ceil(frames.length / cols);
+  let rows = Math.ceil(frames.length / cols);
   let eff = scale;
   if (rows * ch > LIMIT || cols * cw > LIMIT) {
     // Не влезает в предел — уменьшаем масштаб, а не отказываем.
-    eff = Math.min(LIMIT / (cols * crop.w), LIMIT / (rows * crop.h));
+    eff = Math.min((LIMIT / cols - padPx * 2) / crop.w, (LIMIT / rows - padPx * 2) / crop.h);
     eff = Math.max(0.05, Math.min(1, eff));
-    cw = Math.max(1, Math.round(crop.w * eff));
-    ch = Math.max(1, Math.round(crop.h * eff));
+    box = fitCell(eff);
+    cw = box.cw; ch = box.ch;
   }
   cv.width = cols * cw;
   cv.height = rows * ch;
@@ -3313,10 +3498,33 @@ async function buildSheet() {
   const cells = [];
   imgs.forEach((im, i) => {
     const x = (i % cols) * cw, y = Math.floor(i / cols) * ch;
-    ctx.drawImage(im, crop.x, crop.y, crop.w, crop.h, x, y, cw, ch);
+    if (box.cW > 0 && box.cH > 0) {
+      ctx.drawImage(im, crop.x, crop.y, crop.w, crop.h,
+        x + padPx, y + padPx, box.cW, box.cH);
+    }
     cells.push({ i, x, y, w: cw, h: ch });
   });
   cv.hidden = false;
+
+  // Точка привязки: низ по центру содержимого ячейки (с учётом полей).
+  const pivot = { x: 0.5, y: +(((padPx + box.cH) / ch).toFixed(4)) };
+  const pivotPx = { x: Math.round(cw / 2), y: padPx + box.cH };
+
+  const qa = $('#sheetQA');
+  if (qa) {
+    const list = a => a.slice(0, 8).join(', ') + (a.length > 8 ? '…' : '');
+    const issues = [];
+    if (empty.length) issues.push(`пустые кадры: ${list(empty)}`);
+    if (opaque.length) issues.push(`без прозрачности: ${list(opaque)}`);
+    if (cut.length) issues.push(`касаются края кадра: ${list(cut)} — добавьте поле вокруг персонажа`);
+    if (sizes.size > 1) issues.push(`кадры разного размера: ${[...sizes].join(' / ')}`);
+    qa.hidden = false;
+    qa.className = 'sheetQa ' + (issues.length ? 'bad' : 'ok');
+    qa.innerHTML = `<b>${issues.length ? 'Проверка листа: есть замечания' : 'Проверка листа: всё в порядке'}</b>`
+      + `<div><span>${frameLabel(frames.length)}</span> · <span>ячейка</span> ${cw}×${ch} · <span>поля</span> ${padPx} px · <span>pivot снизу по центру</span></div>`
+      + (issues.length ? `<ul>${issues.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : '');
+  }
+
   const name = (S.upName || $('#resMeta').textContent.split('·')[0] || 'sprite').trim().replace(/[^\w\-]+/g, '-') || 'sprite';
   cv.toBlob(blob => {
     if (!blob) return;
@@ -3325,7 +3533,8 @@ async function buildSheet() {
     const a = $('#sheetDl');
     a.href = url; a.download = `${name}-sheet.png`; a.hidden = false;
     const atlas = { image: `${name}-sheet.png`, columns: cols, rows, count: frames.length,
-                    frame: { w: cw, h: ch }, source: { w, h }, crop, frames: cells };
+                    frame: { w: cw, h: ch }, pad: padPx, source: { w, h }, crop,
+                    pivot, pivot_px: pivotPx, frames: cells };
     const jurl = URL.createObjectURL(new Blob([JSON.stringify(atlas, null, 1)], { type: 'application/json' }));
     S.sheetUrls.push(jurl);
     const j = $('#sheetJson');
@@ -3334,14 +3543,16 @@ async function buildSheet() {
     S.sheetAtlas = atlas;
     $('#sheetSave').hidden = false;
   }, 'image/png');
-  hint.textContent = `${cols}×${rows}, ячейка ${cw}×${ch}, лист ${cv.width}×${cv.height} px. Поля обрезаны по контуру кадров.`
-    + (eff < scale - 0.001 ? ` Масштаб подгонён под предел ${LIMIT} px.` : '');
+  hint.innerHTML = `${cols}×${rows}, ячейка ${cw}×${ch} (поля ${padPx} px), лист ${cv.width}×${cv.height} px. `
+    + '<span>Поля обрезаны по контуру кадров, pivot — снизу по центру.</span>'
+    + (eff < scale - 0.001 ? ` <span>Масштаб подгонён под предел ${LIMIT} px.</span>` : '');
   $('#sheetInfo').textContent = `${frameLabel(frames.length)} → ${cols}×${rows}`;
 }
 
 $('#sheetBuild').onclick = () => buildSheet();
 $('#sheetCols').onchange = () => S.framesList.length && buildSheet();
 $('#sheetScale').onchange = () => S.framesList.length && buildSheet();
+$('#sheetPad').onchange = () => S.framesList.length && buildSheet();
 
 $('#sheetSave').onclick = () => {
   const cv = $('#sheetCv');
@@ -3356,6 +3567,8 @@ $('#sheetSave').onclick = () => {
     cols: a.columns, rows: a.rows, cw: a.frame.w, ch: a.frame.h, count: a.count,
     crop: [a.crop.x, a.crop.y, a.crop.w, a.crop.h].join(','),
     src: [a.source.w, a.source.h].join(','),
+    pad: a.pad || 0,
+    pivot: [a.pivot.x, a.pivot.y].join(','),
     origin: JSON.stringify({
       kind: S.upResult ? 'upscale' : 'animation',
       name: S.sheetName || '',
@@ -4900,7 +5113,9 @@ $('#comfyModal').addEventListener('click', e => {
 
 boot();
 const startTab = (location.hash || '').slice(1);
-if (['img', 'bg', 'gen', 'up', 'sheet'].includes(startTab)) setTab(startTab);
+const queryTab = new URLSearchParams(location.search).get('tab') || '';
+if (['img', 'bg', 'gen', 'up', 'sheet'].includes(queryTab)) setTab(queryTab);
+else if (['img', 'bg', 'gen', 'up', 'sheet'].includes(startTab)) setTab(startTab);
 setInterval(async () => {
   try {
     const j = await (await fetch('/api/state')).json();

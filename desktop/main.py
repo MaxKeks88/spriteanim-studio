@@ -48,7 +48,7 @@ if sys.stdout is None or sys.stderr is None or FROZEN:
 
 import server  # noqa: E402
 
-URL = f"http://{server.HOST}:{server.PORT}"
+URL = f"http://127.0.0.1:{server.PORT}"
 TITLE = "SpriteAnim Studio"
 SMOKE = os.environ.get("SPRITE_SMOKE") == "1"
 DEBUG = os.environ.get("SPRITE_DEBUG") == "1"
