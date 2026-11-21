@@ -446,7 +446,7 @@ public class MainActivity extends Activity {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
-                while ((line = reader.readLine()) != null && body.length() < 65536) {
+                while ((line = reader.readLine()) != null) {
                     body.append(line);
                 }
             }
