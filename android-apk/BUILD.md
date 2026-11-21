@@ -46,8 +46,8 @@ gradlew.bat assembleDebug
 В `android/app/build.gradle`:
 
 ```groovy
-versionCode 3
-versionName "0.4.0-mobile"
+versionCode 4
+versionName "0.4.1-mobile"
 ```
 
 `versionCode` обязан расти при каждой установке поверх — иначе Android не

@@ -2,17 +2,22 @@
 <resources>
     <string name="app_name">SpriteAnim Studio</string>
     <string name="connect_title">Подключение к компьютеру</string>
-    <string name="connect_hint">Запустите SpriteAnim Studio на компьютере и нажмите
-        «Найти компьютер в сети». Телефон и компьютер — в одной сети. Если не находит,
-        в студии откройте ⚙ Настройки → С телефона и нажмите «Открыть в брандмауэре».</string>
+    <string name="connect_hint">Перед подключением запустите на компьютере SpriteAnim Studio
+        и ComfyUI. Нажмите «Найти компьютер в сети»; телефон и компьютер должны быть
+        в одной сети. Если не находит — в студии откройте ⚙ Настройки → Обновление
+        и нажмите «Открыть в брандмауэре».</string>
     <string name="addr_hint">192.168.1.42:8189</string>
     <string name="connect">Подключиться</string>
     <string name="find">Найти компьютер в сети</string>
     <string name="searching">Ищу студию в сети…</string>
     <string name="scanning">Проверяю адреса в сети…</string>
-    <string name="not_found">Студия не найдена. Проверьте, что SpriteAnim Studio запущена
-        на компьютере, в настройках включён «Доступ с телефона», и брандмауэр
-        не блокирует порт 8189.</string>
+    <string name="checking_comfy">Проверяю ComfyUI…</string>
+    <string name="not_found">Компьютер не найден. Проверьте, что на ПК запущены
+        SpriteAnim Studio и ComfyUI, и что брандмауэр не блокирует порт 8189.</string>
+    <string name="comfy_off">ComfyUI не запущен на компьютере. Запустите ComfyUI
+        на ПК, затем нажмите «Повторить».</string>
+    <string name="studio_off">Компьютер не найден. Проверьте, что на ПК запущены
+        SpriteAnim Studio и ComfyUI.</string>
     <string name="offline">Нет связи со студией. Проверьте, что компьютер включён
         и студия запущена.</string>
     <string name="retry">Повторить</string>
@@ -23,4 +28,8 @@
     <string name="exit_hint">Нажмите «Назад» ещё раз, чтобы выйти</string>
     <string name="mic_needed">Для голосового ввода нужно разрешение на микрофон</string>
     <string name="bad_addr">Не похоже на адрес. Пример: 192.168.1.42:8189</string>
+    <string name="install_permission">Разрешите установку приложений из этого источника
+        и повторите.</string>
+    <string name="update_downloading">Скачиваю обновление…</string>
+    <string name="update_failed">Не удалось скачать обновление</string>
 </resources>

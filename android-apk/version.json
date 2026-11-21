@@ -1,0 +1,6 @@
+{
+  "versionCode": 4,
+  "versionName": "0.4.1-mobile",
+  "apk": "https://raw.githubusercontent.com/MaxKeks88/spriteanim-studio/main/android-apk/SpriteAnimStudio-Android-0.4.1.apk",
+  "notes": "Проверка обновлений для телефона, кнопка APK перенесена в «Обновление», обязательный запуск ComfyUI на ПК."
+}

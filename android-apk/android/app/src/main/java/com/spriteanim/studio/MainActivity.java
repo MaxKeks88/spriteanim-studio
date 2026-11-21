@@ -3,10 +3,13 @@ package com.spriteanim.studio;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -17,6 +20,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Base64;
 import android.view.View;
 import android.view.Window;
@@ -41,9 +45,14 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -67,18 +76,52 @@ public class MainActivity extends Activity {
     private EditText addr;
     private Button connectBtn;
     private Button findBtn;
+    private Button retryBtn;
     private ProgressBar progress;
     private LinearLayout recentList;
 
     private ValueCallback<Uri[]> fileCallback;
     private PermissionRequest micRequest;
     private String serverHost = "";
+    private String pendingUrl = "";
+    private long updateDownloadId = -1L;
     private long lastBack = 0L;
     private boolean pageLoaded = false;
     private boolean mainError = false;
     private boolean searchedOnce = false;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
+
+    /** Завершение скачивания обновления — сразу открываем установщик. */
+    private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) {
+                return;
+            }
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
+            if (id < 0 || id != updateDownloadId) {
+                return;
+            }
+            updateDownloadId = -1L;
+            try {
+                DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                Uri uri = dm.getUriForDownloadedFile(id);
+                if (uri == null) {
+                    Toast.makeText(MainActivity.this, R.string.update_failed, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Intent view = new Intent(Intent.ACTION_VIEW);
+                view.setDataAndType(uri, "application/vnd.android.package-archive");
+                view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(view);
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this,
+                        "Обновление скачано в «Загрузки» — откройте файл для установки",
+                        Toast.LENGTH_LONG).show();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,10 +138,18 @@ public class MainActivity extends Activity {
         addr = findViewById(R.id.addr);
         connectBtn = findViewById(R.id.connectBtn);
         findBtn = findViewById(R.id.findBtn);
+        retryBtn = findViewById(R.id.retryBtn);
         progress = findViewById(R.id.progress);
         recentList = findViewById(R.id.recentList);
 
         setupWebView();
+
+        IntentFilter downloadFilter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(downloadReceiver, downloadFilter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(downloadReceiver, downloadFilter);
+        }
 
         connectBtn.setOnClickListener(v -> {
             String url = normalizeUrl(addr.getText().toString());
@@ -107,16 +158,25 @@ public class MainActivity extends Activity {
                 connStatus.setTextColor(getColor(R.color.bad));
                 return;
             }
-            connect(url);
+            checkAndOpen(url);
         });
         findBtn.setOnClickListener(v -> discover());
+        retryBtn.setOnClickListener(v -> {
+            String url = pendingUrl != null && !pendingUrl.isEmpty()
+                    ? pendingUrl : prefs().getString(PREF_URL, "");
+            if (!url.isEmpty()) {
+                checkAndOpen(url);
+            } else {
+                discover();
+            }
+        });
 
         renderRecent();
 
         String saved = prefs().getString(PREF_URL, "");
         if (!saved.isEmpty()) {
             addr.setText(saved.replaceFirst("^https?://", ""));
-            connect(saved);
+            checkAndOpen(saved);
         } else {
             showConnect(getString(R.string.connect_hint), false);
             discover();
@@ -181,6 +241,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progress.setVisibility(View.GONE);
+                retryBtn.setVisibility(View.GONE);
                 if (mainError) {
                     return;
                 }
@@ -197,7 +258,7 @@ public class MainActivity extends Activity {
                 if (request.isForMainFrame()) {
                     mainError = true;
                     pageLoaded = false;
-                    String text = getString(R.string.offline);
+                    String text = getString(R.string.studio_off);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         text += "\n\n" + error.getDescription();
                     }
@@ -327,13 +388,86 @@ public class MainActivity extends Activity {
         return sb.toString();
     }
 
-    private void connect(String url) {
+    /** Проверяет ComfyUI на найденном компьютере и только потом открывает студию. */
+    private void checkAndOpen(String raw) {
+        final String url = normalizeUrl(raw);
+        if (url == null) {
+            connStatus.setText(R.string.bad_addr);
+            connStatus.setTextColor(getColor(R.color.bad));
+            return;
+        }
         serverHost = Uri.parse(url).getHost();
         prefs().edit().putString(PREF_URL, url).apply();
         addRecent(url);
+        pendingUrl = url;
         pageLoaded = false;
         mainError = false;
         searchedOnce = false;
+        web.setVisibility(View.GONE);
+        connectScroll.setVisibility(View.VISIBLE);
+        retryBtn.setVisibility(View.GONE);
+        connectBtn.setEnabled(false);
+        findBtn.setEnabled(false);
+        progress.setVisibility(View.VISIBLE);
+        progress.setIndeterminate(true);
+        connStatus.setTextColor(getColor(R.color.muted));
+        connStatus.setText(R.string.checking_comfy);
+        new Thread(() -> {
+            final String state = checkComfy(url);
+            ui.post(() -> {
+                connectBtn.setEnabled(true);
+                findBtn.setEnabled(true);
+                progress.setVisibility(View.GONE);
+                if ("ok".equals(state)) {
+                    openStudio(url);
+                } else if ("comfy_off".equals(state)) {
+                    showConnect(getString(R.string.comfy_off), true);
+                    retryBtn.setVisibility(View.VISIBLE);
+                } else {
+                    showConnect(getString(R.string.studio_off), true);
+                    retryBtn.setVisibility(View.VISIBLE);
+                }
+            });
+        }).start();
+    }
+
+    /** Возвращает ok / comfy_off / studio_off. */
+    private String checkComfy(String url) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(url + "/api/state").openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(15000);
+            conn.setUseCaches(false);
+            if (conn.getResponseCode() != 200) {
+                return "studio_off";
+            }
+            StringBuilder body = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null && body.length() < 65536) {
+                    body.append(line);
+                }
+            }
+            JSONObject obj = new JSONObject(body.toString());
+            JSONObject comfy = obj.optJSONObject("comfy");
+            return comfy != null && comfy.optBoolean("online") ? "ok" : "comfy_off";
+        } catch (Exception e) {
+            return "studio_off";
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    private void openStudio(String url) {
+        serverHost = Uri.parse(url).getHost();
+        pageLoaded = false;
+        mainError = false;
+        searchedOnce = false;
+        retryBtn.setVisibility(View.GONE);
         connectScroll.setVisibility(View.GONE);
         web.setVisibility(View.VISIBLE);
         progress.setVisibility(View.VISIBLE);
@@ -347,6 +481,7 @@ public class MainActivity extends Activity {
         progress.setVisibility(View.GONE);
         web.setVisibility(View.GONE);
         connectScroll.setVisibility(View.VISIBLE);
+        retryBtn.setVisibility(View.GONE);
         connStatus.setText(message);
         connStatus.setTextColor(getColor(failed ? R.color.bad : R.color.muted));
         renderRecent();
@@ -372,7 +507,7 @@ public class MainActivity extends Activity {
                 for (Discovery.Server server : found) {
                     addRecent(server.url);
                 }
-                connect(found.get(0).url);
+                checkAndOpen(found.get(0).url);
             });
         }).start();
     }
@@ -418,7 +553,7 @@ public class MainActivity extends Activity {
                 chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
                         Color.parseColor("#171b23")));
                 chip.setTextColor(Color.parseColor("#e8ecf4"));
-                chip.setOnClickListener(v -> connect(url));
+                chip.setOnClickListener(v -> checkAndOpen(url));
                 recentList.addView(chip);
             }
         } catch (Exception ignored) {
@@ -530,7 +665,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Мост для страницы: ссылки на файлы и большие двоичные ответы. */
+    /** Мост для страницы: ссылки на файлы, версия и установка обновления. */
     public class Bridge {
         @JavascriptInterface
         public void downloadUrl(String url, String name) {
@@ -541,6 +676,80 @@ public class MainActivity extends Activity {
         public void saveBase64(String name, String mime, String data) {
             MainActivity.this.saveBase64(name, mime, data);
         }
+
+        @JavascriptInterface
+        public int versionCode() {
+            return appVersionCode();
+        }
+
+        @JavascriptInterface
+        public String versionName() {
+            return appVersionName();
+        }
+
+        @JavascriptInterface
+        public void installApk(String url) {
+            runOnUiThread(() -> MainActivity.this.installApk(url));
+        }
+    }
+
+    private int appVersionCode() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return Build.VERSION.SDK_INT >= 28 ? (int) info.getLongVersionCode() : info.versionCode;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private String appVersionName() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return info.versionName == null ? "" : info.versionName;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Скачивает APK обновления и открывает системный установщик. */
+    private void installApk(String url) {
+        if (url == null || url.isEmpty()) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !getPackageManager().canRequestPackageInstalls()) {
+            try {
+                startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + getPackageName())));
+            } catch (Exception ignored) {
+            }
+            Toast.makeText(this, R.string.install_permission, Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            String name = "SpriteAnimStudio-update-" + System.currentTimeMillis() + ".apk";
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setTitle("SpriteAnim Studio");
+            request.setDescription(getString(R.string.update_downloading));
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
+            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            updateDownloadId = manager.enqueue(request);
+            Toast.makeText(this, R.string.update_downloading, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.update_failed, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        try {
+            unregisterReceiver(downloadReceiver);
+        } catch (Exception ignored) {
+        }
+        super.onDestroy();
     }
 
     // ------------------------------------------------------------ системное

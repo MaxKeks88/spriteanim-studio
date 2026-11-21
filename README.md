@@ -249,14 +249,16 @@ keep their own licenses — see [`THIRD-PARTY.md`](THIRD-PARTY.md).
 ## С телефона / From phone
 
 Всё то же самое можно делать с телефона. Готовое Android-приложение лежит в
-папке [`android-apk/`](android-apk/): `SpriteAnimStudio-Android-0.4.0.apk`
-(0,86 МБ). Запустите студию на компьютере, установите APK и нажмите
-«Найти компьютер в сети» — изображения, анимация, апскейл и спрайт-лист
-доступны так же, как на ПК. Подробности — в
+папке [`android-apk/`](android-apk/): `SpriteAnimStudio-Android-0.4.1.apk`
+(0,89 МБ). **Перед запуском приложения обязательно запустите на компьютере
+ComfyUI** (и студию): без него приложение покажет «ComfyUI не запущен» и не
+откроет интерфейс. Установите APK и нажмите «Найти компьютер в сети»;
+обновления для телефона — в «Настройки → Обновление». Подробности —
 [`android-apk/README.md`](android-apk/README.md).
 
 All of this can also be done from a phone. The ready APK is in
-[`android-apk/`](android-apk/): `SpriteAnimStudio-Android-0.4.0.apk` (0.86 MB).
-Start the studio on the PC, install the APK and tap "Find computer on the
-network"; images, animation, upscale and the sprite sheet work exactly as on
-the PC. See [`android-apk/README.md`](android-apk/README.md).
+[`android-apk/`](android-apk/): `SpriteAnimStudio-Android-0.4.1.apk` (0.89 MB).
+**ComfyUI must be running on the PC before you start the app** — otherwise it
+shows "ComfyUI is not running" and does not open the interface. Install the APK
+and tap "Find computer on the network"; phone updates are in
+"Settings → Update". Details: [`android-apk/README.md`](android-apk/README.md).

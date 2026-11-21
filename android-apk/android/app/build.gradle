@@ -10,8 +10,8 @@ android {
         applicationId "com.spriteanim.studio"
         minSdk 26
         targetSdk 34
-        versionCode 3
-        versionName "0.4.0-mobile"
+        versionCode 4
+        versionName "0.4.1-mobile"
     }
 
     buildTypes {
