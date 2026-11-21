@@ -242,3 +242,21 @@ The code is **MIT** (see [`LICENSE`](LICENSE)): use, modify and redistribute it
 with the copyright notice. The app is free; the installer shows the
 [`EULA`](desktop/EULA.txt). ComfyUI, the models and other third-party components
 keep their own licenses — see [`THIRD-PARTY.md`](THIRD-PARTY.md).
+
+
+---
+
+## С телефона / From phone
+
+Всё то же самое можно делать с телефона. Готовое Android-приложение лежит в
+папке [`android-apk/`](android-apk/): `SpriteAnimStudio-Android-0.4.0.apk`
+(0,86 МБ). Запустите студию на компьютере, установите APK и нажмите
+«Найти компьютер в сети» — изображения, анимация, апскейл и спрайт-лист
+доступны так же, как на ПК. Подробности — в
+[`android-apk/README.md`](android-apk/README.md).
+
+All of this can also be done from a phone. The ready APK is in
+[`android-apk/`](android-apk/): `SpriteAnimStudio-Android-0.4.0.apk` (0.86 MB).
+Start the studio on the PC, install the APK and tap "Find computer on the
+network"; images, animation, upscale and the sprite sheet work exactly as on
+the PC. See [`android-apk/README.md`](android-apk/README.md).

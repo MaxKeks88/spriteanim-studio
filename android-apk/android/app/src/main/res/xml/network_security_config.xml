@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Приложение ходит к студии по локальной сети без шифрования. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

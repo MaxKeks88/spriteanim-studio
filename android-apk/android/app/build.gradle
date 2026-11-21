@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.spriteanim.studio'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.spriteanim.studio"
+        minSdk 26
+        targetSdk 34
+        versionCode 3
+        versionName "0.4.0-mobile"
+    }
+
+    buildTypes {
+        release {
+            // Для личной установки подписываем debug-ключом: Play Market не нужен.
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+    }
+}
