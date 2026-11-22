@@ -2929,6 +2929,8 @@ async function runGenAgent(brief) {
       onDelta: t => { live += t; box.value = live; countPrompt(); },
       onDone: j => {
         box.value = j.prompt;
+        colorizePrompt();
+        S.prompts[S.repeat] = box.value;
         trReset('gen');
         countPrompt();
         checkPrompt();
@@ -3031,6 +3033,7 @@ function applyClipPreset(id) {
   S.prompts[S.repeat] = p.prompt;
   S.names[S.repeat] = p.name;
   colorizePrompt();
+  S.prompts[S.repeat] = $('#prompt').value;
   countPrompt();
   checkPrompt();
   paintParams();
@@ -3047,12 +3050,23 @@ function syncClipPreset(name) {
 $('#clipPreset').onchange = e => applyClipPreset(e.target.value);
 
 
-// Цвет и промпт — один контракт: если в тексте назван фон, слово меняется вместе с кнопкой.
+// Цвет и промпт — один контракт: цвет фона в тексте всегда равен выбранному.
 function colorizePrompt() {
   const color = $('#keyColor').value || 'magenta';
   const box = $('#prompt');
-  const text = box.value.replace(/\b(flat,\s*uniform\s+solid\s+)(magenta|green|blue)\b/gi,
+  const colors = 'magenta|green|blue|white|black|grey|gray|violet|purple|cyan|yellow|red|orange|pink';
+  let text = box.value;
+  text = text.replace(new RegExp('(\\b(?:flat|uniform|solid)[^.!?]{0,30}?)\\b(?:' + colors + ')\\b', 'gi'),
     (m, head) => head + color);
+  text = text.replace(new RegExp('\\b(?:' + colors + ')\\b(\\s+(?:flat\\s+)?(?:background|backdrop)\\b)', 'gi'),
+    (m, tail) => color + tail);
+  text = text.replace(new RegExp('(\\b(?:background|backdrop)\\s+(?:is|stays|remains|should be|must be|will be|is a|is one)\\s+(?:a\\s+)?(?:flat|uniform|solid|plain|pure|dark|light|bright|muted)?\\s*)\\b(?:' + colors + ')\\b', 'gi'),
+    (m, head) => head + color);
+  text = text.replace(/\b(?:a\s+|an\s+)?(?:transparent|no)\s+background\b/gi,
+    m => {
+      const s = `a flat, uniform solid ${color} background`;
+      return /^[A-Z]/.test(m) ? s[0].toUpperCase() + s.slice(1) : s;
+    });
   if (text === box.value) return false;
   box.value = text;
   countPrompt();
@@ -3072,6 +3086,7 @@ $('#keyColors').onclick = e => {
   const color = b.dataset.c;
   $('#keyColor').value = color;
   const fixed = colorizePrompt();
+  S.prompts[S.repeat] = $('#prompt').value;
   paintKeyColor();
   checkPrompt();
   if (before !== color) {
@@ -3147,7 +3162,10 @@ function padImage(img, targetW, targetH, pad, keyHex) {
       ch = Math.max(64, Math.round(ch / 32) * 32);
 
       // 1. Берём фактический цвет фона из угла исходника.
-      let bgR = 255, bgG = 0, bgB = 255;
+      const hex = String(keyHex || '#ff00ff').replace('#', '');
+      let bgR = parseInt(hex.slice(0, 2), 16) || 255;
+      let bgG = parseInt(hex.slice(2, 4), 16) || 0;
+      let bgB = parseInt(hex.slice(4, 6), 16) || 255;
       try {
         const probe = document.createElement('canvas');
         probe.width = 8; probe.height = 8;
@@ -3231,6 +3249,7 @@ function padImage(img, targetW, targetH, pad, keyHex) {
 
 $('#go').onclick = async () => {
   trEnsureEn('gen');
+  colorizePrompt();
   if (!S.img) { toast('Сначала загрузите картинку персонажа', 'bad'); return; }
   if (!S.repeat) { toast('Не выбран тип повтора', 'bad'); return; }
   if (!$('#prompt').value.trim()) { toast('Промпт пустой', 'bad'); return; }
@@ -3244,14 +3263,14 @@ $('#go').onclick = async () => {
     dedupe_twos: $('#dedupe').checked,
   };
   const keyHex = { magenta: '#ff00ff', green: '#00ff00', blue: '#0000ff' }[$('#keyColor').value] || '#ff00ff';
+  // Всегда собираем персонажа на выбранном ключевом цвете, даже без полей:
+  // иначе прозрачный исходник уходит в модель как белый фон.
   let sendImg = S.img;
-  if (S.pad) {
-    try {
-      sendImg = await padImage(S.img, S.size.w, S.size.h, S.pad, keyHex);
-    } catch (e) {
-      toast('Не удалось подготовить поле: ' + e.message, 'bad');
-      return;
-    }
+  try {
+    sendImg = await padImage(S.img, S.size.w, S.size.h, S.pad || 0, keyHex);
+  } catch (e) {
+    toast('Не удалось подготовить поле: ' + e.message, 'bad');
+    return;
   }
   const body = {
     mode: S.repeat, name: $('#clipName').value.trim(),
@@ -3405,12 +3424,23 @@ function alphaBox(img, W, H, cv, ctx) {
         }
       }
     }
-    if (maxX >= minX && maxY >= minY) {
-      return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, minA };
+    // Углы кадра: если там непрозрачно, подложка не вырезалась.
+    const cs = Math.max(2, Math.round(Math.min(W, H) * 0.02));
+    let corner = 0;
+    for (const [cx, cy] of [[0, 0], [W - cs, 0], [0, H - cs], [W - cs, H - cs]]) {
+      for (let y = cy; y < Math.min(H, cy + cs); y++) {
+        for (let x = cx; x < Math.min(W, cx + cs); x++) {
+          const a = d[(y * W + x) * 4 + 3];
+          if (a > corner) corner = a;
+        }
+      }
     }
-    return { x: 0, y: 0, w: 0, h: 0, minA };
+    if (maxX >= minX && maxY >= minY) {
+      return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, minA, corner };
+    }
+    return { x: 0, y: 0, w: 0, h: 0, minA, corner };
   } catch { /* без прозрачности — берём кадр целиком */ }
-  return { x: 0, y: 0, w: W, h: H, minA: -1 };
+  return { x: 0, y: 0, w: W, h: H, minA: -1, corner: -1 };
 }
 
 async function buildSheet() {
@@ -3446,7 +3476,7 @@ async function buildSheet() {
   boxCv.width = w; boxCv.height = h;
   const boxCtx = boxCv.getContext('2d', { willReadFrequently: true });
   let ux0 = w, uy0 = h, ux1 = -1, uy1 = -1;
-  const empty = [], opaque = [], cut = [], sizes = new Set();
+  const empty = [], opaque = [], cut = [], sizes = new Set(), bgLeft = [];
   for (let i = 0; i < imgs.length; i++) {
     const im = imgs[i];
     sizes.add(`${im.naturalWidth || im.width}x${im.naturalHeight || im.height}`);
@@ -3459,6 +3489,7 @@ async function buildSheet() {
       if (b.x + b.w > ux1) ux1 = b.x + b.w;
       if (b.y + b.h > uy1) uy1 = b.y + b.h;
       if (b.minA >= 250) opaque.push(i + 1);
+      if (b.corner > 200) bgLeft.push(i + 1);
       if (b.x <= 1 || b.y <= 1 || b.x + b.w >= w - 1 || b.y + b.h >= h - 1) cut.push(i + 1);
     }
     if (i % 12 === 0) hint.textContent = `ищу контур: ${i + 1} из ${imgs.length}…`;
@@ -3515,7 +3546,8 @@ async function buildSheet() {
     const list = a => a.slice(0, 8).join(', ') + (a.length > 8 ? '…' : '');
     const issues = [];
     if (empty.length) issues.push(`пустые кадры: ${list(empty)}`);
-    if (opaque.length) issues.push(`без прозрачности: ${list(opaque)}`);
+    if (bgLeft.length) issues.push(`фон не вырезался (углы непрозрачные): ${list(bgLeft)} — проверьте цвет подложки и ноду SpriteChromaKey`);
+    if (opaque.length && opaque.length < imgs.length) issues.push(`без прозрачности: ${list(opaque)}`);
     if (cut.length) issues.push(`касаются края кадра: ${list(cut)} — добавьте поле вокруг персонажа`);
     if (sizes.size > 1) issues.push(`кадры разного размера: ${[...sizes].join(' / ')}`);
     qa.hidden = false;

@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.4.1"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -1222,13 +1222,45 @@ SIZE_PRESETS = [(512, 512), (640, 512), (512, 640), (768, 768), (640, 640)]
 # SpriteChromaKey. Поэтому нужная фраза добавляется к промпту сама, откуда бы
 # промпт ни пришёл.
 COLOR_WORDS = ("magenta", "green", "blue")
+COLOR_HEX = {"magenta": "#FF00FF", "green": "#00FF00", "blue": "#0000FF"}
+BG_COLORS = r"magenta|green|blue|white|black|grey|gray|violet|purple|cyan|yellow|red|orange|pink"
 TECH_TAIL = ("Crisp outlines and clear separate limbs, with no motion blur. "
              "No camera movement, zoom, rotation, character turning, sliding across the frame, "
              "extra limbs, extra fingers, morphing, text or new objects.")
 
 
 def bg_clause(color: str) -> str:
-    return f"The background remains a flat, uniform solid {color}."
+    hexv = COLOR_HEX.get(color, color)
+    return (f"The entire background is one flat, uniform solid {color} ({hexv}) "
+            "with no gradients, no shadows, no ground and no other colors.")
+
+
+def _force_bg_color(text: str, color: str) -> str:
+    """Заменить цвет фона в промпте на выбранный, откуда бы промпт ни пришёл."""
+    body = text or ""
+    # «flat, uniform solid <color>» — фраза пресетов.
+    body = re.sub(r"(?i)(\b(?:flat|uniform|solid)[^.!?]{0,30}?)\b(?:" + BG_COLORS + r")\b",
+                  lambda m: m.group(1) + color, body)
+    # «<color> background» / «<color> flat background».
+    body = re.sub(r"(?i)\b(?:" + BG_COLORS + r")\b(\s+(?:flat\s+)?(?:background|backdrop)\b)",
+                  lambda m: color + m.group(1), body)
+    # «background is/stays/remains [a] [flat/plain/pure/dark] <color>».
+    body = re.sub(
+        r"(?i)(\b(?:background|backdrop)\s+"
+        r"(?:is|stays|remains|should be|must be|will be|is a|is one)\s+"
+        r"(?:a\s+)?(?:flat|uniform|solid|plain|pure|dark|light|bright|muted)?\s*)"
+        r"\b(?:" + BG_COLORS + r")\b",
+        lambda m: m.group(1) + color, body)
+    # «transparent/no background» — модель не умеет прозрачность, нужен ровный ключ.
+    body = re.sub(r"(?i)\b(?:a\s+|an\s+)?(?:transparent|no)\s+background\b",
+                  lambda m: _bg_phrase(color, m.group(0)), body)
+    return body
+
+
+def _bg_phrase(color: str, src: str) -> str:
+    """Фраза фона для случая «transparent/no background» с заглавной, если надо."""
+    s = f"a flat, uniform solid {color} background"
+    return s[0].upper() + s[1:] if src[:1].isupper() else s
 
 
 # Кириллица → латиница: имя движения становится именем папки и zip.
@@ -1257,18 +1289,15 @@ def normalize_prompt(text: str, color: str) -> tuple[str, list[str], str]:
     """
     color = color if color in COLOR_WORDS else "magenta"
     body = (text or "").strip()
+    body = _force_bg_color(body, color)
     low = body.lower()
     added: list[str] = []
-    conflict = ""
-    found = _bg_color_in(low)
-    if found and found != color:
-        conflict = f"в промпте {found} фон, а ключ вырезания — {color}"
-    if not found:
+    if not _bg_color_in(low):
         added.append(bg_clause(color))
     if "no motion blur" not in low:
         added.append(TECH_TAIL)
     final = " ".join([body] + added).strip()
-    return final, added, conflict
+    return final, added, ""
 
 
 def load_workflows() -> list[dict]:

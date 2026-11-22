@@ -29,6 +29,7 @@ available in **Russian and English**.
 | **Изображения** — генерация по промпту, до 5 референсов, форматы 1:1, 16:9, 9:16, 4:3, 3:4 | **Images** — generate from a prompt, up to 5 reference images, 1:1, 16:9, 9:16, 4:3, 3:4 |
 | **Убрать фон** — прозрачный PNG одной кнопкой | **Remove background** — transparent PNG in one click |
 | **Анимация** — спрайтовый цикл или одно действие, выбор цвета подложки, обрезка кадра, видео и кадры PNG | **Animation** — sprite loop or one-shot, backdrop color, frame trimming, video and PNG frames |
+| **Цвет подложки** — выбранный цвет подставляется и в промпт, и в кадр; вырезание работает по фактическому ровному фону, даже если модель ошиблась цветом | **Backdrop color** — the chosen color goes into both the prompt and the frame; keying follows the actual flat background even if the model picked another color |
 | **Пресеты клипов** — 12 готовых вариантов (стойка, атака, ульта, удар, оглушение, победа, две смерти, радость, три бытовых действия) подставляют промпт, имя и длительность; есть «Свой вариант» | **Clip presets** — 12 ready variants (idle, attack, ultimate, hit, stun, victory, two deaths, joy, three fidgets) fill in the prompt, name and duration; a “Custom” option is included |
 | **Промпт по-русски** — кнопка RU/EN у «Сгенерировать» показывает английский промпт по-русски и возвращает обратно | **Prompt in Russian** — an RU/EN button near Generate shows the English prompt in Russian and switches back |
 | **Готовый спрайт-лист** — лист сохраняется в `output/sheets` вместе с JSON | **Finished sprite sheet** — the sheet is saved to `output/sheets` with its JSON |
@@ -84,7 +85,7 @@ remembered, and the sprite-sheet editor follows the app language.
 В папке **`Install`** лежит готовый установщик:
 
 ```
-Install\SpriteAnimStudio-Setup-0.4.0.exe
+Install\SpriteAnimStudio-Setup-0.4.1.exe
 ```
 
 1. Запустите его — права администратора не нужны, ставится в профиль пользователя.
@@ -96,7 +97,7 @@ Install\SpriteAnimStudio-Setup-0.4.0.exe
 The ready-to-use installer is in the **`Install`** folder:
 
 ```
-Install\SpriteAnimStudio-Setup-0.4.0.exe
+Install\SpriteAnimStudio-Setup-0.4.1.exe
 ```
 
 1. Run it — no administrator rights are needed, it installs into your user profile.
@@ -125,9 +126,9 @@ python desktop/build.py
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ```
 
-Результат — `desktop/dist/SpriteAnimStudio-Setup-0.4.0.exe`.
+Результат — `desktop/dist/SpriteAnimStudio-Setup-0.4.1.exe`.
 
-Output: `desktop/dist/SpriteAnimStudio-Setup-0.4.0.exe`.
+Output: `desktop/dist/SpriteAnimStudio-Setup-0.4.1.exe`.
 
 ---
 

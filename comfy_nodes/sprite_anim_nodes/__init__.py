@@ -12,15 +12,28 @@ def key_frame(rgb, key_color, sample_border, clip_black, clip_white,
               despill, choke_px, edge_bleed_px):
     rgb = np.asarray(rgb, dtype=np.float32)[..., :3]
     presets = {'magenta': (1., 0., 1.), 'green': (0., 1., 0.), 'blue': (0., 0., 1.)}
-    bg = np.array(presets[key_color], dtype=np.float32)
+    bg = np.array(presets.get(key_color, presets['magenta']), dtype=np.float32)
+    distance_mode = False
     if sample_border:
         # Sampling the outermost strips avoids the subject on this full-body canvas.
         border = np.concatenate((rgb[:3].reshape(-1,3), rgb[-3:].reshape(-1,3),
                                  rgb[:, :3].reshape(-1,3), rgb[:, -3:].reshape(-1,3)))
-        measured = np.median(border, axis=0)
-        if signal(measured, key_color) > .15:
+        measured = np.median(border, axis=0).astype(np.float32)
+        close = np.linalg.norm(border - measured, axis=1) <= .12
+        flat = float(close.mean()) if close.size else 0.
+        if flat >= .55:
+            # The model may paint a different flat color than requested. Use the
+            # actual border color and a distance matte so any flat backdrop works
+            # and a per-frame color flicker is still keyed cleanly.
             bg = measured
-    raw_alpha = np.clip(1. - signal(rgb, key_color) / max(float(signal(bg, key_color)), .05), 0., 1.)
+            distance_mode = True
+        elif signal(measured, key_color) > .15:
+            bg = measured
+    if distance_mode:
+        dist = np.linalg.norm(rgb - bg, axis=-1) / float(np.sqrt(3.))
+        raw_alpha = np.clip((dist - .09) / .26, 0., 1.)
+    else:
+        raw_alpha = np.clip(1. - signal(rgb, key_color) / max(float(signal(bg, key_color)), .05), 0., 1.)
     alpha = np.clip((raw_alpha - clip_black) / max(clip_white - clip_black, .001), 0., 1.)
     if choke_px > 0:
         whole = int(choke_px)
@@ -55,7 +68,7 @@ class SpriteChromaKey:
         return {'required': {
             'images': ('IMAGE',),
             'key_color': (['magenta','green','blue'], {'default':'magenta'}),
-            'sample_border': ('BOOLEAN', {'default':True, 'tooltip':'Estimate actual backdrop color from each frame border. Subject must not touch the border.'}),
+            'sample_border': ('BOOLEAN', {'default':True, 'tooltip':'Estimate the actual backdrop color from each frame border. Works for any flat color, so a wrong or flickering backdrop is still keyed; the subject must not touch the border.'}),
             'clip_black': ('FLOAT', {'default':.04, 'min':0., 'max':.4, 'step':.01, 'tooltip':'Raise to clear faint background haze. Too high removes thin details.'}),
             'clip_white': ('FLOAT', {'default':.97, 'min':.5, 'max':1., 'step':.01, 'tooltip':'Lower to make more of the subject fully opaque.'}),
             'despill': ('FLOAT', {'default':1., 'min':0., 'max':1., 'step':.05, 'tooltip':'Remove backdrop color mixed into partially transparent edges.'}),
