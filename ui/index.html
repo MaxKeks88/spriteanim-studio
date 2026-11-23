@@ -1930,6 +1930,7 @@ function trPaint(tab) {
 
 function trReset(tab) {
   const st = TR[tab];
+  if (st.busy) { st.ctrl?.abort(); st.busy = false; st.ctrl = null; }
   st.en = ''; st.ru = ''; st.mode = 'en';
   const box = $(st.field);
   if (box) box.readOnly = false;
@@ -1943,6 +1944,7 @@ function trRefreshText(tab) {
 
 async function trToggle(tab) {
   const st = TR[tab], box = $(st.field), el = $(st.btn);
+  if (st.busy) { st.ctrl?.abort(); return; }   // второе нажатие останавливает перевод
   if (st.mode === 'ru') {
     box.value = st.en;
     box.readOnly = false;
@@ -1961,25 +1963,72 @@ async function trToggle(tab) {
     trPaint(tab);
     return;
   }
-  el.disabled = true;
+  // Переводим потоком: текст появляется по ходу, кнопка остаётся активной для отмены.
+  st.busy = true;
+  st.ctrl = new AbortController();
+  st.en = text;
   el.textContent = '…';
+  el.title = 'Нажмите, чтобы остановить перевод';
+  el.classList.add('busy');
+  box.readOnly = true;
+  let live = '';
+  let said = false;
   try {
-    const r = await fetch('/api/translate', {
+    const res = await fetch('/api/translate/stream', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text }), signal: st.ctrl.signal,
     });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || 'не удалось перевести');
-    st.en = text;
-    st.ru = String(j.text || '').trim();
-    st.mode = 'ru';
-    box.value = st.ru;
-    box.readOnly = true;
+    if (!res.ok) {
+      let msg = 'не удалось перевести';
+      try { const j = await res.json(); msg = j.error || msg; } catch { /* не json */ }
+      throw new Error(msg);
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let k;
+      while ((k = buf.indexOf('\n\n')) >= 0) {
+        const chunk = buf.slice(0, k).trim();
+        buf = buf.slice(k + 2);
+        if (!chunk.startsWith('data:')) continue;
+        let ev = null;
+        try { ev = JSON.parse(chunk.slice(5)); } catch { continue; }
+        if (ev.type === 'status') {
+          el.title = ev.text || '';
+          if (!said) { said = true; toast('Перевод: ' + (ev.text || 'работаю') + '…'); }
+        }
+        else if (ev.type === 'delta') { live += ev.text; box.value = live; }
+        else if (ev.type === 'error') throw new Error(ev.message || 'ошибка перевода');
+        else if (ev.type === 'done') {
+          st.ru = String(ev.text || '').trim();
+          st.mode = 'ru';
+          box.value = st.ru;
+          trRefreshText(tab);
+        }
+      }
+    }
+    if (st.mode !== 'ru') {
+      if (!live.trim()) throw new Error('агент не вернул перевод');
+      st.ru = live.trim();
+      st.mode = 'ru';
+      box.value = st.ru;
+      trRefreshText(tab);
+    }
   } catch (e) {
-    toast('Перевод: ' + e.message, 'bad');
+    box.value = st.en;
+    box.readOnly = false;
+    st.mode = 'en';
+    if (e.name === 'AbortError') toast('Перевод остановлен');
+    else toast('Перевод: ' + e.message, 'bad');
+  } finally {
+    st.busy = false;
+    st.ctrl = null;
+    el.classList.remove('busy');
+    trPaint(tab);
   }
-  el.disabled = false;
-  trPaint(tab);
 }
 
 /* Перед генерацией показываем модели оригинал, а не перевод. */
@@ -2941,7 +2990,14 @@ async function runGenAgent(brief) {
   } catch (e) {
     progStop();
     if (e.name === 'AbortError') { toast('Остановлено — текст оставлен как есть'); checkPrompt(); }
-    else { toast('Агент: ' + e.message, 'bad'); if (!live) { box.value = wasBrief; countPrompt(); } }
+    else {
+      toast('Агент: ' + e.message, 'bad');
+      // Причина остаётся на экране: тост исчезает, а ошибку надо прочитать.
+      clearTimeout(promptTimer);
+      const info = $('#tailInfo');
+      if (info) info.innerHTML = `<b style="color:var(--warn)">Агент не смог:</b> ${esc(e.message)}`;
+      if (!live) { box.value = wasBrief; countPrompt(); }
+    }
   } finally {
     genAgentBusy = false;
     genAgentCtrl = null;

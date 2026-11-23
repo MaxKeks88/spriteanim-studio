@@ -428,6 +428,7 @@ _load_settings()
 WF_DIR = DATA / "workflows"
 UI_DIR = DATA / "ui"
 CACHE_DIR = ROOT / ".cache"
+AGENT_LOG = CACHE_DIR / "agent.log"
 
 COMFY = os.environ.get("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
 HOST = os.environ.get("SPRITE_HOST", "127.0.0.1")
@@ -2964,8 +2965,6 @@ def build_image_graph(model: dict, prompt: str, negative: str, width: int, heigh
 AGENT_PORT = 8281
 AGENT_CTX = 16384
 AGENT_THREADS = 14
-# Ниже этого порога свободной RAM (ГБ) перед стартом агента просим ComfyUI выгрузить модели.
-AGENT_FREE_RAM_GB = float(os.environ.get("SPRITE_FREE_RAM_GB", "2.5"))
 SKILL_DIR = ROOT / "skills"
 
 # Какая модель изображений каким скиллом пишется.
@@ -3098,6 +3097,27 @@ def agent_info(port: int = 0, owned: bool = False) -> dict:
     }
 
 
+def agent_log_tail(chars: int = 300) -> str:
+    """Последние строки лога llama-server: почему агент не поднялся."""
+    try:
+        data = AGENT_LOG.read_bytes()[-chars * 4:]
+    except OSError:
+        return ""
+    text = data.decode("utf-8", "replace")
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    return " | ".join(lines[-4:])[:chars]
+
+
+def agent_need_gb() -> float:
+    """Сколько RAM нужно агенту: веса на диске + буферы и KV-кэш."""
+    model = agent_model_path()
+    try:
+        weights = model.stat().st_size / 1024 ** 3
+    except OSError:
+        weights = 7.0
+    return weights * 1.15 + 1.0
+
+
 def agent_start(wait: bool = True) -> dict:
     """Запускает агента. wait=False отвечает сразу («starting»), загрузка — в фоне."""
     freed = False
@@ -3128,17 +3148,29 @@ def agent_start(wait: bool = True) -> dict:
             flags = 0x08000000 if os.name == "nt" else 0        # CREATE_NO_WINDOW
             if os.name == "nt":
                 flags |= 0x00004000                              # BELOW_NORMAL_PRIORITY_CLASS
-            # Память под агента: если свободной RAM мало, а ComfyUI простаивает —
-            # просим его выгрузить модели (15–25 ГБ). Следующая генерация потом
-            # перезагрузит их с диска; поэтому делаем это только при нехватке.
-            if free_ram_gb() < AGENT_FREE_RAM_GB and comfy_queue_empty():
+            # Один тяжёлый движок за раз: ComfyUI после генерации держит модели
+            # в RAM и VRAM, а llama-server с ними не поднимается (падает при
+            # старте). Перед агентом выгружаем ComfyUI, если он простаивает;
+            # следующая генерация перезагрузит модели с диска.
+            if comfy_queue_empty():
                 freed = comfy_unload_models()
-                print(f"[agent] память: свободно {free_ram_gb():.1f} ГБ, "
-                      f"выгрузка ComfyUI: {'да' if freed else 'не удалось'}")
+                print(f"[agent] выгрузка ComfyUI перед агентом: "
+                      f"{'да' if freed else 'нечего выгружать'}; "
+                      f"свободно {free_ram_gb():.1f} ГБ RAM, "
+                      f"нужно ~{agent_need_gb():.1f} ГБ")
+            else:
+                print("[agent] ComfyUI занят генерацией — запускаю агента как есть")
             try:
+                try:
+                    CACHE_DIR.mkdir(exist_ok=True)
+                    log = open(AGENT_LOG, "wb")       # свежий лог на каждый запуск
+                except OSError:
+                    log = subprocess.DEVNULL
                 booting = subprocess.Popen(cmd, cwd=str(exe.parent), stdin=subprocess.DEVNULL,
-                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                           stdout=log, stderr=subprocess.STDOUT,
                                            creationflags=flags)
+                if log is not subprocess.DEVNULL:
+                    log.close()          # у ребёнка своя копия handle
             except Exception as exc:  # noqa: BLE001
                 return {"running": False, "starting": False,
                         "error": f"не удалось запустить агента: {exc}",
@@ -3159,8 +3191,11 @@ def agent_start(wait: bool = True) -> dict:
             return {**agent_info(AGENT_PORT, True), "freed": freed}
         if booting.poll() is not None:
             _agent_state.update(proc=None, port=0, starting=False)
+            tail = agent_log_tail()
+            print(f"[agent] закрылся при старте: {tail or 'без вывода'}")
             return {"running": False, "starting": False,
-                    "error": "агент запустился и сразу закрылся",
+                    "error": "агент запустился и сразу закрылся"
+                             + (f": {tail}" if tail else ""),
                     "port": 0, "owned": False, "model": "", "vision": False, "skills": []}
     _agent_state.update(starting=False)
     return {"running": False, "starting": False, "error": "агент не ответил за 10 минут",
@@ -3299,6 +3334,33 @@ def _agent_chat(port: int, messages: list, max_tokens: int = 900,
     return ((res.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
 
 
+TRANSLATE_SYSTEM = (
+    "You are a precise translator for game-art and video prompts. "
+    "Translate the user's text into Russian. Keep the meaning exact, keep "
+    "technical terms, numbers, field names, labels and the original structure. "
+    "Do not add, remove, explain or comment on anything. "
+    "Output only the translation, without quotation marks."
+)
+
+
+def translate_messages(text: str) -> list[dict]:
+    return [{"role": "system", "content": TRANSLATE_SYSTEM},
+            {"role": "user", "content": text}]
+
+
+def translate_max_tokens(text: str) -> int:
+    """Русский текст чуть длиннее английского: токенов с запасом, но без лишних."""
+    return max(400, min(1600, int(len(text) / 1.7) + 150))
+
+
+def _translate_clean(out: str) -> str:
+    out = (out or "").strip()
+    for a, b in (('"', '"'), ("«", "»"), ("“", "”")):
+        if out.startswith(a) and out.endswith(b):
+            out = out[1:-1].strip()
+    return out
+
+
 def translate_text(text: str) -> str:
     """Перевод промпта на русский локальным агентом (без интернета)."""
     text = (text or "").strip()
@@ -3310,21 +3372,8 @@ def translate_text(text: str) -> str:
     if not info.get("running"):
         raise RuntimeError(info.get("error") or "агент не запущен")
     port = info["port"]
-    system = (
-        "You are a precise translator for game-art and video prompts. "
-        "Translate the user's text into Russian. Keep the meaning exact, keep "
-        "technical terms, numbers, field names, labels and the original structure. "
-        "Do not add, remove, explain or comment on anything. "
-        "Output only the translation, without quotation marks."
-    )
-    out = _agent_chat(port, [
-        {"role": "system", "content": system},
-        {"role": "user", "content": text},
-    ], max_tokens=1400, think=False)
-    out = (out or "").strip()
-    for a, b in (('"', '"'), ("«", "»"), ("“", "”")):
-        if out.startswith(a) and out.endswith(b):
-            out = out[1:-1].strip()
+    out = _translate_clean(_agent_chat(port, translate_messages(text),
+                                       max_tokens=translate_max_tokens(text), think=False))
     if not out:
         raise RuntimeError("агент не вернул перевод")
     return out
@@ -3631,6 +3680,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._bad(str(exc), 422)
                 except RuntimeError as exc:
                     return self._bad(str(exc), 422)
+            if u.path == "/api/translate/stream":
+                return self._translate_stream()
             if u.path == "/api/quit":
                 threading.Timer(0.6, shutdown_app).start()
                 return self._json({"ok": True})
@@ -3999,6 +4050,21 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
+    def _sse_begin(self):
+        """Открыть SSE-поток и вернуть emit(obj): событие сразу уходит клиенту."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.close_connection = True
+
+        def emit(obj):
+            self.wfile.write(("data: " + json.dumps(obj, ensure_ascii=False) + "\n\n").encode("utf-8"))
+            self.wfile.flush()
+
+        return emit
+
     def _agent_stream(self):
         """Тот же агент, но ответ идёт кусками (SSE): текст появляется по мере генерации."""
         body = self._body()
@@ -4015,16 +4081,7 @@ class Handler(BaseHTTPRequestHandler):
         if not brief and not pics:
             return self._bad("напишите, что нужно", 422)
 
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "close")
-        self.end_headers()
-        self.close_connection = True
-
-        def emit(obj):
-            self.wfile.write(("data: " + json.dumps(obj, ensure_ascii=False) + "\n\n").encode("utf-8"))
-            self.wfile.flush()
+        emit = self._sse_begin()
 
         try:
             emit({"type": "status", "text": "запускаю агента"})
@@ -4061,6 +4118,38 @@ class Handler(BaseHTTPRequestHandler):
                   "description": description, "retried": retried})
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             return  # пользователь нажал «Стоп» или закрыл страницу
+        except Exception as exc:  # noqa: BLE001
+            try:
+                emit({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
+            except Exception:
+                pass
+
+    def _translate_stream(self):
+        """Перевод на русский кусками: видно, что агент работает, можно отменить."""
+        body = self._body()
+        text = str(body.get("text") or "").strip()
+        if not text:
+            return self._bad("пустой текст", 422)
+        text = text[:4000]
+
+        emit = self._sse_begin()
+        try:
+            emit({"type": "status", "text": "запускаю агента"})
+            info = agent_start()
+            if not info.get("running"):
+                emit({"type": "error", "message": info.get("error") or "агент не запущен"})
+                return
+            emit({"type": "status", "text": "перевожу"})
+            out = _translate_clean(_agent_chat_stream(
+                info["port"], translate_messages(text),
+                lambda d: emit({"type": "delta", "text": d}),
+                max_tokens=translate_max_tokens(text), think=False))
+            if not out:
+                emit({"type": "error", "message": "агент не вернул перевод"})
+                return
+            emit({"type": "done", "text": out})
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return  # пользователь нажал «RU» ещё раз или закрыл страницу
         except Exception as exc:  # noqa: BLE001
             try:
                 emit({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
