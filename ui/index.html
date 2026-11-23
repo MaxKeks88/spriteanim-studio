@@ -1026,7 +1026,7 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
             <div class="row-l"><span>Длительность</span><b id="durV"></b></div>
             <input type="range" id="dur" min="0" max="12" step="1" value="6">
             <div class="ticks"><span>0,9 с</span><span>2,3</span><span>4,0</span><span>5,2</span><span>9,4 с</span></div>
-            <div class="hint">Модель считает кадрами: 24 fps, длина = 17k + 5. Ползунок стоит только на допустимых значениях — 124 кадра ≈ 5,2 с (по умолчанию из воркфлоу).</div>
+            <div class="hint">Модель считает кадрами: 24 fps, длина = 17k + 5. Ползунок стоит только на допустимых значениях — 124 кадра ≈ 5,2 с. По умолчанию в результат идёт один цикл; чтобы сохранить всю длительность, включите «не обрезать цикл» в «Дополнительно».</div>
           </div>
 
           <div class="row">
@@ -1037,7 +1037,7 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
               <button class="chip kc" type="button" data-c="blue"><i style="background:#0000ff"></i>Синий</button>
             </div>
             <input type="hidden" id="keyColor" value="magenta">
-            <div class="hint">Это цвет фона в самом видео: под него настраивается вырезание, и он же подставляется в промпт. После рендера фон становится прозрачным.</div>
+            <div class="hint">Это цвет фона в самом видео: под него настраивается вырезание, и он же подставляется в промпт. В PNG-кадрах фон прозрачный, в видео — ровно этот цвет.</div>
           </div>
 
           <div class="row">
@@ -1083,6 +1083,10 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
             <div class="inline" style="margin-top:10px">
               <label class="inline" style="gap:7px;font-size:12.5px;color:var(--muted)">
                 <input type="checkbox" id="dedupe" checked style="width:auto"> убирать дубли («на двойках»)
+              </label>
+              <label class="inline" style="gap:7px;font-size:12.5px;color:var(--muted)"
+                     title="По умолчанию из клипа оставляется один цикл. Включите, чтобы сохранить все отрендеренные кадры — выбранная длительность.">
+                <input type="checkbox" id="keepAll" style="width:auto"> не обрезать цикл (все кадры)
               </label>
             </div>
             <div class="hint">Трогайте только если остаётся кайма или фон не убирается полностью.</div>
@@ -3317,6 +3321,7 @@ $('#go').onclick = async () => {
     edge_bleed_px: +$('#bleed').value,
     max_frames: +$('#maxFrames').value || 0,
     dedupe_twos: $('#dedupe').checked,
+    keep_all: $('#keepAll').checked,
   };
   const keyHex = { magenta: '#ff00ff', green: '#00ff00', blue: '#0000ff' }[$('#keyColor').value] || '#ff00ff';
   // Всегда собираем персонажа на выбранном ключевом цвете, даже без полей:
@@ -3427,7 +3432,11 @@ function finish(st, restored = false) {
     strip.append(im);
   });
   const took = restored ? '' : ` · ${fmtT(performance.now() - S.job.t0)}`;
-  $('#resMeta').innerHTML = `${esc(slug)} · кадров: <b>${frames.length}</b> · ${width}×${height}`
+  const secs = (frames.length / 24).toFixed(1).replace('.', ',');
+  const asked = S.job?.length || 0;
+  // Один цикл короче запрошенной длительности — говорим об этом прямо.
+  const trimNote = asked && frames.length < asked ? ` · один цикл из ${asked}` : '';
+  $('#resMeta').innerHTML = `${esc(slug)} · кадров: <b>${frames.length}</b> (${secs} с)${trimNote} · ${width}×${height}`
     + ` · seed <b>${seed ?? '—'}</b>${took}`;
   if (!restored) {
     recordRun({ kind: 'anim', id: S.job?.id, mode: S.repeat, name: slug,

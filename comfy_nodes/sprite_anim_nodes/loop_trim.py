@@ -121,9 +121,12 @@ def trim(frames, mode='cycle', dedupe=True, min_len=12, max_len=240, close=0.08,
 
 def _trim(frames, mode, dedupe, min_len, max_len, close, rest_share, dup_share):
     thumbs = small(frames)
-    keep = unique_frames(thumbs, dup_share) if dedupe else list(range(len(frames)))
+    keep = unique_frames(thumbs, dup_share) if (dedupe and mode != 'keep') else list(range(len(frames)))
     D = distances(thumbs[keep])
-    if mode == 'action':
+    if mode == 'keep':
+        chosen = keep
+        info = 'keep: %d frames of %d' % (len(chosen), len(frames))
+    elif mode == 'action':
         s, e = find_action(D, rest_share)
         chosen = keep[s:e + 1]
         info = 'action: frames %d-%d of %d (%d kept)' % (keep[s] + 1, keep[e] + 1, len(frames), len(chosen))

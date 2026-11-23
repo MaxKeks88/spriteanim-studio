@@ -52,6 +52,18 @@ def key_frame(rgb, key_color, sample_border, clip_black, clip_white,
             distance, indices = ndimage.distance_transform_edt(~solid, return_indices=True)
             extend = (alpha < .01) & (distance <= edge_bleed_px)
             foreground[extend] = foreground[indices[0][extend], indices[1][extend]]
+        else:
+            distance = None
+    else:
+        distance = None
+    # Far transparent pixels keep the raw model backdrop, and the video (no alpha)
+    # shows it: a drifting magenta/green backdrop flickers. Paint the chosen key
+    # colour there, keeping the edge-bleed ring for clean compositing.
+    preset = np.array(presets.get(key_color, presets['magenta']), dtype=np.float32)
+    clear = alpha < .01
+    if distance is not None:
+        clear &= distance > edge_bleed_px
+    foreground[clear] = preset
     return np.concatenate((foreground, alpha[...,None]), axis=-1)
 
 
@@ -100,7 +112,7 @@ class SpriteLoopTrim:
     def INPUT_TYPES(cls):
         return {'required': {
             'images': ('IMAGE',),
-            'mode': (['cycle', 'action'], {'default': 'cycle', 'tooltip': 'cycle: one walk/run loop (its last frame leads back into the first). action: one attack, from the last rest frame to the return to rest.'}),
+            'mode': (['cycle', 'action', 'keep'], {'default': 'cycle', 'tooltip': 'cycle: one walk/run loop (its last frame leads back into the first). action: one attack, from the last rest frame to the return to rest. keep: every rendered frame, no loop search.'}),
             'max_frames': ('INT', {'default': 0, 'min': 0, 'max': 512, 'step': 1, 'tooltip': '0 = every frame of the loop. Otherwise at most this many frames, spread evenly over the loop.'}),
             'dedupe_twos': ('BOOLEAN', {'default': True, 'tooltip': 'Clips rendered "on twos" show every picture twice: keep every second frame.'}),
             'min_frames': ('INT', {'default': 12, 'min': 3, 'max': 256, 'step': 1, 'tooltip': 'Shortest loop to accept (cycle mode).'}),
@@ -109,7 +121,7 @@ class SpriteLoopTrim:
     RETURN_NAMES = ('images', 'frame_count', 'info')
     FUNCTION = 'execute'
     CATEGORY = 'Sprite / Animation'
-    DESCRIPTION = 'Keeps exactly one loop of a generated clip: one walk/run cycle or one attack. Repeated frames are dropped first.'
+    DESCRIPTION = 'Keeps exactly one loop of a generated clip: one walk/run cycle, one attack, or (mode keep) every rendered frame. Repeated frames are dropped first.'
 
     def execute(self, images, mode='cycle', max_frames=0, dedupe_twos=True, min_frames=12):
         from . import loop_trim

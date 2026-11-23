@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.1"
+APP_VERSION = "0.4.2"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -1410,6 +1410,8 @@ def build_graph(manifest: dict, params: dict, info: dict, run: str) -> tuple[dic
             n["inputs"]["max_frames"] = int(adv["max_frames"])
         if adv.get("dedupe_twos") is not None:
             n["inputs"]["dedupe_twos"] = bool(adv["dedupe_twos"])
+        if adv.get("keep_all"):
+            n["inputs"]["mode"] = "keep"       # все кадры, без поиска цикла
         n["inputs"].setdefault("min_frames", 12)
 
     # Своя папка на прогон: ComfyUI не перезапишет прошлые результаты.
