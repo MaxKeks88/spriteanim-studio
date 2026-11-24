@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.2"
+APP_VERSION = "0.4.3"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -2169,7 +2169,7 @@ def model_group_info(group: dict) -> dict:
             "name": "llama.cpp (llama-server)", "what": "движок для агента",
             "folder": "", "size": 0, "present": bool(llama),
             "found_path": str(llama) if llama else "", "found_size": 0,
-            "size_hint": "≈ 0,3 ГБ",
+            "size_hint": "≈ 25 МБ",
         })
         if not llama and state == "ok":
             state = "partial"
@@ -2454,29 +2454,44 @@ def sheet_dialog(kind: str, start: str = "") -> str:
     return lines[-1] if lines else ""
 
 
+_LLAMA_WIN_RE = re.compile(r"^llama-b\d+-bin-win-cpu-x64\.zip$", re.I)
+
+
+def _llama_release_asset() -> dict:
+    """Свежий релиз llama.cpp с готовой сборкой под Windows x64.
+
+    `/releases/latest` с 13.11.2026 отдаёт v1.0.0 без файлов (только
+    nightly-tag.txt), а сборки публикуются в ночных тегах bXXXXX — поэтому
+    смотрим список релизов и берём первый, где архивы действительно есть.
+    """
+    req = urllib.request.Request(
+        "https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=30",
+        headers={"User-Agent": "SpriteAnimStudio/0.1", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req, timeout=40) as r:
+        releases = json.loads(r.read().decode("utf-8"))
+    for rel in releases if isinstance(releases, list) else []:
+        if rel.get("draft"):
+            continue
+        for asset in rel.get("assets") or []:
+            if _LLAMA_WIN_RE.match(asset.get("name") or ""):
+                return asset
+    raise RuntimeError("в релизах llama.cpp не нашлась сборка для Windows x64")
+
+
 def _install_llama() -> str:
     _set_progress(kind="llama", group="agent", file="llama.cpp", message="ищу сборку llama.cpp",
                   done=0, total=0)
-    req = urllib.request.Request(
-        "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest",
-        headers={"User-Agent": "SpriteAnimStudio/0.1", "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=40) as r:
-        rel = json.loads(r.read().decode("utf-8"))
-    assets = rel.get("assets") or []
-    pick = None
-    for pref in ("win-cuda-x64", "win-cpu-x64"):
-        pick = next((a for a in assets if pref in a["name"] and a["name"].endswith(".zip")), None)
-        if pick:
-            break
-    if not pick:
-        raise RuntimeError("в последнем релизе llama.cpp нет сборки для Windows")
+    pick = _llama_release_asset()
     dest = agent_home() / "llama" / pick["name"]
     _download(pick["browser_download_url"], dest, group="agent", name="llama.cpp")
     _set_progress(phase="extract", message="распаковываю llama.cpp", done=0, total=0)
     target = agent_llama_dir()
     target.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["tar", "-xf", str(dest), "-C", str(target)], check=True,
-                   creationflags=0x08000000 if os.name == "nt" else 0)
+    try:
+        subprocess.run(["tar", "-xf", str(dest), "-C", str(target)], check=True,
+                       creationflags=0x08000000 if os.name == "nt" else 0)
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"не удалось распаковать {pick['name']}: {exc}") from exc
     # llama.cpp кладёт файлы в подпапку — поднимаем её содержимое наверх
     subs = [p for p in target.iterdir() if p.is_dir()]
     if subs and not (target / "llama-server.exe").is_file():
@@ -2487,6 +2502,8 @@ def _install_llama() -> str:
             inner.rmdir()
         except OSError:
             pass
+    if not agent_server_path():
+        raise RuntimeError(f"в {pick['name']} нет llama-server.exe")
     dest.unlink(missing_ok=True)
     return f"llama.cpp: {pick['name']}"
 
@@ -2515,6 +2532,8 @@ def _install_worker(group_id: str) -> None:
         _set_progress(active=False, phase="done", kind="", group=group_id,
                       message="готово", done=0, total=0, speed=0.0)
     except Exception as exc:  # noqa: BLE001
+        # Ошибку видно только в тосте — дублируем в лог, иначе причина теряется
+        print(f"[setup] {group_id}: {type(exc).__name__}: {exc}")
         _set_progress(active=False, phase="error", error=str(exc), message=str(exc))
     finally:
         _cancel_flag.clear()

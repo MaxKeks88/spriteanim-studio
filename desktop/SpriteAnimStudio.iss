@@ -1,11 +1,11 @@
-﻿; Установщик SpriteAnim Studio 0.2 (настольное окно).
+; Установщик SpriteAnim Studio 0.2 (настольное окно).
 ; Inno Setup 6:  "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" desktop\SpriteAnimStudio.iss
 ;
 ; Ставится в профиль пользователя (%LOCALAPPDATA%\Programs\SpriteAnimStudio),
 ; поэтому не требует прав администратора и может писать .cache/output/voice рядом.
 
 #define AppName "SpriteAnim Studio"
-#define AppVersion "0.4.2"
+#define AppVersion "0.4.3"
 #define AppExe "SpriteAnimStudio.exe"
 
 [Setup]
