@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.6"
+APP_VERSION = "0.4.7"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -2994,7 +2994,7 @@ SKILL_FOR = {
     "klein": "flux2-klein",
     "minimax": "minimax-h3-image",
     "sprite": "sprite-animation",
-    "bg": "qwen-image-2-1-director-prompt",
+    "bg": "qwen-image-style-clone",
 }
 
 _agent_state: dict = {"proc": None, "port": 0, "starting": False}

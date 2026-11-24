@@ -301,7 +301,7 @@ FLUX.2 klein, затем **MiniMax H3 Image** (найдена на диске и
 - **Важно:** у Gemma 4 включены «размышления» — без их отключения весь ответ уходит в
   `reasoning_content`, а `content` приходит пустым. Поэтому в запросе всегда
   `chat_template_kwargs: {"enable_thinking": false}` (проверено: 2 с вместо пустого ответа).
-- Скилл выбирается по модели или сценарию: `qwen21 → qwen-image-2-1-director-prompt`,
+- Скилл выбирается по модели или сценарию: `qwen21 → qwen-image-style-clone`,
   `klein → flux2-klein`, `minimax → minimax-h3-image`, спрайтовая анимация →
   `sprite-animation` (наш собственный скилл), вырезание фона → qwen-скилл.
   Текст скилла кладётся в system (frontmatter отрезается) и дополняется правилами
@@ -1238,6 +1238,10 @@ background», и картинка совпадала со стилем исхо�
 2D-жука + бриф «таракан с топором для 2D-платформера» → `skill:
 qwen-image-style-clone`, промпт «Full-body 2D … bold linework … earthy muted
 palette … isolated on a solid pure white background», без 3D и чёрного фона.
+
+В 0.4.7 старый `qwen-image-2-1-director-prompt` удалён из репозитория и сборки;
+«Убрать фон» переведён на новый скилл, а установщик удаляет старую папку из
+`_internal\skills` у существующих установок.
 
 ## 34. «Скачать недостающие» для агента обрывалось (24.11.2026)
 

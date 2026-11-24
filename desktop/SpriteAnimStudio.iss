@@ -5,7 +5,7 @@
 ; поэтому не требует прав администратора и может писать .cache/output/voice рядом.
 
 #define AppName "SpriteAnim Studio"
-#define AppVersion "0.4.6"
+#define AppVersion "0.4.7"
 #define AppExe "SpriteAnimStudio.exe"
 
 [Setup]
@@ -55,6 +55,10 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall
+
+[InstallDelete]
+; Старый скилл удалён в 0.4.7 — чистим его при обновлении существующей установки.
+Type: filesandordirs; Name: "{app}\_internal\skills\qwen-image-2-1-director-prompt"
 
 [UninstallDelete]
 ; Профиль WebView2 и лог можно удалять. .cache с настройками, output с результатами
