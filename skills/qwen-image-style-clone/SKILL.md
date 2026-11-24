@@ -34,12 +34,12 @@ Replace only the subject's identity, species, pose, and specific props requested
 
 Write a single, cohesive English prompt block structured in this exact order (Qwen Image 2.1 responds best to front-loaded style and clear visual hierarchy):
 
-1. **Asset format & subject:** Full-body framing, asset type, new character species/identity, and background isolation.
+1. **Asset format & subject:** Start with "In the exact same artistic style as the reference image," then full-body framing, asset type, new character species/identity.
 2. **Art style & rendering:** Exact medium, era/style, linework quality, color palette, and shading extracted from the reference.
 3. **Pose & expression:** Camera angle (e.g., three-quarter side view facing right), stance, and facial expression matching the reference's vibe.
 4. **Anatomy & silhouette:** Body build and key anatomical features of the new character rendered in the reference's proportions.
 5. **Clothing & props:** Requested outfit and held items described with the same material wear, textures, and detailing seen in the reference.
-6. **Technical clean-up:** Flat lighting, clean asset edges, no background elements, no drop shadow (if generating a game sprite).
+6. **Background & finish:** Reproduce the reference's background exactly — its colour, texture and ground shadow. Use a solid pure white background with no shadow only when the user asks for a clean sprite or transparent background.
 
 ### 4. Deliver the output
 
@@ -47,15 +47,20 @@ Present the ready-to-copy English prompt inside a blockquote, followed by 1 to 2
 
 ## Example (follow this level of detail and structure)
 
-> Full-body 2D hand-drawn game character sprite of an anthropomorphic stag beetle innkeeper, isolated on a solid pure white background. Vintage 1930s rubber-hose cartoon art style with a gritty, worn-out look: crisp slightly rough dark ink outlines, hand-drawn line weight, muted desaturated palette of dusty browns, sepia, charcoal and dirty cream, subtle painterly shading. Three-quarter side view facing right, sturdy stance and a grumpy furrowed brow. Rounded beetle body with a segmented shell, short fan-shaped antennae and large expressive pie-cut eyes. Patched tattered waistcoat, scuffed off-white cartoon gloves, oversized worn-out shoes, holding a dented metal tankard. Flat lighting, clean asset edges, no background elements, no drop shadow.
+> In the exact same artistic style as the reference image, a full-body 2D ink illustration of an anthropomorphic stag beetle barista standing in a three-quarter pose on a solid, slightly textured olive-grey background. Detailed 2D illustration with crisp black ink outlines, fine crosshatching for shadows and texture, muted earthy palette of chestnut brown, charcoal, khaki and cream. Round beetle head with large sly eyes, black pupils and long fan-shaped antennae; segmented chestnut shell with elytra folded like coattails. He wears a dark charcoal zip-up hoodie, loose navy trousers with three white stripes down the sides, chunky vintage lace-up boots and white cartoon gloves with three black lines on the back. One hand holds a vintage glass milk bottle against his chest. A small hatched ground shadow under his feet.
 
 ## Gotchas
 
 - **Do not copy the old subject's identity:** Transfer the aesthetic (e.g., tattered vintage fabric, scuffed off-white gloves, pie-cut eyes), not the previous character's species or unrelated props.
-- **Background for game sprites is always `solid pure white background`:** never copy a black or dark background from the reference, and never write "black background" unless the user explicitly asks for it. Other flat colours only on request.
-- **Style lock:** name the reference's medium and era exactly (e.g., "2D hand-drawn rubber-hose cartoon", "ink etching", "cel-shaded anime"). Never replace a hand-drawn 2D reference with "digital painting", "3D render", "photoreal" or "cinematic".
+- **Background fidelity:** reproduce the reference's background exactly — its colour, texture and ground shadow (for example, a solid slightly textured olive-grey with a small hatched shadow). Use `solid pure white background` with no shadow only when the user asks for a clean sprite or transparent background; never invent a black background.
+- **Style lock:** open with "In the exact same artistic style as the reference image" and name the medium and era exactly (e.g., "detailed 2D ink illustration", "ink etching", "1930s rubber-hose cartoon"). Never replace a hand-drawn 2D reference with "digital painting", "3D render", "photoreal" or "cinematic".
+- **Explicit user direction wins:** if the user explicitly asks for cinematic, dramatic lighting, another medium or a different mood, follow that request while keeping the character design and palette from the reference. The reference dictates the style when the user does not ask for a change.
+- **Keep the reference's signature styling:** when changing the outfit, keep its visual language — e.g., white cartoon gloves with three black lines, chunky vintage boots, muted earthy palette, hatched shading — so the new character belongs to the same world.
+- **Use the measured colours when supplied:** the app sends `background #RRGGBB` and a dominant palette from the reference. Put that exact background hex in the prompt and build the palette from those colours; do not rename them ("olive-grey" ≠ "dark forest-green").
+- **Lighting stays as in the reference:** reproduce its light direction and softness; do not add dramatic, cinematic or directional lighting unless it is visible in the reference.
+- **Keep the species from the user's request:** if the user says "May beetle" / "cockchafer" (майский жук), write `cockchafer`, not another beetle species.
 - **Do not invent anatomy, props or materials:** describe only what the user asked for plus the reference's visual language. No extra horns, masks, fur, watches or accessories.
-- **Avoid negative-heavy phrasing:** Describe what should be present ("solid pure white background, flat lighting") rather than long lists of "no X, without Y", keeping minimal isolation tags only at the very end.
+- **Avoid negative-heavy phrasing:** Describe what should be present ("solid slightly textured olive-grey background, hatched ground shadow") rather than long lists of "no X, without Y".
 - **Keep prompts in English:** Even when conversing in Russian or another language, always output the Qwen Image 2.1 prompt itself in clear, concrete English.
-- **Be concrete, not generic:** Replace vague words like "cool style" or "nice colors" with specific visual descriptors ("crisp slightly rough dark ink outlines", "muted desaturated earthy palette of sepia and charcoal").
+- **Be concrete, not generic:** Replace vague words like "cool style" or "nice colors" with specific visual descriptors ("crisp black ink outlines", "muted earthy palette of chestnut, charcoal and khaki", "fine crosshatching").
 - **No placeholders:** Never leave `[Subject]`, `[Clothing Description]` or similar in the final prompt; fill them from the user's request and the reference.

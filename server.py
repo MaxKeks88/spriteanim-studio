@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.7"
+APP_VERSION = "0.4.8"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -3007,6 +3007,11 @@ AGENT_RULES = (
     "1) первой строкой — «Формат кадра: <1:1, 16:9, 9:16, 4:3 или 3:4>»;\n"
     "2) короткая фраза по-русски, что это за стиль (одна строка);\n"
     "3) сам промпт на английском в блоке ```prompt … ```.\n"
+    "5) Освещение и тени повтори как на референсе; не добавляй dramatic/cinematic, "
+    "если их там нет.\n"
+    "6) Вид и породу персонажа бери из запроса пользователя (например, майский жук — "
+    "cockchafer), не заменяй другим видом.\n"
+    "7) Если даны измеренные цвета референса — используй фон именно этим HEX.\n"
     "Если скилл требует другого — следуй скиллу. Никаких пояснений, списков и переводов "
     "промпта.\n"
 )
@@ -3307,10 +3312,11 @@ def parse_agent_reply(text: str) -> tuple[str, str]:
 
 AGENT_VISION = (
     "Опиши изображение как художник-референс: кто или что в кадре, поза и ракурс, "
-    "одежда и материалы, точные цвета, фон, свет, композиция и настроение. "
+    "одежда и материалы, точные цвета, фон (цвет, текстура, тень на земле), свет, "
+    "композиция и настроение. "
     "Начни строкой `Style DNA:` и перечисли по-английски точные термины стиля: "
     "medium (2D hand-drawn / ink / vector / 3D / photo), era or genre, linework, "
-    "palette, shading method. Затем 5–12 предложений по-русски. "
+    "palette, shading method, background. Затем 5–12 предложений по-русски. "
     "Только наблюдаемое, без оценок и без советов."
 )
 
@@ -3443,7 +3449,8 @@ MULTI_HINT = {
 
 
 def _agent_prepare(port: int, brief: str, pics: list[str], model_id: str, skill_id: str,
-                   think: bool, mode: str, two_pass: bool = True, emit=None):
+                   think: bool, mode: str, two_pass: bool = True, emit=None,
+                   palette: dict | None = None):
     """System + сообщения для агента. Сначала отдельный проход «опиши картинки»."""
     skill = skill_id or SKILL_FOR.get(model_id, "")
     system = skill_text(skill) or "Ты пишешь точные промпты для генерации изображений."
@@ -3469,7 +3476,19 @@ def _agent_prepare(port: int, brief: str, pics: list[str], model_id: str, skill_
 
     if description:
         what = "исходной картинки" if len(pics) == 1 else "исходных картинок"
-        user_text = (f"Описание {what} (наблюдение):\n{description}\n\n"
+        hint = ""
+        if isinstance(palette, dict):
+            bg = str(palette.get("bg") or "").strip()
+            cols = [str(c) for c in (palette.get("palette") or []) if c][:5]
+            if bg or cols:
+                bits = []
+                if bg:
+                    bits.append(f"background {bg}")
+                if cols:
+                    bits.append("dominant colours " + ", ".join(cols))
+                hint = ("\n\nReference colours measured from the image: " + "; ".join(bits)
+                        + ". Use the background hex exactly and draw the palette from these colours.")
+        user_text = (f"Описание {what} (наблюдение):\n{description}{hint}\n\n"
                      f"Задача пользователя: {brief or 'сделай изображение по этому описанию'}")
         messages = [{"role": "system", "content": system},
                     {"role": "user", "content": user_text}]
@@ -3487,7 +3506,7 @@ def _agent_prepare(port: int, brief: str, pics: list[str], model_id: str, skill_
 
 def agent_prompt(model_id: str, brief: str, image_data: str = "", skill_id: str = "",
                  two_pass: bool = True, think: bool = False, mode: str = "",
-                 images: list[str] | None = None) -> dict:
+                 images: list[str] | None = None, palette: dict | None = None) -> dict:
     brief = (brief or "").strip()
     pics = [p for p in (images if images is not None else ([image_data] if image_data else [])) if p]
     if not brief and not pics:
@@ -3498,7 +3517,7 @@ def agent_prompt(model_id: str, brief: str, image_data: str = "", skill_id: str 
     port = info["port"]
 
     skill, messages, description = _agent_prepare(
-        port, brief, pics, model_id, skill_id, think, mode, two_pass)
+        port, brief, pics, model_id, skill_id, think, mode, two_pass, palette=palette)
 
     text = _agent_chat(port, messages, max_tokens=900, think=think)
     prompt, aspect = parse_agent_reply(text)
@@ -3868,7 +3887,8 @@ class Handler(BaseHTTPRequestHandler):
                         str(body.get("image") or ""), str(body.get("skill") or ""),
                         bool(body.get("two_pass", True)), bool(body.get("think")),
                         str(body.get("mode") or ""),
-                        [str(i) for i in imgs] if isinstance(imgs, list) else None))
+                        [str(i) for i in imgs] if isinstance(imgs, list) else None,
+                        body.get("palette") if isinstance(body.get("palette"), dict) else None))
                 except (ValueError, RuntimeError) as exc:
                     return self._bad(str(exc), 422)
             if u.path == "/api/agent/prompt/stream":
@@ -4113,6 +4133,7 @@ class Handler(BaseHTTPRequestHandler):
         pics = [str(i) for i in imgs] if isinstance(imgs, list) else (
             [image_data] if image_data else [])
         pics = [p for p in pics if p]
+        palette = body.get("palette") if isinstance(body.get("palette"), dict) else None
         if not brief and not pics:
             return self._bad("напишите, что нужно", 422)
 
@@ -4126,7 +4147,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             port = info["port"]
             skill, messages, description = _agent_prepare(
-                port, brief, pics, model_id, skill_id, think, mode, emit=emit)
+                port, brief, pics, model_id, skill_id, think, mode, emit=emit,
+                palette=palette)
             if description:
                 emit({"type": "description", "text": description})
 

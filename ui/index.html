@@ -4666,6 +4666,44 @@ async function refsForAgent(max = 640) {
   return out;
 }
 
+/* Цвета референса: фон по краям и пять частых цветов. Модель-описатель путает
+   оттенки («оливковый» → «тёмно-зелёный»), поэтому даём агенту точные HEX. */
+async function refPalette(dataUrl) {
+  try {
+    const im = await loadImage(dataUrl);
+    const n = 64;
+    const c = document.createElement('canvas');
+    c.width = n; c.height = n;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(im, 0, 0, n, n);
+    const d = ctx.getImageData(0, 0, n, n).data;
+    const hex = (r, g, b) => '#' + [r, g, b]
+      .map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
+    const med = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)] || 0;
+    const edge = [];
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (x < 3 || y < 3 || x >= n - 3 || y >= n - 3) {
+          const i = (y * n + x) * 4;
+          if (d[i + 3] > 200) edge.push([d[i], d[i + 1], d[i + 2]]);
+        }
+      }
+    }
+    const bg = edge.length
+      ? hex(med(edge.map(p => p[0])), med(edge.map(p => p[1])), med(edge.map(p => p[2])))
+      : '';
+    const counts = new Map();
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 200) continue;
+      const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+    const palette = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+      .map(([k]) => hex(((k >> 8) & 15) * 17, ((k >> 4) & 15) * 17, (k & 15) * 17));
+    return { bg, palette };
+  } catch { return null; }
+}
+
 function paintImg() {
   const models = (S.image && S.image.models) || [];
   if (!I.model && models.length) I.model = (models.find(m => m.ready) || models[0]).id;
@@ -5024,8 +5062,9 @@ async function runAgent(brief) {
   let live = '';
   try {
     const pics = await refsForAgent();
+    const palette = pics.length ? await refPalette(pics[0]) : null;
     await streamAgent(
-      { model: I.model, brief, images: pics,
+      { model: I.model, brief, images: pics, palette,
         mode: I.refMode === 'edit' ? 'edit' : 'new' },
       {
         onStatus: t => { btn.textContent = '✨ ' + t + '…'; progAgent('img', t); },
