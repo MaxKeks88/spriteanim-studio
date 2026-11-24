@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.3"
+APP_VERSION = "0.4.4"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -2796,7 +2796,7 @@ IMAGE_MODELS = [
 ASPECTS = {"1:1": (1, 1), "16:9": (16, 9), "9:16": (9, 16), "4:3": (4, 3), "3:4": (3, 4)}
 
 # Системный промпт улучшайзера — из официального шаблона ComfyUI (10 КБ).
-ENHANCER_FILE = ROOT / "prompts" / "qwen_enhancer.md"
+ENHANCER_FILE = DATA / "prompts" / "qwen_enhancer.md"
 ENHANCER_SYSTEM = ENHANCER_FILE.read_text("utf-8") if ENHANCER_FILE.is_file() else ""
 
 
@@ -2986,7 +2986,7 @@ def build_image_graph(model: dict, prompt: str, negative: str, width: int, heigh
 AGENT_PORT = 8281
 AGENT_CTX = 16384
 AGENT_THREADS = 14
-SKILL_DIR = ROOT / "skills"
+SKILL_DIR = DATA / "skills"
 
 # Какая модель изображений каким скиллом пишется.
 SKILL_FOR = {
