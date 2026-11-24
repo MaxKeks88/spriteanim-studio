@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.4"
+APP_VERSION = "0.4.6"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -2990,7 +2990,7 @@ SKILL_DIR = DATA / "skills"
 
 # Какая модель изображений каким скиллом пишется.
 SKILL_FOR = {
-    "qwen21": "qwen-image-2-1-director-prompt",
+    "qwen21": "qwen-image-style-clone",
     "klein": "flux2-klein",
     "minimax": "minimax-h3-image",
     "sprite": "sprite-animation",
@@ -3285,6 +3285,18 @@ def parse_agent_reply(text: str) -> tuple[str, str]:
     fence = re.search(r"```(?:prompt)?\s*\n(.*?)```", body, re.S)
     if fence:
         return fence.group(1).strip(), aspect
+    # Скилл может отдать готовый промпт цитатой (`> ...`), а ниже — пояснения.
+    quoted = []
+    for line in body.splitlines():
+        mq = re.match(r"^\s*>\s?(.*)$", line)
+        if mq:
+            quoted.append(mq.group(1))
+        elif quoted:
+            break
+    if quoted:
+        text = "\n".join(quoted).strip()
+        if text:
+            return text, aspect
     m = re.search(r"PROMPT:\s*", body, re.I)
     if m:
         body = body[m.end():].lstrip()
@@ -3295,9 +3307,11 @@ def parse_agent_reply(text: str) -> tuple[str, str]:
 
 AGENT_VISION = (
     "Опиши изображение как художник-референс: кто или что в кадре, поза и ракурс, "
-    "одежда и материалы, точные цвета, стиль (фото/вектор/3D/аниме), фон, свет, "
-    "композиция и настроение. Только наблюдаемое, без оценок и без советов. "
-    "Пиши по-русски, плотно, 5–12 предложений."
+    "одежда и материалы, точные цвета, фон, свет, композиция и настроение. "
+    "Начни строкой `Style DNA:` и перечисли по-английски точные термины стиля: "
+    "medium (2D hand-drawn / ink / vector / 3D / photo), era or genre, linework, "
+    "palette, shading method. Затем 5–12 предложений по-русски. "
+    "Только наблюдаемое, без оценок и без советов."
 )
 
 
@@ -3307,7 +3321,7 @@ def _agent_chat_stream(port: int, messages: list, on_delta, max_tokens: int = 90
     payload = {
         "model": "local",
         "messages": messages,
-        "temperature": 0.7,
+        "temperature": 0.4,
         "max_tokens": max_tokens,
         "stream": True,
         "chat_template_kwargs": {"enable_thinking": bool(think)},
@@ -3344,7 +3358,7 @@ def _agent_chat(port: int, messages: list, max_tokens: int = 900,
     payload = {
         "model": "local",
         "messages": messages,
-        "temperature": 0.7,
+        "temperature": 0.4,
         "max_tokens": max_tokens,
         "stream": False,
         # «Быстро» — без рассуждений (по умолчанию, как в референсном приложении);
