@@ -323,6 +323,14 @@ body.tab-img .wrap,body.tab-bg .wrap,body.tab-gen .wrap{display:flex;flex-direct
 @keyframes stopPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
 .side-btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
 .bgResActions{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.bgObjList{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;margin-top:8px}
+.bgObj{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:10px;
+  padding:6px;background:var(--card2)}
+.bgObj img{width:64px;height:64px;object-fit:contain;background:var(--card);border:1px solid var(--line);border-radius:7px;flex:none}
+.bgObj .t{min-width:0;flex:1;font-size:11.5px;color:var(--muted);line-height:1.35}
+.bgObj .t b{display:block;color:var(--text);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bgObjSum{font-size:12.5px;color:var(--muted);margin:10px 0 0;line-height:1.45}
+.bgObjSum b{color:var(--text)}
 #bgPrompt{min-height:80px;max-height:160px;padding:12px 14px;border-radius:14px;
   font-size:13.5px;line-height:1.5;resize:none;overflow:auto}
 #prompt{min-height:96px;max-height:160px;padding:12px 14px;border-radius:14px;
@@ -770,6 +778,25 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
               <button data-v="1536">1536<small>крупнее</small></button>
             </div>
             <div class="hint">Пропорции — из загруженной картинки; «Исходный» не меняет размер.</div>
+            <div class="inline" style="margin-top:10px">
+              <label class="inline" style="gap:7px;font-size:12.5px;color:var(--muted)"
+                     title="После удаления фона каждый объект сохраняется отдельным PNG; позиции — в objects.json">
+                <input type="checkbox" id="bgSplit" style="width:auto"> Несколько объектов — каждый в отдельный PNG
+              </label>
+              <label class="inline" style="gap:6px;font-size:12.5px;color:var(--muted);margin-left:10px"
+                     title="Поле вокруг объекта: плюс — прозрачный отступ, минус — обрезка внутрь объекта. Минус 1 или 2 px срезает края.">
+                поля
+                <select id="bgObjPad" style="width:auto;padding:5px 8px">
+                  <option value="-2">−2 px</option>
+                  <option value="-1">−1 px</option>
+                  <option value="0">0 px</option>
+                  <option value="1" selected>1 px</option>
+                  <option value="2">2 px</option>
+                  <option value="4">4 px</option>
+                </select>
+              </label>
+            </div>
+            <div class="hint" id="bgSplitHint" hidden>Объекты ищутся по прозрачности; касающиеся друг друга станут одним объектом.</div>
           </div>
         </div>
       </div>
@@ -817,6 +844,7 @@ body.tab-up .wrap{display:flex;flex-direction:column;height:100vh;max-width:none
             <a class="side-btn" id="bgDl" href="#" download aria-disabled="true">⬇ PNG с прозрачностью</a>
             <button class="side-btn" id="bgToGen" type="button" disabled>→ В анимацию</button>
           </div>
+          <div id="bgObjects" hidden></div>
           <div class="hint">Прозрачность настоящая (альфа-канал), без «белого фона»: такой PNG сразу годится и для генерации, и для редактора.</div>
         </div>
       </div>
@@ -4195,7 +4223,7 @@ $('#toEditor').onclick = async () => {
 };
 
 /* ---------- вкладка «Убрать фон» (Qwen Image 2.1) ---------- */
-const B = { img: null, job: null, tick: null, res: 1024, result: '', url: '' };
+const B = { img: null, job: null, tick: null, res: 1024, result: '', url: '', out: null, split: false };
 
 const bgPh = $('#bgDrop').innerHTML;
 
@@ -4269,11 +4297,23 @@ $('#bgRes').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   B.res = +b.dataset.v; paintBg();
 };
+$('#bgSplit').onchange = e => {
+  B.split = e.target.checked;
+  $('#bgSplitHint').hidden = !B.split;
+  if (B.split && B.url && B.out) splitBgObjects(B.url, B.out);
+  else if (!B.split) { $('#bgObjects').hidden = true; $('#bgObjects').innerHTML = ''; }
+};
+$('#bgObjPad').onchange = () => {
+  if (B.split && B.url && B.out) splitBgObjects(B.url, B.out);
+};
 $('#bgPrompt').oninput = paintBg;
 $('#bgPromptReset').onclick = () => { $('#bgPrompt').value = (S.bgInfo || {}).prompt || ''; paintBg(); };
 
 $('#bgGo').onclick = async () => {
   if (!B.img) { toast('Сначала загрузите картинку', 'bad'); return; }
+  B.split = $('#bgSplit').checked;
+  $('#bgObjects').hidden = true;
+  $('#bgObjects').innerHTML = '';
   B.job = { state: 'queued' };
   progStart('bg', '', 'отправляю в ComfyUI…');
   $('#bgStop').hidden = false;
@@ -4337,7 +4377,8 @@ function bgFinish(st) {
   paintBg();
   const out = (st.outputs || []).find(o => o.kind === 'image');
   if (!out) { toast('Модель не вернула картинку', 'bad'); return; }
-  addBgResult(out, job);
+  const url = addBgResult(out, job);
+  if (B.split) splitBgObjects(url, out);
   recordRun({ kind: 'bg', id: job.id, prompt: job.prompt, resolution: job.resolution ?? B.res, out });
   toast('Фон убран — добавлено в ленту', 'ok');
 }
@@ -4346,6 +4387,7 @@ function addBgResult(out, job) {
   const raw = fileUrl(out);
   const url = raw + '&t=' + Date.now();
   B.url = url;
+  B.out = out;
   const msg = document.createElement('div');
   msg.className = 'msg';
   msg.innerHTML = `
@@ -4396,6 +4438,126 @@ function addBgResult(out, job) {
   $('#bgDl').setAttribute('aria-disabled', 'false');
   $('#bgToGen').disabled = false;
   return url;
+}
+
+/* Несколько объектов: компоненты связности по альфе, каждый — отдельный PNG.
+   Позиции сохраняются в objects.json, чтобы платформы можно было расставить в уровне. */
+async function splitBgObjects(url, out) {
+  const box = $('#bgObjects');
+  box.hidden = false;
+  box.innerHTML = '<div class="hint">Ищу объекты…</div>';
+  let comps = [], W = 0, H = 0, cv = null;
+  try {
+    const im = await loadImage(url);
+    W = im.naturalWidth; H = im.naturalHeight;
+    cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(im, 0, 0);
+    const d = ctx.getImageData(0, 0, W, H).data;
+    const n = W * H;
+    const seen = new Uint8Array(n);
+    const stack = new Int32Array(n);
+    const minArea = Math.max(120, Math.round(n * 0.0004));
+    for (let start = 0; start < n; start++) {
+      if (seen[start] || d[start * 4 + 3] < 16) continue;
+      let sp = 0;
+      stack[sp++] = start; seen[start] = 1;
+      let area = 0, minX = W, minY = H, maxX = -1, maxY = -1;
+      while (sp) {
+        const p = stack[--sp];
+        area++;
+        const x = p % W, y = (p - x) / W;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        for (let dy = -1; dy <= 1; dy++) {
+          const yy = y + dy;
+          if (yy < 0 || yy >= H) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            const xx = x + dx;
+            if (xx < 0 || xx >= W) continue;
+            const q = yy * W + xx;
+            if (seen[q] || d[q * 4 + 3] < 16) continue;
+            seen[q] = 1;
+            stack[sp++] = q;
+          }
+        }
+      }
+      if (area >= minArea) comps.push({ x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, area });
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="hint">Не удалось разделить: ' + esc(e.message) + '</div>';
+    return;
+  }
+  comps.sort((a, b) => (Math.abs(a.y - b.y) > 24 ? a.y - b.y : a.x - b.x));
+  if (!comps.length) {
+    box.innerHTML = '<div class="bgObjSum">Объекты не найдены — похоже, на картинке только фон.</div>';
+    return;
+  }
+  const whole = comps.length === 1 && comps[0].area > W * H * 0.9;
+  // Минус — обрезка внутрь объекта, плюс — прозрачное поле вокруг.
+  const PAD = Math.max(-4, Math.min(8, +((document.querySelector('#bgObjPad') || {}).value ?? 1)));
+  const files = [], metaObjects = [];
+  const list = document.createElement('div');
+  list.className = 'bgObjList';
+  comps.forEach((c, i) => {
+    const sx = Math.max(0, Math.min(W - 1, c.x - PAD));
+    const sy = Math.max(0, Math.min(H - 1, c.y - PAD));
+    const sw = Math.max(1, Math.min(W, c.x + c.w + PAD) - sx);
+    const sh = Math.max(1, Math.min(H, c.y + c.h + PAD) - sy);
+    const oc = document.createElement('canvas');
+    oc.width = sw; oc.height = sh;
+    oc.getContext('2d').drawImage(cv, sx, sy, sw, sh, 0, 0, sw, sh);
+    const data = oc.toDataURL('image/png');
+    const name = `object-${String(i + 1).padStart(2, '0')}.png`;
+    files.push({ name, data });
+    metaObjects.push({ file: name, x: c.x, y: c.y, w: c.w, h: c.h, area: c.area });
+    const row = document.createElement('div');
+    row.className = 'bgObj';
+    row.innerHTML = '<img alt=""><div class="t"><b></b><span></span></div>';
+    row.querySelector('img').src = data;
+    row.querySelector('b').textContent = name;
+    row.querySelector('.t span').textContent = `${sw}×${sh} · x${c.x} y${c.y}`;
+    const a = document.createElement('a');
+    a.className = 'chip'; a.download = name; a.href = data; a.textContent = '⬇';
+    a.title = 'Скачать PNG';
+    row.append(a);
+    list.append(row);
+  });
+  const sum = document.createElement('div');
+  sum.className = 'bgObjSum';
+  sum.innerHTML = `Найдено объектов: <b>${comps.length}</b>`
+    + (whole ? ' · похоже, фон не удалён: объект занимает почти весь кадр' : '')
+    + '<br>Позиции объектов сохранены в objects.json.';
+  const zip = document.createElement('button');
+  zip.className = 'side-btn'; zip.type = 'button'; zip.textContent = '⬇ Все объекты (ZIP)';
+  zip.onclick = async () => {
+    zip.disabled = true;
+    try {
+      const r = await fetch('/api/objects/zip', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files, meta: { source: out && out.filename, width: W, height: H, pad: PAD, objects: metaObjects } }),
+      });
+      if (!r.ok) {
+        let m = 'не удалось собрать ZIP';
+        try { m = (await r.json()).error || m; } catch { /* не json */ }
+        throw new Error(m);
+      }
+      const blob = await r.blob();
+      const a = document.createElement('a');
+      const u = URL.createObjectURL(blob);
+      a.href = u; a.download = 'objects.zip';
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 4000);
+    } catch (e) { toast('ZIP: ' + e.message, 'bad'); }
+    zip.disabled = false;
+  };
+  box.innerHTML = '';
+  box.append(list, sum, zip);
+  toast(`Объектов: ${comps.length}`, 'ok');
 }
 
 async function bgSendToGen(url) {

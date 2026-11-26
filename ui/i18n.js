@@ -118,6 +118,18 @@
     "Инструкция — в поле ниже, его можно не трогать.": "The prompt is in the field below; you can leave it as is.",
     "Прозрачность настоящая (альфа-канал), без «белого фона»: такой PNG сразу годится и для генерации, и для редактора.": "The transparency is real (alpha channel), not a white background: the PNG works for generation and in the editor.",
     "Фон убран — добавлено в ленту": "Background removed — added to the feed",
+    "Несколько объектов — каждый в отдельный PNG": "Multiple objects — one PNG each",
+    "Прозрачное поле вокруг каждого объекта. 0 — обрезка точно по контуру.": "Transparent padding around each object. 0 crops exactly to the outline.",
+    "Поле вокруг объекта: плюс — прозрачный отступ, минус — обрезка внутрь объекта. Минус 1 или 2 px срезает края.": "Object padding: positive adds a transparent margin, negative crops inside the object. Minus 1 or 2 px trims the edges.",
+    "Объекты ищутся по прозрачности; касающиеся друг друга станут одним объектом.": "Objects are found by transparency; touching ones become a single object.",
+    "Ищу объекты…": "Finding objects…",
+    "Объекты не найдены — похоже, на картинке только фон.": "No objects found — the image seems to be background only.",
+    "Найдено объектов:": "Objects found:",
+    "Позиции объектов сохранены в objects.json.": "Object positions are saved in objects.json.",
+    "⬇ Все объекты (ZIP)": "⬇ All objects (ZIP)",
+    "Скачать PNG": "Download PNG",
+    "Не удалось разделить:": "Could not split:",
+    "похоже, фон не удалён: объект занимает почти весь кадр": "looks like the background was not removed: the object covers almost the whole frame",
 
     // ---------- вкладка «Анимация» ----------
     "Персонаж": "Character",

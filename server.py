@@ -201,7 +201,7 @@ def settings_info() -> dict:
 
 
 # ------------------------------------------------------- обновления
-APP_VERSION = "0.4.8"
+APP_VERSION = "0.4.10"
 GITHUB_REPO = "MaxKeks88/spriteanim-studio"
 UPDATE_CACHE_TTL = 600
 UPDATE_DIR = ROOT / ".cache" / "update"
@@ -3893,6 +3893,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._bad(str(exc), 422)
             if u.path == "/api/agent/prompt/stream":
                 return self._agent_stream()
+            if u.path == "/api/objects/zip":
+                return self._objects_zip()
             if u.path == "/api/frames":
                 body = self._body()
                 pid = str(body.get("id") or "")
@@ -4212,6 +4214,39 @@ class Handler(BaseHTTPRequestHandler):
                 emit({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
             except Exception:
                 pass
+
+    def _objects_zip(self):
+        """ZIP с отдельными объектами после удаления фона (PNG + objects.json)."""
+        body = self._body()
+        files = body.get("files")
+        if not isinstance(files, list) or not files:
+            return self._bad("нет объектов", 422)
+        buf = io.BytesIO()
+        count = 0
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for i, item in enumerate(files[:200], 1):
+                if not isinstance(item, dict):
+                    continue
+                name = Path(str(item.get("name") or f"object-{i:02d}.png")).name
+                if not name.lower().endswith(".png"):
+                    continue
+                data = str(item.get("data") or "")
+                if "," in data:
+                    data = data.split(",", 1)[1]
+                try:
+                    blob = base64.b64decode(data, validate=False)
+                except Exception:  # noqa: BLE001
+                    continue
+                if not blob.startswith(b"\x89PNG"):
+                    continue
+                z.writestr(name, blob)
+                count += 1
+            meta = body.get("meta")
+            if isinstance(meta, dict):
+                z.writestr("objects.json", json.dumps(meta, ensure_ascii=False, indent=1))
+        if not count:
+            return self._bad("в объектах нет PNG", 422)
+        return self._send(200, buf.getvalue(), "application/zip")
 
     def _image_generate(self):
         body = self._body()
